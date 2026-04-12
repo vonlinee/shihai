@@ -64,7 +64,6 @@ func InitDB(cfg *DatabaseConfig) (*gorm.DB, error) {
 		&models.OperationLog{},
 		// RBAC models
 		&models.Role{},
-		&models.Permission{},
 		&models.RolePermission{},
 		&models.UserRole{},
 	)
@@ -99,8 +98,7 @@ func setTableComments(db *gorm.DB) error {
 		"feedback":           "反馈表 - 存储用户反馈",
 		"operation_log":      "操作日志表 - 存储系统操作日志",
 		"role":               "角色表 - 存储RBAC角色",
-		"permission":         "权限表 - 存储RBAC权限",
-		"role_permission":    "角色权限关联表 - 存储角色与权限的关联关系",
+		"role_permission":    "角色权限关联表 - 存储角色与权限编码的关联关系",
 		"user_role":          "用户角色关联表 - 存储用户与角色的关联关系",
 	}
 

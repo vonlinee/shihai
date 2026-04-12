@@ -28,42 +28,9 @@ type RoleListRequest struct {
 	PageSize int `form:"pageSize,default=10"`
 }
 
-// PermissionCreateRequest 创建权限请求
-type PermissionCreateRequest struct {
-	Code        string `json:"code" binding:"required,max=100"`
-	Name        string `json:"name" binding:"required,max=100"`
-	Description string `json:"description" binding:"max=255"`
-	Module      string `json:"module" binding:"max=50"`
-}
-
-// PermissionUpdateRequest 更新权限请求
-type PermissionUpdateRequest struct {
-	Name        string `json:"name" binding:"max=100"`
-	Description string `json:"description" binding:"max=255"`
-	Module      string `json:"module" binding:"max=50"`
-	IsActive    *bool  `json:"isActive"`
-}
-
-// PermissionResponse 权限响应
-type PermissionResponse struct {
-	ID          uint64 `json:"id"`
-	Code        string `json:"code"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Module      string `json:"module"`
-	IsActive    bool   `json:"isActive"`
-}
-
-// PermissionListRequest 权限列表请求
-type PermissionListRequest struct {
-	Page     int    `form:"page,default=1"`
-	PageSize int    `form:"pageSize,default=10"`
-	Module   string `form:"module"`
-}
-
-// AssignPermissionRequest 分配权限请求
+// AssignPermissionRequest 为角色分配权限请求（权限编码列表）
 type AssignPermissionRequest struct {
-	PermissionIDs []uint64 `json:"permissionIds" binding:"required"`
+	Permissions []string `json:"permissions" binding:"required"`
 }
 
 // AssignRoleRequest 分配角色请求
@@ -77,19 +44,7 @@ type UserRoleResponse struct {
 	Roles  []RoleResponse `json:"roles"`
 }
 
-// RolePermissionResponse 角色权限响应
-type RolePermissionResponse struct {
-	RoleID      uint64               `json:"roleId"`
-	Permissions []PermissionResponse `json:"permissions"`
-}
-
 // CheckPermissionRequest 检查权限请求
 type CheckPermissionRequest struct {
 	Permission string `json:"permission" binding:"required"`
-}
-
-// ModulePermissions 模块权限分组
-type ModulePermissions struct {
-	Module      string               `json:"module"`
-	Permissions []PermissionResponse `json:"permissions"`
 }

@@ -110,109 +110,6 @@ func (h *RBACHandler) DeleteRole(c *gin.Context) {
 	utils.SuccessWithMessage(c, "role deleted successfully", nil)
 }
 
-// ==================== Permission Handlers ====================
-
-// CreatePermission 创建权限
-func (h *RBACHandler) CreatePermission(c *gin.Context) {
-	var req dto.PermissionCreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, err.Error())
-		return
-	}
-
-	permission, err := h.rbacService.CreatePermission(&req)
-	if err != nil {
-		utils.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	utils.Success(c, permission)
-}
-
-// GetPermissionList 获取权限列表
-func (h *RBACHandler) GetPermissionList(c *gin.Context) {
-	var req dto.PermissionListRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		utils.BadRequest(c, err.Error())
-		return
-	}
-
-	permissions, total, err := h.rbacService.GetPermissionList(&req)
-	if err != nil {
-		utils.InternalServerError(c, err.Error())
-		return
-	}
-
-	utils.PageSuccess(c, permissions, total, req.Page, req.PageSize)
-}
-
-// GetAllPermissions 获取所有权限（按模块分组）
-func (h *RBACHandler) GetAllPermissions(c *gin.Context) {
-	permissions, err := h.rbacService.GetAllPermissions()
-	if err != nil {
-		utils.InternalServerError(c, err.Error())
-		return
-	}
-
-	utils.Success(c, permissions)
-}
-
-// GetPermissionByID 根据ID获取权限
-func (h *RBACHandler) GetPermissionByID(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		utils.BadRequest(c, "invalid permission id")
-		return
-	}
-
-	permission, err := h.rbacService.GetPermissionByID(id)
-	if err != nil {
-		utils.NotFound(c, "")
-		return
-	}
-
-	utils.Success(c, permission)
-}
-
-// UpdatePermission 更新权限
-func (h *RBACHandler) UpdatePermission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		utils.BadRequest(c, "invalid permission id")
-		return
-	}
-
-	var req dto.PermissionUpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, err.Error())
-		return
-	}
-
-	permission, err := h.rbacService.UpdatePermission(id, &req)
-	if err != nil {
-		utils.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	utils.Success(c, permission)
-}
-
-// DeletePermission 删除权限
-func (h *RBACHandler) DeletePermission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		utils.BadRequest(c, "invalid permission id")
-		return
-	}
-
-	if err := h.rbacService.DeletePermission(id); err != nil {
-		utils.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	utils.SuccessWithMessage(c, "permission deleted successfully", nil)
-}
-
 // ==================== Role-Permission Handlers ====================
 
 // AssignPermissionsToRole 为角色分配权限
@@ -229,7 +126,7 @@ func (h *RBACHandler) AssignPermissionsToRole(c *gin.Context) {
 		return
 	}
 
-	if err := h.rbacService.AssignPermissionsToRole(roleID, req.PermissionIDs); err != nil {
+	if err := h.rbacService.AssignPermissionsToRole(roleID, req.Permissions); err != nil {
 		utils.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}

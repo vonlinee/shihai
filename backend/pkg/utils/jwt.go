@@ -13,16 +13,14 @@ var jwtSecret = []byte("your-secret-key-change-in-production")
 type Claims struct {
 	UserID   uint64 `json:"userId"`
 	Username string `json:"username"`
-	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token
-func GenerateToken(userID uint64, username, role string) (string, error) {
+func GenerateToken(userID uint64, username string) (string, error) {
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
-		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

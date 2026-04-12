@@ -35,21 +35,7 @@ func Auth() gin.HandlerFunc {
 		// 将用户信息存入上下文
 		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
-		c.Set("role", claims.Role)
 
-		c.Next()
-	}
-}
-
-// AdminOnly 仅管理员访问
-func AdminOnly() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		role, exists := c.Get("role")
-		if !exists || role != "admin" {
-			utils.Forbidden(c, "admin access required")
-			c.Abort()
-			return
-		}
 		c.Next()
 	}
 }
@@ -77,7 +63,6 @@ func OptionalAuth() gin.HandlerFunc {
 
 		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
-		c.Set("role", claims.Role)
 
 		c.Next()
 	}

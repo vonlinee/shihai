@@ -10,7 +10,6 @@ type User struct {
 	Age      int    `json:"age" gorm:"comment:年龄"`
 	Phone    string `json:"phone" gorm:"size:20;comment:手机号"`
 	IDCard   string `json:"idCard" gorm:"size:18;comment:身份证号"`
-	Role     string `json:"role" gorm:"not null;default:'user';size:20;comment:角色"` // admin, user, reviewer, editor
 	IsActive bool   `json:"isActive" gorm:"default:true;comment:是否启用"`
 }
 

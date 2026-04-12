@@ -88,16 +88,15 @@ func initApp(db *gorm.DB) *App {
 	commentRepo := repository.NewCommentRepository(db)
 	announcementRepo := repository.NewAnnouncementRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
-	permissionRepo := repository.NewPermissionRepository(db)
 	rolePermissionRepo := repository.NewRolePermissionRepository(db)
 	userRoleRepo := repository.NewUserRoleRepository(db)
 
 	// Service layer
-	userService := services.NewUserService(userRepo)
+	userService := services.NewUserService(userRepo, roleRepo, userRoleRepo)
 	poemService := services.NewPoemService(poemRepo, dynastyRepo)
 	commentService := services.NewCommentService(commentRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
-	rbacService := services.NewRBACService(roleRepo, permissionRepo, rolePermissionRepo, userRoleRepo)
+	rbacService := services.NewRBACService(roleRepo, rolePermissionRepo, userRoleRepo)
 
 	// Handler layer
 	userHandler := handlers.NewUserHandler(userService)
@@ -124,7 +123,6 @@ func initApp(db *gorm.DB) *App {
 func initRBACData(app *App) error {
 	rbacService := services.NewRBACService(
 		repository.NewRoleRepository(app.db),
-		repository.NewPermissionRepository(app.db),
 		repository.NewRolePermissionRepository(app.db),
 		repository.NewUserRoleRepository(app.db),
 	)
@@ -179,13 +177,7 @@ func setupRoutes(r *gin.Engine, app *App) {
 		api.GET("/rbac/roles/:id/permissions", middleware.Auth(), app.rbacMiddleware.RequirePermission("role:read"), app.rbacHandler.GetRolePermissions)
 		api.PUT("/rbac/roles/:id/permissions", middleware.Auth(), app.rbacMiddleware.RequirePermission("role:assign"), app.rbacHandler.AssignPermissionsToRole)
 
-		// 权限管理（需要permission:list权限）
-		api.GET("/rbac/permissions", middleware.Auth(), app.rbacMiddleware.RequirePermission("permission:list"), app.rbacHandler.GetPermissionList)
-		api.GET("/rbac/permissions/all", middleware.Auth(), app.rbacMiddleware.RequirePermission("permission:list"), app.rbacHandler.GetAllPermissions)
-		api.GET("/rbac/permissions/:id", middleware.Auth(), app.rbacMiddleware.RequirePermission("permission:read"), app.rbacHandler.GetPermissionByID)
-		api.POST("/rbac/permissions", middleware.Auth(), app.rbacMiddleware.RequirePermission("permission:create"), app.rbacHandler.CreatePermission)
-		api.PUT("/rbac/permissions/:id", middleware.Auth(), app.rbacMiddleware.RequirePermission("permission:update"), app.rbacHandler.UpdatePermission)
-		api.DELETE("/rbac/permissions/:id", middleware.Auth(), app.rbacMiddleware.RequirePermission("permission:delete"), app.rbacHandler.DeletePermission)
+
 
 		// 用户角色管理（需要role:assign权限）
 		api.GET("/rbac/users/:id/roles", middleware.Auth(), app.rbacMiddleware.RequirePermission("role:read"), app.rbacHandler.GetUserRoles)

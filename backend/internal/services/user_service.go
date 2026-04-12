@@ -12,10 +12,16 @@ import (
 
 type UserService struct {
 	userRepo *repository.UserRepository
+	roleRepo *repository.RoleRepository
+	userRoleRepo *repository.UserRoleRepository
 }
 
-func NewUserService(userRepo *repository.UserRepository) *UserService {
-	return &UserService{userRepo: userRepo}
+func NewUserService(userRepo *repository.UserRepository, roleRepo *repository.RoleRepository, userRoleRepo *repository.UserRoleRepository) *UserService {
+	return &UserService{
+		userRepo: userRepo,
+		roleRepo: roleRepo,
+		userRoleRepo: userRoleRepo,
+	}
 }
 
 // Register 用户注册
@@ -42,13 +48,23 @@ func (s *UserService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 		Username: req.Username,
 		Password: string(hashedPassword),
 		Name:     name,
-		Role:     "user",
 		IsActive: true,
 	}
 
 	err = s.userRepo.Create(user)
 	if err != nil {
 		return nil, err
+	}
+
+	// 为新用户分配默认的 "user" 角色
+	role, err := s.roleRepo.GetByName("user")
+	if err == nil {
+		ur := &models.UserRole{
+			UserID: user.ID,
+			RoleID: role.ID,
+		}
+		// 忽略分配错误的，尽量创建
+		_ = s.userRoleRepo.Create(ur)
 	}
 
 	return s.toUserResponse(user), nil
@@ -74,7 +90,7 @@ func (s *UserService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 	}
 
 	// 生成JWT token
-	token, err := utils.GenerateToken(user.ID, user.Username, user.Role)
+	token, err := utils.GenerateToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +186,9 @@ func (s *UserService) DeleteUser(id uint64) error {
 
 // toUserResponse 转换为响应格式
 func (s *UserService) toUserResponse(user *models.User) *dto.UserResponse {
+	// 查询用户角色
+	roles, _ := s.userRoleRepo.GetRolesByUserID(user.ID)
+
 	return &dto.UserResponse{
 		ID:        user.ID,
 		Username:  user.Username,
@@ -178,7 +197,7 @@ func (s *UserService) toUserResponse(user *models.User) *dto.UserResponse {
 		Gender:    user.Gender,
 		Age:       user.Age,
 		Phone:     user.Phone,
-		Role:      user.Role,
+		Roles:     roles,
 		IsActive:  user.IsActive,
 		CreatedAt: user.CreatedAt,
 	}

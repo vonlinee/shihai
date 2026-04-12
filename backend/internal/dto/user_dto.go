@@ -39,7 +39,7 @@ type UserResponse struct {
 	Gender    string    `json:"gender"`
 	Age       int       `json:"age"`
 	Phone     string    `json:"phone"`
-	Role      string    `json:"role"`
+	Roles     []string  `json:"roles"`
 	IsActive  bool      `json:"isActive"`
 	CreatedAt time.Time `json:"createdAt"`
 }
