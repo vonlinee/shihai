@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"shihai/internal/config"
 	"shihai/internal/handlers"
@@ -24,8 +25,12 @@ type App struct {
 }
 
 func main() {
+	// Parse command-line flags
+	configFile := flag.String("config", "", "path to JSON config file (default: config.json)")
+	flag.Parse()
+
 	// Load configuration
-	cfg := config.Load()
+	cfg := config.Load(*configFile)
 
 	// Set Gin mode
 	gin.SetMode(cfg.Server.Mode)

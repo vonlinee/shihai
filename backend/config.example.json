@@ -1,0 +1,24 @@
+{
+  "server": {
+    "port": "8080",
+    "mode": "debug"
+  },
+  "database": {
+    "host": "localhost",
+    "port": "5432",
+    "user": "postgres",
+    "password": "123456",
+    "dbName": "shihai",
+    "sslMode": "disable"
+  },
+  "redis": {
+    "host": "localhost",
+    "port": "6379",
+    "password": "",
+    "db": 0
+  },
+  "jwt": {
+    "secret": "your-secret-key",
+    "expiresIn": 86400
+  }
+}
