@@ -61,8 +61,8 @@ function PoemsTab() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [formData, setFormData] = useState<{
     title: string; content: string
-    authorId?: number; authorName?: string
-    dynastyId?: number; dynastyName?: string
+    authorId?: string; authorName?: string
+    dynastyId?: string; dynastyName?: string
     genre: string | number | undefined
     translation: string; appreciation: string; annotation: string
   }>({
@@ -74,8 +74,8 @@ function PoemsTab() {
   const { data: poets } = usePoets()
   const { data: genres } = useGenres()
 
-  const dynastyOptions: ComboboxOption[] = (dynasties ?? []).map((d) => ({ value: d.id, label: d.name, description: d.period }))
-  const poetOptions: ComboboxOption[] = (poets ?? []).map((p) => ({ value: p.id, label: p.name, description: p.dynasty?.name }))
+  const dynastyOptions: ComboboxOption[] = (dynasties ?? []).map((d) => ({ value: String(d.id), label: d.name, description: d.period }))
+  const poetOptions: ComboboxOption[] = (poets ?? []).map((p) => ({ value: String(p.id), label: p.name, description: p.dynasty?.name }))
   const genreOptions: ComboboxOption[] = (genres ?? []).map((g) => ({ value: g, label: String(g) }))
 
   const deletePoemMutation = useAdminDeletePoem()
@@ -92,10 +92,8 @@ function PoemsTab() {
       genre: typeof formData.genre === 'number' ? String(formData.genre) : formData.genre || '',
       translation: formData.translation, appreciation: formData.appreciation, annotation: formData.annotation,
     }
-    if (formData.dynastyId) payload.dynastyId = formData.dynastyId
-    else if (formData.dynastyName) payload.dynastyName = formData.dynastyName
-    if (formData.authorId) payload.authorId = formData.authorId
-    else if (formData.authorName) payload.authorName = formData.authorName
+    if (formData.dynastyName) payload.dynastyName = formData.dynastyName
+    if (formData.authorName) payload.authorName = formData.authorName
     createPoemMutation.mutate(payload as any, {
       onSuccess: () => {
         setShowAddDialog(false)
@@ -188,13 +186,13 @@ function PoemsTab() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">作者</label>
                   <Combobox options={poetOptions} value={formData.authorId}
-                    onChange={(val) => { if (typeof val === 'number') setFormData({ ...formData, authorId: val, authorName: undefined }); else setFormData({ ...formData, authorId: undefined, authorName: String(val) }) }}
+                    onChange={(val, option) => { if (option) setFormData({ ...formData, authorId: String(val), authorName: option.label }); else setFormData({ ...formData, authorId: undefined, authorName: String(val || '') }) }}
                     placeholder="选择或输入作者" allowCustom />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">朝代</label>
                   <Combobox options={dynastyOptions} value={formData.dynastyId}
-                    onChange={(val) => { if (typeof val === 'number') setFormData({ ...formData, dynastyId: val, dynastyName: undefined }); else setFormData({ ...formData, dynastyId: undefined, dynastyName: String(val) }) }}
+                    onChange={(val, option) => { if (option) setFormData({ ...formData, dynastyId: String(val), dynastyName: option.label }); else setFormData({ ...formData, dynastyId: undefined, dynastyName: String(val || '') }) }}
                     placeholder="选择或输入朝代" allowCustom />
                 </div>
               </div>

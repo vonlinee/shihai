@@ -88,6 +88,29 @@ export interface PoemVideo {
   createdAt: string;
 }
 
+// Work collection types
+export interface WorkCollectionItem {
+  id: number;
+  collectionId: number;
+  workType: 'poem' | 'novel' | 'article' | string;
+  workId: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkCollection {
+  id: number;
+  title: string;
+  description?: string;
+  coverImage?: string;
+  itemCount: number;
+  isPublished: boolean;
+  items?: WorkCollectionItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Comment types
 export interface Comment {
   id: number;

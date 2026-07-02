@@ -57,6 +57,16 @@ const (
 	PermPoemList   = "poem:list"   // 查看诗词列表
 )
 
+// ------------------------- 作品集模块 (work_collection) ------------------------
+const (
+	PermWorkCollectionCreate     = "work_collection:create"      // 创建作品集
+	PermWorkCollectionRead       = "work_collection:read"        // 查看作品集详情
+	PermWorkCollectionUpdate     = "work_collection:update"      // 更新作品集
+	PermWorkCollectionDelete     = "work_collection:delete"      // 删除作品集
+	PermWorkCollectionList       = "work_collection:list"        // 查看作品集列表
+	PermWorkCollectionItemManage = "work_collection:item_manage" // 管理作品集条目
+)
+
 // ---------------------------- 评论模块 (comment) ----------------------------
 const (
 	PermCommentCreate   = "comment:create"   // 发表评论
@@ -123,17 +133,18 @@ const (
 // ----------------------------- 模块名称常量 ---------------------------------
 // 用于 PermissionDef.Module 字段，避免在元数据中再次出现字符串字面量
 const (
-	ModuleUser         = "user"         // 用户模块
-	ModuleRole         = "role"         // 角色模块
-	ModulePermission   = "permission"   // 权限模块
-	ModulePoem         = "poem"         // 诗词模块
-	ModuleComment      = "comment"      // 评论模块
-	ModuleCorrection   = "correction"   // 纠错模块
-	ModuleAnnouncement = "announcement" // 公告模块
-	ModuleForum        = "forum"        // 论坛模块
-	ModuleQuiz         = "quiz"         // 题目模块
-	ModuleFeedback     = "feedback"     // 反馈模块
-	ModuleSystem       = "system"       // 系统模块
+	ModuleUser           = "user"            // 用户模块
+	ModuleRole           = "role"            // 角色模块
+	ModulePermission     = "permission"      // 权限模块
+	ModulePoem           = "poem"            // 诗词模块
+	ModuleWorkCollection = "work_collection" // 作品集模块
+	ModuleComment        = "comment"         // 评论模块
+	ModuleCorrection     = "correction"      // 纠错模块
+	ModuleAnnouncement   = "announcement"    // 公告模块
+	ModuleForum          = "forum"           // 论坛模块
+	ModuleQuiz           = "quiz"            // 题目模块
+	ModuleFeedback       = "feedback"        // 反馈模块
+	ModuleSystem         = "system"          // 系统模块
 )
 
 // PermissionDef 权限元数据定义
@@ -181,6 +192,13 @@ var AllPermissions = []PermissionDef{
 	{PermPoemUpdate, "更新诗词", ModulePoem, "编辑诗词信息"},
 	{PermPoemDelete, "删除诗词", ModulePoem, "删除诗词"},
 	{PermPoemList, "诗词列表", ModulePoem, "查看诗词列表"},
+	// work collection
+	{PermWorkCollectionCreate, "创建作品集", ModuleWorkCollection, "创建作品集"},
+	{PermWorkCollectionRead, "查看作品集", ModuleWorkCollection, "查看作品集详情"},
+	{PermWorkCollectionUpdate, "更新作品集", ModuleWorkCollection, "更新作品集"},
+	{PermWorkCollectionDelete, "删除作品集", ModuleWorkCollection, "删除作品集"},
+	{PermWorkCollectionList, "作品集列表", ModuleWorkCollection, "查看作品集列表"},
+	{PermWorkCollectionItemManage, "管理作品集条目", ModuleWorkCollection, "添加、排序和移除作品集条目"},
 	// comment
 	{PermCommentCreate, "创建评论", ModuleComment, "发表评论"},
 	{PermCommentRead, "查看评论", ModuleComment, "查看评论"},

@@ -12,6 +12,7 @@ import { AdminLayout } from './components/layout/AdminLayout'
 import { AdminDashboardPage } from './pages/admin/DashboardPage'
 import { AdminUsersPage } from './pages/admin/UsersPage'
 import { AdminPoemsPage } from './pages/admin/PoemsPage'
+import { AdminWorkCollectionsPage } from './pages/admin/WorkCollectionsPage'
 import { AdminCommentsPage } from './pages/admin/CommentsPage'
 import { AdminCorrectionsPage } from './pages/admin/CorrectionsPage'
 
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <AdminDashboardPage /> },
       { path: 'users', element: <AdminUsersPage /> },
       { path: 'poems', element: <AdminPoemsPage /> },
+      { path: 'work-collections', element: <AdminWorkCollectionsPage /> },
       { path: 'comments', element: <AdminCommentsPage /> },
       { path: 'corrections', element: <AdminCorrectionsPage /> },
     ],

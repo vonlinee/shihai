@@ -4,16 +4,45 @@ import (
 	"errors"
 	"shihai/internal/dto"
 	"shihai/internal/models"
-	"shihai/internal/repository"
 )
 
 type PoemService struct {
-	poemRepo    *repository.PoemRepository
-	dynastyRepo *repository.DynastyRepository
-	poetRepo    *repository.PoetRepository
+	poemRepo    poemRepository
+	dynastyRepo dynastyRepository
+	poetRepo    poetRepository
 }
 
-func NewPoemService(poemRepo *repository.PoemRepository, dynastyRepo *repository.DynastyRepository, poetRepo *repository.PoetRepository) *PoemService {
+type poemRepository interface {
+	Create(poem *models.Poem) error
+	GetByID(id uint64) (*models.Poem, error)
+	Update(poem *models.Poem) error
+	Delete(id uint64) error
+	List(page, pageSize int, keyword, dynasty, author, genre string) ([]models.Poem, int64, error)
+	IncrementViews(id uint64) error
+	IncrementLikes(id uint64) error
+	GetRandom(limit int) ([]models.Poem, error)
+	DistinctGenres() ([]string, error)
+}
+
+type dynastyRepository interface {
+	Create(dynasty *models.Dynasty) error
+	GetByID(id uint64) (*models.Dynasty, error)
+	GetByName(name string) (*models.Dynasty, error)
+	Update(dynasty *models.Dynasty) error
+	Delete(id uint64) error
+	List() ([]models.Dynasty, error)
+}
+
+type poetRepository interface {
+	Create(poet *models.Poet) error
+	GetByID(id uint64) (*models.Poet, error)
+	GetByName(name string) (*models.Poet, error)
+	List(keyword string) ([]models.Poet, error)
+	Update(poet *models.Poet) error
+	Delete(id uint64) error
+}
+
+func NewPoemService(poemRepo poemRepository, dynastyRepo dynastyRepository, poetRepo poetRepository) *PoemService {
 	return &PoemService{
 		poemRepo:    poemRepo,
 		dynastyRepo: dynastyRepo,
@@ -51,9 +80,10 @@ func (s *PoemService) GetPoemByID(id uint64) (*dto.PoemResponse, error) {
 
 // CreatePoem 创建诗词
 func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse, error) {
-	// 如果没有朝代ID但有朝代名称，自动查找或创建朝代
+	// 优先按朝代名称解析，避免前端大整数ID精度丢失后触发误判。
 	dynastyID := req.DynastyID
-	if dynastyID == 0 && req.DynastyName != "" {
+	dynastyResolved := false
+	if req.DynastyName != "" {
 		dynasty, err := s.dynastyRepo.GetByName(req.DynastyName)
 		if err != nil {
 			// 朝代不存在，创建新的
@@ -63,9 +93,16 @@ func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse,
 			}
 		}
 		dynastyID = dynasty.ID
+		dynastyResolved = true
 	}
 
 	// 如果没有作者ID但有作者名称，自动查找或创建作者
+	if dynastyID > 0 && !dynastyResolved {
+		if _, err := s.dynastyRepo.GetByID(dynastyID); err != nil {
+			return nil, errors.New("dynasty not found")
+		}
+	}
+
 	authorID := req.AuthorID
 	if authorID == 0 && req.AuthorName != "" {
 		poet, err := s.poetRepo.GetByName(req.AuthorName)
@@ -216,12 +253,7 @@ func (s *PoemService) GetPoetList(keyword string) ([]dto.PoetResponse, error) {
 
 // GetGenreList 获取体裁列表
 func (s *PoemService) GetGenreList() ([]string, error) {
-	var genres []string
-	err := s.poemRepo.DB().Model(&models.Poem{}).
-		Where("genre != '' AND genre IS NOT NULL").
-		Distinct("genre").
-		Pluck("genre", &genres).Error
-	return genres, err
+	return s.poemRepo.DistinctGenres()
 }
 
 // CreateDynasty 创建朝代（如果不存在则创建）

@@ -34,6 +34,21 @@ func (r *PoemRepository) GetByID(id uint64) (*models.Poem, error) {
 	return &poem, nil
 }
 
+func (r *PoemRepository) ExistsByID(id uint64) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.Poem{}).Where("id = ?", id).Count(&count).Error
+	return count > 0, err
+}
+
+func (r *PoemRepository) DistinctGenres() ([]string, error) {
+	var genres []string
+	err := r.db.Model(&models.Poem{}).
+		Where("genre != '' AND genre IS NOT NULL").
+		Distinct("genre").
+		Pluck("genre", &genres).Error
+	return genres, err
+}
+
 // Update 更新诗词
 func (r *PoemRepository) Update(poem *models.Poem) error {
 	return r.db.Save(poem).Error

@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { User, Poem, Announcement, Dynasty, Poet } from '@/types';
+import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem } from '@/types';
 
 // ─── User Admin ──────────────────────────────────────────────────────────────
 
@@ -29,9 +29,9 @@ export interface AdminCreateUserRequest {
 export interface PoemCreateRequest {
   title: string;
   content: string;
-  authorId?: number;
+  authorId?: number | string;
   authorName?: string;
-  dynastyId?: number;
+  dynastyId?: number | string;
   dynastyName?: string;
   genre?: string;
   translation?: string;
@@ -44,14 +44,54 @@ export interface PoemCreateRequest {
 export interface PoemUpdateRequest {
   title?: string;
   content?: string;
-  authorId?: number;
-  dynastyId?: number;
+  authorId?: number | string;
+  dynastyId?: number | string;
   genre?: string;
   translation?: string;
   appreciation?: string;
   annotation?: string;
   audioUrl?: string;
   coverImage?: string;
+}
+
+// ─── Work Collection Admin ───────────────────────────────────────────────────
+
+export interface WorkCollectionListResponse {
+  list: WorkCollection[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface WorkCollectionListParams {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  published?: boolean;
+}
+
+export interface WorkCollectionCreateRequest {
+  title: string;
+  description?: string;
+  coverImage?: string;
+  isPublished?: boolean;
+}
+
+export interface WorkCollectionUpdateRequest {
+  title?: string;
+  description?: string;
+  coverImage?: string;
+  isPublished?: boolean;
+}
+
+export interface WorkCollectionItemCreateRequest {
+  workType: string;
+  workId: number;
+  sortOrder?: number;
+}
+
+export interface WorkCollectionItemUpdateRequest {
+  sortOrder: number;
 }
 
 // ─── Announcement Admin ──────────────────────────────────────────────────────
@@ -86,7 +126,7 @@ export interface DynastyUpdateRequest {
 
 export interface PoetCreateRequest {
   name: string;
-  dynastyId?: number;
+  dynastyId?: number | string;
   biography?: string;
   avatar?: string;
   birthYear?: number;
@@ -95,7 +135,7 @@ export interface PoetCreateRequest {
 
 export interface PoetUpdateRequest {
   name?: string;
-  dynastyId?: number;
+  dynastyId?: number | string;
   biography?: string;
   avatar?: string;
   birthYear?: number;
@@ -131,6 +171,39 @@ export const adminService = {
 
   deletePoem(id: number): Promise<void> {
     return api.delete<void>(`/admin/poems/${id}`);
+  },
+
+  // Work Collections
+  getWorkCollections(params?: WorkCollectionListParams): Promise<WorkCollectionListResponse> {
+    return api.get<WorkCollectionListResponse>('/admin/work-collections', params as Record<string, unknown>);
+  },
+
+  getWorkCollectionById(id: number): Promise<WorkCollection> {
+    return api.get<WorkCollection>(`/admin/work-collections/${id}`);
+  },
+
+  createWorkCollection(data: WorkCollectionCreateRequest): Promise<WorkCollection> {
+    return api.post<WorkCollection>('/admin/work-collections', data);
+  },
+
+  updateWorkCollection(id: number, data: WorkCollectionUpdateRequest): Promise<WorkCollection> {
+    return api.put<WorkCollection>(`/admin/work-collections/${id}`, data);
+  },
+
+  deleteWorkCollection(id: number): Promise<void> {
+    return api.delete<void>(`/admin/work-collections/${id}`);
+  },
+
+  addWorkCollectionItem(collectionId: number, data: WorkCollectionItemCreateRequest): Promise<WorkCollectionItem> {
+    return api.post<WorkCollectionItem>(`/admin/work-collections/${collectionId}/items`, data);
+  },
+
+  updateWorkCollectionItem(collectionId: number, itemId: number, data: WorkCollectionItemUpdateRequest): Promise<WorkCollectionItem> {
+    return api.put<WorkCollectionItem>(`/admin/work-collections/${collectionId}/items/${itemId}`, data);
+  },
+
+  deleteWorkCollectionItem(collectionId: number, itemId: number): Promise<void> {
+    return api.delete<void>(`/admin/work-collections/${collectionId}/items/${itemId}`);
   },
 
   // Announcements

@@ -17,13 +17,14 @@ import (
 
 // App 应用容器
 type App struct {
-	db                  *gorm.DB
-	userHandler         *handlers.UserHandler
-	poemHandler         *handlers.PoemHandler
-	commentHandler      *handlers.CommentHandler
-	announcementHandler *handlers.AnnouncementHandler
-	rbacHandler         *handlers.RBACHandler
-	rbacMiddleware      *middleware.RBACMiddleware
+	db                    *gorm.DB
+	userHandler           *handlers.UserHandler
+	poemHandler           *handlers.PoemHandler
+	commentHandler        *handlers.CommentHandler
+	announcementHandler   *handlers.AnnouncementHandler
+	workCollectionHandler *handlers.WorkCollectionHandler
+	rbacHandler           *handlers.RBACHandler
+	rbacMiddleware        *middleware.RBACMiddleware
 }
 
 func main() {
@@ -90,6 +91,7 @@ func initApp(db *gorm.DB) *App {
 	poetRepo := repository.NewPoetRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
 	announcementRepo := repository.NewAnnouncementRepository(db)
+	workCollectionRepo := repository.NewWorkCollectionRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	rolePermissionRepo := repository.NewRolePermissionRepository(db)
 	userRoleRepo := repository.NewUserRoleRepository(db)
@@ -100,6 +102,7 @@ func initApp(db *gorm.DB) *App {
 	poemService := services.NewPoemService(poemRepo, dynastyRepo, poetRepo)
 	commentService := services.NewCommentService(commentRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
+	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)
 	rbacService := services.NewRBACService(roleRepo, rolePermissionRepo, userRoleRepo, permRepo)
 
 	// Handler layer
@@ -107,19 +110,21 @@ func initApp(db *gorm.DB) *App {
 	poemHandler := handlers.NewPoemHandler(poemService)
 	commentHandler := handlers.NewCommentHandler(commentService)
 	announcementHandler := handlers.NewAnnouncementHandler(announcementService)
+	workCollectionHandler := handlers.NewWorkCollectionHandler(workCollectionService)
 	rbacHandler := handlers.NewRBACHandler(rbacService)
 
 	// Middleware
 	rbacMiddleware := middleware.NewRBACMiddleware(rbacService)
 
 	return &App{
-		db:                  db,
-		userHandler:         userHandler,
-		poemHandler:         poemHandler,
-		commentHandler:      commentHandler,
-		announcementHandler: announcementHandler,
-		rbacHandler:         rbacHandler,
-		rbacMiddleware:      rbacMiddleware,
+		db:                    db,
+		userHandler:           userHandler,
+		poemHandler:           poemHandler,
+		commentHandler:        commentHandler,
+		announcementHandler:   announcementHandler,
+		workCollectionHandler: workCollectionHandler,
+		rbacHandler:           rbacHandler,
+		rbacMiddleware:        rbacMiddleware,
 	}
 }
 
@@ -270,6 +275,16 @@ func setupRoutes(r *gin.Engine, app *App) {
 			admin.POST("/poets", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreatePoet)
 			admin.PUT("/poets/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoet)
 			admin.DELETE("/poets/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeletePoet)
+
+			// Work Collections
+			admin.GET("/work-collections", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionList), app.workCollectionHandler.GetWorkCollections)
+			admin.GET("/work-collections/:id", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionRead), app.workCollectionHandler.GetWorkCollectionByID)
+			admin.POST("/work-collections", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionCreate), app.workCollectionHandler.CreateWorkCollection)
+			admin.PUT("/work-collections/:id", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionUpdate), app.workCollectionHandler.UpdateWorkCollection)
+			admin.DELETE("/work-collections/:id", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionDelete), app.workCollectionHandler.DeleteWorkCollection)
+			admin.POST("/work-collections/:id/items", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionItemManage), app.workCollectionHandler.AddWorkCollectionItem)
+			admin.PUT("/work-collections/:id/items/:itemId", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionItemManage), app.workCollectionHandler.UpdateWorkCollectionItem)
+			admin.DELETE("/work-collections/:id/items/:itemId", app.rbacMiddleware.RequirePermission(models.PermWorkCollectionItemManage), app.workCollectionHandler.DeleteWorkCollectionItem)
 
 			// Announcements
 			admin.POST("/announcements", app.rbacMiddleware.RequirePermission(models.PermAnnouncementCreate), app.announcementHandler.CreateAnnouncement)

@@ -103,6 +103,7 @@ var RolePermissionMap = map[string][]string{
 	RoleEditor: {
 		PermPermissionList, PermPermissionRead,
 		PermPoemCreate, PermPoemRead, PermPoemUpdate, PermPoemDelete, PermPoemList,
+		PermWorkCollectionCreate, PermWorkCollectionRead, PermWorkCollectionUpdate, PermWorkCollectionDelete, PermWorkCollectionList, PermWorkCollectionItemManage,
 		PermCommentRead, PermCommentDelete, PermCommentList, PermCommentModerate,
 		PermCorrectionRead, PermCorrectionReview, PermCorrectionList,
 		PermAnnouncementCreate, PermAnnouncementRead, PermAnnouncementUpdate, PermAnnouncementList,
@@ -130,7 +131,7 @@ var RolePermissionMap = map[string][]string{
 		PermFeedbackCreate, PermFeedbackRead,
 	},
 }
+
 // 权限点定义请参见 permission_codes.go。
 // 启动同步逻辑在 services/rbac_service.go 的 InitDefaultRolesAndPermissions 中，
 // 会从 AllPermissions 读取所有权限点并 UPSERT 到 permission 表。
-
