@@ -226,21 +226,128 @@ import (
 
 ### 3.3 注释规范
 
-- 所有导出的类型、函数、方法、变量都必须有注释，以名称开头。
-- 复杂逻辑、非直觉代码必须添加行内注释。
+良好的注释可以降低项目交接、长期维护和重新熟悉代码时的理解成本。即使命名清晰，函数、结构体和关键逻辑的真实业务意图也可能在数月后变得模糊；注释应帮助自己和后续协作者快速理解代码为什么这样写、如何正确使用、变更时需要注意什么。
+
+#### 3.3.1 基本要求
+
+- 注释语言必须在团队内保持统一；本项目默认使用中文注释，如团队统一切换为英文，应整体调整，避免中英文混用。
+- 注释统一使用单行注释，`//` 后必须保留一个空格。
+- Go Doc 注释首句必须以被注释的包、类型、函数、方法或变量名称开头。
+- 注释应解释业务含义、使用方式、边界条件和错误场景，避免只重复代码本身。
+- 所有导出的类型、函数、方法、变量都必须有注释；包内重要的类型、函数、方法和复杂逻辑也必须补充注释。
+
+#### 3.3.2 包注释
+
+- 每个包至少需要一个包注释，可放在同包任意一个源文件中。
+- 包注释放在 `package` 语句之前，用于简短描述包的职责。
+- 包注释应以 `Package {包名}` 开头，符合 Go Doc 风格。
 
 ```go
-// UserService 提供用户相关的业务逻辑处理
-type UserService struct { ... }
+// Package services 提供业务服务层能力，负责组织业务规则并协调仓储层访问。
+package services
+```
 
-// GetByID 根据用户 ID 查询用户信息，若用户不存在返回 nil 和错误
-func (s *UserService) GetByID(id uint64) (*models.User, error) { ... }
+#### 3.3.3 结构体和接口注释
+
+- 每个结构体或接口都应有整体说明，说明其职责和使用场景。
+- 结构体字段应补充字段含义，避免只从字段名猜测业务语义；字段注释建议使用 `FieldName 字段含义。` 格式，避免“表示”等冗余表述。
+- 接口方法应说明方法用途；当参数或返回值不直观时，应补充说明。
+
+```go
+// User 定义用户登录所需的核心信息。
+type User struct {
+    UserName string // UserName 用户登录名。
+    Password string // Password 用户登录密码的加密值。
+}
+
+// UserService 定义用户登录和退出相关能力。
+type UserService interface {
+    // Login 校验用户凭证并创建登录会话。
+    Login(username string, password string) error
+
+    // Logout 终止用户当前登录会话。
+    Logout(userID uint64) error
+}
+```
+
+#### 3.3.4 函数和方法注释
+
+- 每个函数或方法都应有注释，首句以函数或方法名称开头，并简要描述其功能。
+- 注释应说明输入参数、返回值和可能的错误场景；说明方式使用 Go Doc 自然语言，不使用 JavaDoc 风格的 `@Param`、`@Return`。
+- 函数或方法注释应包含创建作者和创建时间；涉及变更时，应补充修改作者、修改时间和修改说明。
+
+```go
+// ValidateAuthorName 校验作者名称是否可用于创建或更新作者。
+// Create: zhangsan 2026-07-05 10:00
+// Modified: lisi 2026-07-05 11:30
+// Modify description: 增加作者名称最大长度校验。
+//
+// name 待校验的作者名称，调用方传入前无需自行去除首尾空白。
+// 返回规范化后的作者名称；当名称为空或超过最大长度时返回错误。
+func ValidateAuthorName(name string) (string, error) {
+    // ...
+}
+```
+
+#### 3.3.5 代码逻辑注释
+
+- 存在业务含义、特殊分支、边界处理或非直观意图的代码块必须添加注释。
+- 逻辑注释应解释“为什么这样处理”，避免写成对代码逐行翻译。
+
+```go
+// 1118 是业务配置中的纪念日期，需要触发专属提醒。
+if birthday == 1118 {
+    // ...
+}
 ```
 
 ### 3.4 函数长度
 
 - 单个函数原则上不超过 **80 行**，超出时应拆分为子函数。
 - 函数只做一件事，保持单一职责。
+- 实现功能时应优先识别可复用逻辑，并抽取为语义清晰的具名方法，避免在 Handler、Service 或 Repository 中堆叠重复代码。
+- 新增或抽取的方法必须编写符合 Go 风格的详细注释，首句以方法名开头，并说明方法功能、参数含义、返回值含义以及可能的错误场景；注释应帮助调用方理解如何正确使用该方法，避免只写空泛描述。
+
+```go
+// 正确：将通用校验逻辑抽取为具名方法，并使用符合 Go 风格的注释说明功能、参数、返回值和错误场景。
+
+// validateAuthorName 校验作者名称是否可用于创建或更新作者。
+//
+// name 待校验的作者名称，调用方传入前无需自行去除首尾空白。
+// 返回规范化后的作者名称；当名称为空或超过最大长度时返回错误。
+func validateAuthorName(name string) (string, error) {
+    trimmedName := strings.TrimSpace(name)
+    if trimmedName == "" {
+        return "", errors.New("作者名称不能为空")
+    }
+    if len([]rune(trimmedName)) > 50 {
+        return "", errors.New("作者名称不能超过 50 个字符")
+    }
+    return trimmedName, nil
+}
+```
+
+```go
+// 错误：在业务方法中重复堆叠校验逻辑，且抽取的方法缺少有效注释。
+
+func (s *AuthorService) Create(req dto.CreateAuthorRequest) error {
+    name := strings.TrimSpace(req.Name)
+    if name == "" {
+        return errors.New("作者名称不能为空")
+    }
+    if len([]rune(name)) > 50 {
+        return errors.New("作者名称不能超过 50 个字符")
+    }
+    // ...
+    return nil
+}
+
+// checkName 检查名称。
+func checkName(name string) error {
+    // 注释未说明参数处理方式、返回值语义和错误场景，调用方仍需阅读实现才能正确使用。
+    return nil
+}
+```
 
 ### 3.5 错误处理
 
@@ -420,15 +527,19 @@ if err != nil {
 所有业务模型必须内嵌 `BaseModel`，自动获得主键、时间戳和软删除能力：
 
 ```go
+// BaseModel 定义所有业务模型共享的基础字段。
 type BaseModel struct {
-    ID        uint64         `json:"id" gorm:"primaryKey"`
-    CreatedAt time.Time      `json:"createdAt"`
-    UpdatedAt time.Time      `json:"updatedAt"`
-    DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
-    CreatedBy uint64         `json:"createdBy" gorm:"default:0"`
-    UpdatedBy uint64         `json:"updatedBy" gorm:"default:0"`
+    ID        uint64         `json:"id" gorm:"primaryKey"`          // ID 业务数据主键。
+    CreatedAt time.Time      `json:"createdAt"`                     // CreatedAt 数据创建时间。
+    UpdatedAt time.Time      `json:"updatedAt"`                     // UpdatedAt 数据最后更新时间。
+    DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`                // DeletedAt 软删除时间。
+    CreatedBy uint64         `json:"createdBy" gorm:"default:0"`    // CreatedBy 创建人用户 ID。
+    UpdatedBy uint64         `json:"updatedBy" gorm:"default:0"`    // UpdatedBy 最后更新人用户 ID。
 }
 ```
+
+- 每个数据模型结构体都必须添加 Go 风格注释，首句以模型名称开头，说明模型对应的业务含义。
+- 数据模型中的每个字段都必须添加字段注释，说明字段业务含义；字段注释和 `gorm:"comment:..."` 分别服务于代码阅读和数据库结构说明，不能互相替代。
 
 ### 7.2 主键规范
 
@@ -437,11 +548,16 @@ type BaseModel struct {
 
 ### 7.3 字段标签规范
 
-每个字段必须同时添加 `json` 和 `gorm` 标签：
+每个字段必须同时添加 `json`、`gorm` 标签和字段注释：
 
 ```go
-Title   string `json:"title" gorm:"not null;size:200;comment:诗词标题"`
-Content string `json:"content" gorm:"not null;type:text;comment:诗词内容"`
+// Poem 定义诗词作品的数据模型。
+type Poem struct {
+    BaseModel
+
+    Title   string `json:"title" gorm:"not null;size:200;comment:诗词标题"`  // Title 诗词标题。
+    Content string `json:"content" gorm:"not null;type:text;comment:诗词内容"` // Content 诗词正文内容。
+}
 ```
 
 - 密码等敏感字段 JSON 序列化设为 `json:"-"`。
