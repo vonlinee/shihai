@@ -25,12 +25,13 @@ backend/
 │
 ├── .idea/                      # JetBrains IDE configuration files (local)
 ├── bin/                        # Compiled executables
-├── Golang开发规范.md           # Go development standards and guidelines
 ├── config.json                 # Active configuration properties (local)
 ├── config.example.json         # Example structure for application configuration
 ├── go.mod                      # Go module dependencies file
 └── go.sum                      # Go module checksums file
 ```
+
+Project-level backend and Go development guidelines have been moved to `docs/guidelines/`.
 
 ## Architecture Layers Overview
 

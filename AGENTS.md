@@ -15,7 +15,17 @@
 - 后端位于 `backend/`，主要使用 Go。
 - 前端位于 `frontend/`，主要使用 React、TypeScript 和 Vite。
 - 数据库脚本位于 `database/`。
-- 项目文档位于 `docs/`。
+- 项目长期开发指南位于 `docs/guidelines/`。
+
+## 项目文档阅读顺序
+
+开始任务前，先根据任务范围阅读 [项目开发指南索引](docs/guidelines/README.md)。
+
+- 涉及整体架构、模块边界或新增功能时，先读 [系统设计文档](docs/guidelines/system-design.md) 和 [需求设计文档](docs/guidelines/requirements-design.md)。
+- 涉及后端时，读 [后端指南](docs/guidelines/backend-guidelines.md) 和 [Go 开发规范](docs/guidelines/go-development-guidelines.md)。
+- 涉及前端时，读 [前端指南](docs/guidelines/frontend-guidelines.md)。
+- 涉及提交代码时，读 [Git 提交规范](docs/guidelines/git-commit-guidelines.md)。
+- 这些文档是项目级约束；若文档与用户当前明确指令冲突，以用户当前明确指令为准，并在回复中说明取舍。
 
 ## 代码修改规则
 
@@ -27,7 +37,7 @@
 
 ## Git 提交规范
 
-提交前必须阅读并遵守 [Git 提交规范](docs/git-commit-guidelines.md)。
+提交前必须阅读并遵守 [Git 提交规范](docs/guidelines/git-commit-guidelines.md)。
 
 提交信息必须使用 `type(scope): 中文说明` 格式，例如：
 

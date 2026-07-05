@@ -4,6 +4,77 @@
 
 ---
 
+## 项目概览
+
+识海前端基于 React、TypeScript、Vite、Tailwind CSS、TanStack Query、Radix UI 和 lucide-react 构建。
+
+### 技术栈
+
+- React
+- TypeScript
+- Vite
+- React Router
+- TanStack Query
+- Tailwind CSS
+- Radix UI
+- lucide-react
+
+### 核心目录
+
+```text
+frontend/
+├── src/components/ # 通用组件和布局组件
+├── src/hooks/      # React hooks 和数据请求 hooks
+├── src/pages/      # 页面级组件
+├── src/services/   # API 客户端和服务封装
+├── src/stores/     # 前端状态管理
+├── src/styles/     # 全局样式
+├── src/types/      # TypeScript 类型定义
+├── src/utils/      # 通用工具
+├── src/main.tsx    # 应用入口
+└── src/router.tsx  # 路由配置
+```
+
+### 开发约定
+
+- 页面放在 `src/pages/`，可复用 UI 放在 `src/components/`。
+- API 调用集中在 `src/services/`，页面通过 hooks 或服务层调用接口。
+- 路由变更同步更新 `src/router.tsx`。
+- 类型优先维护在 `src/types/` 或相关服务文件中，避免重复定义。
+- 后台管理页面应保持信息密度、可扫描性和稳定交互，不做营销式落地页。
+
+### 本地运行
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite 开发服务器默认端口为 `3000`，`/api` 会代理到 `http://localhost:8080`。
+
+### 常用验证
+
+```bash
+cd frontend
+npm run build
+```
+
+如果修改涉及代码质量规则，可额外运行：
+
+```bash
+cd frontend
+npm run lint
+```
+
+### 修改前阅读
+
+- 新增或调整前端页面、组件、路由、API 调用：阅读本文档。
+- 修改后台管理功能：额外阅读 [系统设计文档](system-design.md) 中的后台和权限相关内容。
+- 修改跨端功能：同时阅读 [后端指南](backend-guidelines.md)、[Go 开发规范](go-development-guidelines.md) 和后端相关规范。
+
+---
+
 ## 目录
 
 1. [项目结构规范](#一项目结构规范)
@@ -18,7 +89,7 @@
 10. [表单规范](#十表单规范)
 11. [类型定义规范](#十一类型定义规范)
 12. [代码质量规范](#十二代码质量规范)
-13. [Git 提交规范](#十三git-提交规范)
+13. [Git 提交与分支管理](#十三git-提交与分支管理)
 
 ---
 
@@ -668,32 +739,13 @@ import PoemCard from './PoemCard';
 
 ---
 
-## 十三、Git 提交规范
+## 十三、Git 提交与分支管理
 
-遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范，格式与后端保持一致：
+### 提交信息
 
-```
-<type>(<scope>): <subject>
-```
+提交信息的格式、类型和示例以 [Git 提交规范](git-commit-guidelines.md) 为准。
 
-| type | 说明 |
-|------|------|
-| `feat` | 新功能 |
-| `fix` | 修复 Bug |
-| `refactor` | 重构（非 feat/fix） |
-| `style` | 样式变更（UI 调整，不影响逻辑） |
-| `docs` | 文档变更 |
-| `test` | 测试相关 |
-| `chore` | 构建、依赖等杂项 |
-
-scope 使用前端模块名（kebab-case）：
-
-```
-feat(poem-list): 添加诗词列表筛选功能
-fix(auth): 修复 Token 过期未跳转登录的问题
-style(poem-detail): 优化诗词详情页移动端布局
-refactor(http-client): 重构请求拦截器错误处理逻辑
-```
+前端相关提交的 `scope` 可以使用业务模块或前端模块名，例如 `frontend`、`admin`、`auth`、`poem-list`、`poem-detail`、`http-client`。
 
 ### 分支管理
 

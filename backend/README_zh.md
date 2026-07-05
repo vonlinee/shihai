@@ -25,12 +25,13 @@ backend/
 │
 ├── .idea/                      # JetBrains IDE 配置文件 (仅限本地开发环境)
 ├── bin/                        # 编译后生成的可执行文件目录
-├── Golang开发规范.md           # Go 语言项目开发规范及指导手册
 ├── config.json                 # 当前活动的配置文件
 ├── config.example.json         # 配置文件示例
 ├── go.mod                      # Go module 依赖文件
 └── go.sum                      # Go module 校验和文件
 ```
+
+项目级后端开发规范和 Go 开发规范已统一移动到 `docs/guidelines/`。
 
 ## 架构层级概述
 

@@ -4,6 +4,68 @@
 
 ---
 
+## 项目概览
+
+识海后端基于 Go、Gin、GORM 和 PostgreSQL 构建，采用分层架构组织 HTTP 处理、业务逻辑和数据访问。
+
+### 技术栈
+
+- Go
+- Gin
+- GORM
+- PostgreSQL
+
+### 核心目录
+
+```text
+backend/
+├── cmd/server/          # 服务启动入口
+├── internal/config/     # 配置加载和数据库初始化
+├── internal/dto/        # API 请求和响应 DTO
+├── internal/handlers/   # HTTP 处理器
+├── internal/middleware/ # 鉴权、权限、CORS 等中间件
+├── internal/models/     # GORM 模型和领域模型
+├── internal/repository/ # 数据访问层
+├── internal/services/   # 业务逻辑层
+└── pkg/utils/           # 通用工具
+```
+
+### 分层约定
+
+- Handler 层只处理 HTTP 输入输出、参数绑定、状态码和响应格式。
+- Service 层承载业务规则、流程编排和事务边界。
+- Repository 层封装数据库读写，不承载业务判断。
+- DTO 负责接口输入输出结构，不直接复用数据库模型作为外部契约。
+- Model 负责数据库结构、关联关系和持久化字段定义。
+
+### 本地运行
+
+```bash
+cd backend
+go mod download
+go run cmd/server/main.go
+```
+
+启动前复制 `config.example.json` 为 `config.json`，并配置 PostgreSQL 连接信息。
+
+### 常用验证
+
+```bash
+cd backend
+gofmt -w <changed-go-files>
+go test ./...
+```
+
+涉及数据库模型、服务层、仓储层或权限逻辑时，优先补充对应单元测试。
+
+### 修改前阅读
+
+- 新增或调整后端功能：阅读本文档和 [Go 开发规范](go-development-guidelines.md)。
+- 调整系统模块、权限或数据关系：额外阅读 [系统设计文档](system-design.md)。
+- 调整业务流程：额外阅读 [需求设计文档](requirements-design.md)。
+
+---
+
 ## 目录
 
 1. [项目结构规范](#一项目结构规范)
@@ -17,7 +79,7 @@
 9. [认证与权限规范](#九认证与权限规范)
 10. [日志规范](#十日志规范)
 11. [配置管理规范](#十一配置管理规范)
-12. [Git 提交规范](#十二git-提交规范)
+12. [Git 提交与分支管理](#十二git-提交与分支管理)
 13. [测试规范](#十三测试规范)
 
 ---
@@ -504,35 +566,13 @@ type JWTConfig struct {
 
 ---
 
-## 十二、Git 提交规范
+## 十二、Git 提交与分支管理
 
-### 12.1 提交信息格式
+### 12.1 提交信息
 
-遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+提交信息的格式、类型和示例以 [Git 提交规范](git-commit-guidelines.md) 为准。
 
-```
-<type>(<scope>): <subject>
-
-[可选 body]
-```
-
-| type     | 说明                       |
-|----------|----------------------------|
-| `feat`   | 新功能                     |
-| `fix`    | 修复 Bug                   |
-| `refactor` | 重构（非 feat/fix）       |
-| `docs`   | 文档变更                   |
-| `style`  | 代码格式（不影响逻辑）      |
-| `test`   | 添加或修改测试              |
-| `chore`  | 构建工具、依赖等杂项变更   |
-
-**示例：**
-
-```
-feat(poem): 添加诗词收藏功能
-fix(auth): 修复 Token 刷新时的竞态问题
-docs(api): 更新用户接口文档
-```
+后端相关提交的 `scope` 优先使用业务或技术模块名，例如 `backend`、`poem`、`auth`、`rbac`、`database`、`config`。
 
 ### 12.2 分支管理
 
