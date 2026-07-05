@@ -44,12 +44,19 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
+	// Auto Migrate Database Model
+	err = config.AutoMigrateDatabaseModel(db, err)
+	if err != nil {
+		log.Fatal("Failed to auto migrate database model:", err)
+	}
+
 	// Initialize application
 	app := initApp(db)
 
 	// Initialize default roles and permissions
 	if err := initRBACData(app); err != nil {
 		log.Println("Warning: Failed to initialize RBAC data:", err)
+		return
 	}
 
 	// Create Gin router
@@ -88,6 +95,7 @@ func initApp(db *gorm.DB) *App {
 	userRepo := repository.NewUserRepository(db)
 	poemRepo := repository.NewPoemRepository(db)
 	dynastyRepo := repository.NewDynastyRepository(db)
+	authorRepo := repository.NewAuthorRepository(db)
 	poetRepo := repository.NewPoetRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
 	announcementRepo := repository.NewAnnouncementRepository(db)
@@ -99,7 +107,7 @@ func initApp(db *gorm.DB) *App {
 
 	// Service layer
 	userService := services.NewUserService(userRepo, roleRepo, userRoleRepo)
-	poemService := services.NewPoemService(poemRepo, dynastyRepo, poetRepo)
+	poemService := services.NewPoemService(poemRepo, dynastyRepo, authorRepo, poetRepo)
 	commentService := services.NewCommentService(commentRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
 	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)

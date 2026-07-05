@@ -12,8 +12,9 @@ import (
 func TestCreatePoemRejectsMissingDynastyBeforeCreatingPoet(t *testing.T) {
 	poemRepo := &fakePoemRepository{}
 	dynastyRepo := &fakeDynastyRepository{}
+	authorRepo := &fakeAuthorRepository{}
 	poetRepo := &fakePoetRepository{}
-	service := NewPoemService(poemRepo, dynastyRepo, poetRepo)
+	service := NewPoemService(poemRepo, dynastyRepo, authorRepo, poetRepo)
 
 	_, err := service.CreatePoem(&dto.PoemCreateRequest{
 		Title:      "测试",
@@ -28,6 +29,9 @@ func TestCreatePoemRejectsMissingDynastyBeforeCreatingPoet(t *testing.T) {
 	if poetRepo.createCalls != 0 {
 		t.Fatalf("poet create calls = %d, want 0", poetRepo.createCalls)
 	}
+	if authorRepo.createCalls != 0 {
+		t.Fatalf("author create calls = %d, want 0", authorRepo.createCalls)
+	}
 	if poemRepo.createCalls != 0 {
 		t.Fatalf("poem create calls = %d, want 0", poemRepo.createCalls)
 	}
@@ -40,8 +44,9 @@ func TestCreatePoemPrefersDynastyNameOverStaleDynastyID(t *testing.T) {
 			"Tang": {BaseModel: models.BaseModel{ID: 1}, Name: "Tang"},
 		},
 	}
+	authorRepo := &fakeAuthorRepository{}
 	poetRepo := &fakePoetRepository{}
-	service := NewPoemService(poemRepo, dynastyRepo, poetRepo)
+	service := NewPoemService(poemRepo, dynastyRepo, authorRepo, poetRepo)
 
 	_, err := service.CreatePoem(&dto.PoemCreateRequest{
 		Title:       "test",
@@ -54,8 +59,17 @@ func TestCreatePoemPrefersDynastyNameOverStaleDynastyID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatePoem error = %v, want nil", err)
 	}
+	if authorRepo.createdName != "Li Bai" {
+		t.Fatalf("created author name = %q, want Li Bai", authorRepo.createdName)
+	}
+	if poetRepo.createdAuthorID != 1 {
+		t.Fatalf("poet author ID = %d, want 1", poetRepo.createdAuthorID)
+	}
 	if poetRepo.createdDynastyID != 1 {
 		t.Fatalf("poet dynasty ID = %d, want 1", poetRepo.createdDynastyID)
+	}
+	if poemRepo.createdAuthorID != 1 {
+		t.Fatalf("poem author ID = %d, want 1", poemRepo.createdAuthorID)
 	}
 	if poemRepo.createdDynastyID != 1 {
 		t.Fatalf("poem dynasty ID = %d, want 1", poemRepo.createdDynastyID)
@@ -64,11 +78,13 @@ func TestCreatePoemPrefersDynastyNameOverStaleDynastyID(t *testing.T) {
 
 type fakePoemRepository struct {
 	createCalls      int
+	createdAuthorID  uint64
 	createdDynastyID uint64
 }
 
 func (r *fakePoemRepository) Create(poem *models.Poem) error {
 	r.createCalls++
+	r.createdAuthorID = poem.AuthorID
 	r.createdDynastyID = poem.DynastyID
 	poem.ID = 1
 	return nil
@@ -146,13 +162,47 @@ func (r *fakeDynastyRepository) List() ([]models.Dynasty, error) {
 	return nil, nil
 }
 
+type fakeAuthorRepository struct {
+	createCalls int
+	createdName string
+}
+
+func (r *fakeAuthorRepository) Create(author *models.Author) error {
+	r.createCalls++
+	r.createdName = author.Name
+	author.ID = 1
+	return nil
+}
+
+func (r *fakeAuthorRepository) GetByID(id uint64) (*models.Author, error) {
+	return &models.Author{BaseModel: models.BaseModel{ID: id}}, nil
+}
+
+func (r *fakeAuthorRepository) GetByName(name string) (*models.Author, error) {
+	return nil, errors.New("not found")
+}
+
+func (r *fakeAuthorRepository) List(keyword string) ([]models.Author, error) {
+	return nil, nil
+}
+
+func (r *fakeAuthorRepository) Update(author *models.Author) error {
+	return nil
+}
+
+func (r *fakeAuthorRepository) Delete(id uint64) error {
+	return nil
+}
+
 type fakePoetRepository struct {
 	createCalls      int
+	createdAuthorID  uint64
 	createdDynastyID uint64
 }
 
 func (r *fakePoetRepository) Create(poet *models.Poet) error {
 	r.createCalls++
+	r.createdAuthorID = poet.AuthorID
 	r.createdDynastyID = poet.DynastyID
 	poet.ID = 1
 	return nil
@@ -162,7 +212,7 @@ func (r *fakePoetRepository) GetByID(id uint64) (*models.Poet, error) {
 	return &models.Poet{BaseModel: models.BaseModel{ID: id}}, nil
 }
 
-func (r *fakePoetRepository) GetByName(name string) (*models.Poet, error) {
+func (r *fakePoetRepository) GetByAuthorID(authorID uint64) (*models.Poet, error) {
 	return nil, errors.New("not found")
 }
 

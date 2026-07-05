@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+
 	"shihai/internal/dto"
 	"shihai/internal/models"
 )
@@ -9,6 +10,7 @@ import (
 type PoemService struct {
 	poemRepo    poemRepository
 	dynastyRepo dynastyRepository
+	authorRepo  authorRepository
 	poetRepo    poetRepository
 }
 
@@ -33,87 +35,65 @@ type dynastyRepository interface {
 	List() ([]models.Dynasty, error)
 }
 
+type authorRepository interface {
+	Create(author *models.Author) error
+	GetByID(id uint64) (*models.Author, error)
+	GetByName(name string) (*models.Author, error)
+	List(keyword string) ([]models.Author, error)
+	Update(author *models.Author) error
+	Delete(id uint64) error
+}
+
 type poetRepository interface {
 	Create(poet *models.Poet) error
 	GetByID(id uint64) (*models.Poet, error)
-	GetByName(name string) (*models.Poet, error)
+	GetByAuthorID(authorID uint64) (*models.Poet, error)
 	List(keyword string) ([]models.Poet, error)
 	Update(poet *models.Poet) error
 	Delete(id uint64) error
 }
 
-func NewPoemService(poemRepo poemRepository, dynastyRepo dynastyRepository, poetRepo poetRepository) *PoemService {
+func NewPoemService(poemRepo poemRepository, dynastyRepo dynastyRepository, authorRepo authorRepository, poetRepo poetRepository) *PoemService {
 	return &PoemService{
 		poemRepo:    poemRepo,
 		dynastyRepo: dynastyRepo,
+		authorRepo:  authorRepo,
 		poetRepo:    poetRepo,
 	}
 }
 
-// GetPoemList 获取诗词列表
 func (s *PoemService) GetPoemList(req *dto.PoemListRequest) ([]dto.PoemResponse, int64, error) {
 	poems, total, err := s.poemRepo.List(req.Page, req.PageSize, req.Keyword, req.Dynasty, req.Author, req.Genre)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	var responses []dto.PoemResponse
+	responses := make([]dto.PoemResponse, 0, len(poems))
 	for _, poem := range poems {
 		responses = append(responses, *s.toPoemResponse(&poem))
 	}
-
 	return responses, total, nil
 }
 
-// GetPoemByID 根据ID获取诗词
 func (s *PoemService) GetPoemByID(id uint64) (*dto.PoemResponse, error) {
 	poem, err := s.poemRepo.GetByID(id)
 	if err != nil {
 		return nil, errors.New("poem not found")
 	}
 
-	// 增加浏览量
-	s.poemRepo.IncrementViews(id)
-
+	_ = s.poemRepo.IncrementViews(id)
 	return s.toPoemResponse(poem), nil
 }
 
-// CreatePoem 创建诗词
 func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse, error) {
-	// 优先按朝代名称解析，避免前端大整数ID精度丢失后触发误判。
-	dynastyID := req.DynastyID
-	dynastyResolved := false
-	if req.DynastyName != "" {
-		dynasty, err := s.dynastyRepo.GetByName(req.DynastyName)
-		if err != nil {
-			// 朝代不存在，创建新的
-			dynasty = &models.Dynasty{Name: req.DynastyName}
-			if createErr := s.dynastyRepo.Create(dynasty); createErr != nil {
-				return nil, createErr
-			}
-		}
-		dynastyID = dynasty.ID
-		dynastyResolved = true
+	dynastyID, err := s.resolveDynastyID(req.DynastyID, req.DynastyName)
+	if err != nil {
+		return nil, err
 	}
 
-	// 如果没有作者ID但有作者名称，自动查找或创建作者
-	if dynastyID > 0 && !dynastyResolved {
-		if _, err := s.dynastyRepo.GetByID(dynastyID); err != nil {
-			return nil, errors.New("dynasty not found")
-		}
-	}
-
-	authorID := req.AuthorID
-	if authorID == 0 && req.AuthorName != "" {
-		poet, err := s.poetRepo.GetByName(req.AuthorName)
-		if err != nil {
-			// 作者不存在，创建新的
-			poet = &models.Poet{Name: req.AuthorName, DynastyID: dynastyID}
-			if createErr := s.poetRepo.Create(poet); createErr != nil {
-				return nil, createErr
-			}
-		}
-		authorID = poet.ID
+	authorID, err := s.resolveAuthorID(req.AuthorID, req.AuthorName, dynastyID)
+	if err != nil {
+		return nil, err
 	}
 
 	poem := &models.Poem{
@@ -129,23 +109,18 @@ func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse,
 		CoverImage:   req.CoverImage,
 	}
 
-	err := s.poemRepo.Create(poem)
-	if err != nil {
+	if err := s.poemRepo.Create(poem); err != nil {
 		return nil, err
 	}
-
-	// 重新获取以加载关联数据
 	return s.GetPoemByID(poem.ID)
 }
 
-// UpdatePoem 更新诗词
 func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.PoemResponse, error) {
 	poem, err := s.poemRepo.GetByID(id)
 	if err != nil {
 		return nil, errors.New("poem not found")
 	}
 
-	// 更新字段
 	if req.Title != "" {
 		poem.Title = req.Title
 	}
@@ -177,47 +152,40 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 		poem.CoverImage = req.CoverImage
 	}
 
-	err = s.poemRepo.Update(poem)
-	if err != nil {
+	if err := s.poemRepo.Update(poem); err != nil {
 		return nil, err
 	}
-
 	return s.toPoemResponse(poem), nil
 }
 
-// DeletePoem 删除诗词
 func (s *PoemService) DeletePoem(id uint64) error {
 	return s.poemRepo.Delete(id)
 }
 
-// LikePoem 点赞诗词
 func (s *PoemService) LikePoem(id uint64) error {
 	return s.poemRepo.IncrementLikes(id)
 }
 
-// GetRandomPoems 随机获取诗词
 func (s *PoemService) GetRandomPoems(limit int) ([]dto.PoemResponse, error) {
 	poems, err := s.poemRepo.GetRandom(limit)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []dto.PoemResponse
+	responses := make([]dto.PoemResponse, 0, len(poems))
 	for _, poem := range poems {
 		responses = append(responses, *s.toPoemResponse(&poem))
 	}
-
 	return responses, nil
 }
 
-// GetDynastyList 获取朝代列表
 func (s *PoemService) GetDynastyList() ([]dto.DynastyResponse, error) {
 	dynasties, err := s.dynastyRepo.List()
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []dto.DynastyResponse
+	responses := make([]dto.DynastyResponse, 0, len(dynasties))
 	for _, dynasty := range dynasties {
 		responses = append(responses, dto.DynastyResponse{
 			ID:          dynasty.ID,
@@ -226,45 +194,33 @@ func (s *PoemService) GetDynastyList() ([]dto.DynastyResponse, error) {
 			Description: dynasty.Description,
 		})
 	}
-
 	return responses, nil
 }
 
-// GetPoetList 获取诗人列表
 func (s *PoemService) GetPoetList(keyword string) ([]dto.PoetResponse, error) {
 	poets, err := s.poetRepo.List(keyword)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []dto.PoetResponse
+	responses := make([]dto.PoetResponse, 0, len(poets))
 	for _, poet := range poets {
-		responses = append(responses, dto.PoetResponse{
-			ID:        poet.ID,
-			Name:      poet.Name,
-			DynastyID: poet.DynastyID,
-			Biography: poet.Biography,
-			Avatar:    poet.Avatar,
-		})
+		responses = append(responses, s.toPoetResponse(&poet))
 	}
-
 	return responses, nil
 }
 
-// GetGenreList 获取体裁列表
 func (s *PoemService) GetGenreList() ([]string, error) {
 	return s.poemRepo.DistinctGenres()
 }
 
-// CreateDynasty 创建朝代（如果不存在则创建）
 func (s *PoemService) CreateDynasty(req *dto.DynastyCreateRequest) (*dto.DynastyResponse, error) {
 	dynasty := &models.Dynasty{
 		Name:        req.Name,
 		Period:      req.Period,
 		Description: req.Description,
 	}
-	err := s.dynastyRepo.Create(dynasty)
-	if err != nil {
+	if err := s.dynastyRepo.Create(dynasty); err != nil {
 		return nil, err
 	}
 	return &dto.DynastyResponse{
@@ -275,7 +231,6 @@ func (s *PoemService) CreateDynasty(req *dto.DynastyCreateRequest) (*dto.Dynasty
 	}, nil
 }
 
-// UpdateDynasty 更新朝代
 func (s *PoemService) UpdateDynasty(id uint64, req *dto.DynastyUpdateRequest) (*dto.DynastyResponse, error) {
 	dynasty, err := s.dynastyRepo.GetByID(id)
 	if err != nil {
@@ -290,8 +245,7 @@ func (s *PoemService) UpdateDynasty(id uint64, req *dto.DynastyUpdateRequest) (*
 	if req.Description != "" {
 		dynasty.Description = req.Description
 	}
-	err = s.dynastyRepo.Update(dynasty)
-	if err != nil {
+	if err := s.dynastyRepo.Update(dynasty); err != nil {
 		return nil, err
 	}
 	return &dto.DynastyResponse{
@@ -302,51 +256,59 @@ func (s *PoemService) UpdateDynasty(id uint64, req *dto.DynastyUpdateRequest) (*
 	}, nil
 }
 
-// DeleteDynasty 删除朝代
 func (s *PoemService) DeleteDynasty(id uint64) error {
 	return s.dynastyRepo.Delete(id)
 }
 
-// CreatePoet 创建诗人（如果不存在则创建）
 func (s *PoemService) CreatePoet(req *dto.PoetCreateRequest) (*dto.PoetResponse, error) {
-	poet := &models.Poet{
+	author := &models.Author{
 		Name:      req.Name,
-		DynastyID: req.DynastyID,
 		Biography: req.Biography,
 		Avatar:    req.Avatar,
+	}
+	if err := s.authorRepo.Create(author); err != nil {
+		return nil, err
+	}
+
+	poet := &models.Poet{
+		AuthorID:  author.ID,
+		DynastyID: req.DynastyID,
 		BirthYear: req.BirthYear,
 		DeathYear: req.DeathYear,
 	}
-	err := s.poetRepo.Create(poet)
-	if err != nil {
+	if err := s.poetRepo.Create(poet); err != nil {
 		return nil, err
 	}
-	return &dto.PoetResponse{
-		ID:        poet.ID,
-		Name:      poet.Name,
-		DynastyID: poet.DynastyID,
-		Biography: poet.Biography,
-		Avatar:    poet.Avatar,
-	}, nil
+	poet.Author = *author
+	return responsePtr(s.toPoetResponse(poet)), nil
 }
 
-// UpdatePoet 更新诗人
 func (s *PoemService) UpdatePoet(id uint64, req *dto.PoetUpdateRequest) (*dto.PoetResponse, error) {
 	poet, err := s.poetRepo.GetByID(id)
 	if err != nil {
 		return nil, errors.New("poet not found")
 	}
+
+	author := &poet.Author
+	if author.ID == 0 {
+		loadedAuthor, err := s.authorRepo.GetByID(poet.AuthorID)
+		if err != nil {
+			return nil, errors.New("author not found")
+		}
+		author = loadedAuthor
+	}
+
 	if req.Name != "" {
-		poet.Name = req.Name
+		author.Name = req.Name
 	}
 	if req.DynastyID > 0 {
 		poet.DynastyID = req.DynastyID
 	}
 	if req.Biography != "" {
-		poet.Biography = req.Biography
+		author.Biography = req.Biography
 	}
 	if req.Avatar != "" {
-		poet.Avatar = req.Avatar
+		author.Avatar = req.Avatar
 	}
 	if req.BirthYear > 0 {
 		poet.BirthYear = req.BirthYear
@@ -354,25 +316,72 @@ func (s *PoemService) UpdatePoet(id uint64, req *dto.PoetUpdateRequest) (*dto.Po
 	if req.DeathYear > 0 {
 		poet.DeathYear = req.DeathYear
 	}
-	err = s.poetRepo.Update(poet)
-	if err != nil {
+
+	if err := s.authorRepo.Update(author); err != nil {
 		return nil, err
 	}
-	return &dto.PoetResponse{
-		ID:        poet.ID,
-		Name:      poet.Name,
-		DynastyID: poet.DynastyID,
-		Biography: poet.Biography,
-		Avatar:    poet.Avatar,
-	}, nil
+	if err := s.poetRepo.Update(poet); err != nil {
+		return nil, err
+	}
+	poet.Author = *author
+	return responsePtr(s.toPoetResponse(poet)), nil
 }
 
-// DeletePoet 删除诗人
 func (s *PoemService) DeletePoet(id uint64) error {
 	return s.poetRepo.Delete(id)
 }
 
-// toPoemResponse 转换为响应格式
+func (s *PoemService) resolveDynastyID(reqDynastyID uint64, dynastyName string) (uint64, error) {
+	dynastyID := reqDynastyID
+	dynastyResolved := false
+	if dynastyName != "" {
+		dynasty, err := s.dynastyRepo.GetByName(dynastyName)
+		if err != nil {
+			dynasty = &models.Dynasty{Name: dynastyName}
+			if createErr := s.dynastyRepo.Create(dynasty); createErr != nil {
+				return 0, createErr
+			}
+		}
+		dynastyID = dynasty.ID
+		dynastyResolved = true
+	}
+
+	if dynastyID > 0 && !dynastyResolved {
+		if _, err := s.dynastyRepo.GetByID(dynastyID); err != nil {
+			return 0, errors.New("dynasty not found")
+		}
+	}
+	return dynastyID, nil
+}
+
+func (s *PoemService) resolveAuthorID(reqAuthorID uint64, authorName string, dynastyID uint64) (uint64, error) {
+	if reqAuthorID > 0 {
+		if _, err := s.authorRepo.GetByID(reqAuthorID); err != nil {
+			return 0, errors.New("author not found")
+		}
+		return reqAuthorID, nil
+	}
+	if authorName == "" {
+		return 0, nil
+	}
+
+	author, err := s.authorRepo.GetByName(authorName)
+	if err != nil {
+		author = &models.Author{Name: authorName}
+		if createErr := s.authorRepo.Create(author); createErr != nil {
+			return 0, createErr
+		}
+	}
+
+	if _, err := s.poetRepo.GetByAuthorID(author.ID); err != nil {
+		poet := &models.Poet{AuthorID: author.ID, DynastyID: dynastyID}
+		if createErr := s.poetRepo.Create(poet); createErr != nil {
+			return 0, createErr
+		}
+	}
+	return author.ID, nil
+}
+
 func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 	resp := &dto.PoemResponse{
 		ID:           poem.ID,
@@ -395,15 +404,13 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 	}
 
 	if poem.Author.ID > 0 {
-		resp.Author = dto.PoetResponse{
+		resp.Author = dto.AuthorResponse{
 			ID:        poem.Author.ID,
 			Name:      poem.Author.Name,
-			DynastyID: poem.Author.DynastyID,
 			Biography: poem.Author.Biography,
 			Avatar:    poem.Author.Avatar,
 		}
 	}
-
 	if poem.Dynasty.ID > 0 {
 		resp.Dynasty = dto.DynastyResponse{
 			ID:          poem.Dynasty.ID,
@@ -412,6 +419,22 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 			Description: poem.Dynasty.Description,
 		}
 	}
-
 	return resp
+}
+
+func (s *PoemService) toPoetResponse(poet *models.Poet) dto.PoetResponse {
+	return dto.PoetResponse{
+		ID:        poet.ID,
+		AuthorID:  poet.AuthorID,
+		Name:      poet.Author.Name,
+		DynastyID: poet.DynastyID,
+		Biography: poet.Author.Biography,
+		Avatar:    poet.Author.Avatar,
+		BirthYear: poet.BirthYear,
+		DeathYear: poet.DeathYear,
+	}
+}
+
+func responsePtr[T any](value T) *T {
+	return &value
 }

@@ -70,12 +70,12 @@ func (r *PoemRepository) List(page, pageSize int, keyword, dynasty, author, genr
 		query = query.Where("title LIKE ? OR content LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	}
 	if dynasty != "" {
-		query = query.Joins("JOIN dynasties ON poems.dynasty_id = dynasties.id").
-			Where("dynasties.name = ?", dynasty)
+		query = query.Joins("JOIN dynasty ON poem.dynasty_id = dynasty.id").
+			Where("dynasty.name = ?", dynasty)
 	}
 	if author != "" {
-		query = query.Joins("JOIN poets ON poems.author_id = poets.id").
-			Where("poets.name = ?", author)
+		query = query.Joins("JOIN author ON poem.author_id = author.id").
+			Where("author.name = ?", author)
 	}
 	if genre != "" {
 		query = query.Where("genre = ?", genre)

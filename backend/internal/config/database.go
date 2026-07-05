@@ -44,11 +44,19 @@ func InitDB(cfg *DatabaseConfig) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	return db, nil
+}
 
-	// Auto migrate models
+// AutoMigrateDatabaseModel Auto migrate models
+func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
+	if err := db.AutoMigrate(&models.Author{}); err != nil {
+		return err
+	}
+
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Dynasty{},
+		&models.Author{},
 		&models.Poet{},
 		&models.Poem{},
 		&models.Comment{},
@@ -71,15 +79,14 @@ func InitDB(cfg *DatabaseConfig) (*gorm.DB, error) {
 		&models.Permission{},
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Set table comments
 	if err := setTableComments(db); err != nil {
-		return nil, err
+		return err
 	}
-
-	return db, nil
+	return err
 }
 
 // setTableComments 设置数据库表注释
@@ -90,6 +97,7 @@ func setTableComments(db *gorm.DB) error {
 		"user":                 "用户表 - 存储系统用户信息",
 		"dynasty":              "朝代表 - 存储历史朝代信息",
 		"poet":                 "诗人表 - 存储诗人信息",
+		"author":               "作者表 - 存储作者信息",
 		"poem":                 "诗词表 - 存储古诗词内容",
 		"comment":              "评论表 - 存储诗词评论",
 		"comment_vote":         "评论投票表 - 存储评论点赞/点踩记录",
@@ -104,6 +112,7 @@ func setTableComments(db *gorm.DB) error {
 		"operation_log":        "操作日志表 - 存储系统操作日志",
 		"role":                 "角色表 - 存储RBAC角色",
 		"role_permission":      "角色权限关联表 - 存储角色与权限编码的关联关系",
+		"permission":           "权限信息表 - 存储每个权限点信息",
 		"user_role":            "用户角色关联表 - 存储用户与角色的关联关系",
 	}
 

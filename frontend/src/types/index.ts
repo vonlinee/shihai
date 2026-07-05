@@ -41,9 +41,18 @@ export interface Dynasty {
   createdAt: string;
 }
 
+// Author types
+export interface Author {
+  id: number;
+  name: string;
+  biography?: string;
+  avatar?: string;
+}
+
 // Poet types
 export interface Poet {
   id: number;
+  authorId: number;
   name: string;
   dynastyId: number;
   dynasty?: Dynasty;
@@ -60,7 +69,7 @@ export interface Poem {
   title: string;
   content: string;
   authorId: number;
-  author?: Poet;
+  author?: Author;
   dynastyId: number;
   dynasty?: Dynasty;
   genre?: string;
