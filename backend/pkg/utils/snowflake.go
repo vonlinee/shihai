@@ -2,90 +2,35 @@ package utils
 
 import (
 	"sync"
-	"time"
+
+	"github.com/bwmarrin/snowflake"
 )
 
-// Snowflake ID generator
-type Snowflake struct {
-	mu            sync.Mutex
-	lastTimestamp int64
-	workerID      int64
-	dataCenterID  int64
-	sequence      int64
-}
-
-const (
-	workerIDBits     = 5
-	dataCenterIDBits = 5
-	sequenceBits     = 12
-
-	workerIDShift     = sequenceBits
-	dataCenterIDShift = sequenceBits + workerIDBits
-	timestampShift    = sequenceBits + workerIDBits + dataCenterIDBits
-
-	sequenceMask = -1 ^ (-1 << sequenceBits)
-	maxWorkerID  = -1 ^ (-1 << workerIDBits)
-
-	epoch = int64(1609459200000) // 2021-01-01 00:00:00 UTC
-)
+const defaultSnowflakeNodeID int64 = 1
 
 var (
-	snowflake     *Snowflake
-	snowflakeOnce sync.Once
+	snowflakeNode     *snowflake.Node
+	snowflakeNodeOnce sync.Once
 )
 
-// GetSnowflake returns singleton Snowflake instance
-func GetSnowflake() *Snowflake {
-	snowflakeOnce.Do(func() {
-		snowflake = NewSnowflake(1, 1)
-	})
-	return snowflake
-}
-
-// NewSnowflake creates a new Snowflake instance
-func NewSnowflake(workerID, dataCenterID int64) *Snowflake {
-	if workerID < 0 || workerID > maxWorkerID {
-		panic("worker ID out of range")
-	}
-	return &Snowflake{
-		workerID:     workerID,
-		dataCenterID: dataCenterID,
-	}
-}
-
-// NextID generates next unique ID
-func (s *Snowflake) NextID() uint64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	timestamp := time.Now().UnixMilli()
-
-	if timestamp < s.lastTimestamp {
-		panic("clock moved backwards")
-	}
-
-	if timestamp == s.lastTimestamp {
-		s.sequence = (s.sequence + 1) & sequenceMask
-		if s.sequence == 0 {
-			for timestamp <= s.lastTimestamp {
-				timestamp = time.Now().UnixMilli()
-			}
+// GetSnowflakeNode returns the singleton snowflake node used by the application.
+//
+// 节点 ID 当前固定为 1，用于保持原有单节点部署下的 ID 生成行为。初始化失败代表节点配置不合法，
+// 属于启动期不可恢复错误，因此会触发 panic。
+func GetSnowflakeNode() *snowflake.Node {
+	snowflakeNodeOnce.Do(func() {
+		node, err := snowflake.NewNode(defaultSnowflakeNodeID)
+		if err != nil {
+			panic(err)
 		}
-	} else {
-		s.sequence = 0
-	}
-
-	s.lastTimestamp = timestamp
-
-	id := ((timestamp - epoch) << timestampShift) |
-		(s.dataCenterID << dataCenterIDShift) |
-		(s.workerID << workerIDShift) |
-		s.sequence
-
-	return uint64(id)
+		snowflakeNode = node
+	})
+	return snowflakeNode
 }
 
-// GenerateID generates a new Snowflake ID as uint64
+// GenerateID generates a new Snowflake ID as uint64.
+//
+// 返回值用于业务模型主键。底层开源库生成的是正数 int64 Snowflake ID，转换为 uint64 后保持数值不变。
 func GenerateID() uint64 {
-	return GetSnowflake().NextID()
+	return uint64(GetSnowflakeNode().Generate().Int64())
 }
