@@ -158,12 +158,31 @@ func buildPoemModels(poems []poem, authorIDs map[string]uint64, dynastyID uint64
 
 		poemModels = append(poemModels, models.Poem{
 			Title:     strings.TrimSpace(p.Title),
-			Content:   strings.Join(p.Paragraphs, ""),
+			Content:   buildPoemContent(p.Paragraphs),
 			AuthorID:  authorID,
 			DynastyID: dynastyID,
 		})
 	}
 	return poemModels, skippedPoems
+}
+
+// buildPoemContent 将原始段落合并为单个正文元素。
+//
+// paragraphs 原始诗词段落数组，通常来自 chinese-poetry 数据源的 paragraphs 字段。
+// 返回包含一个合并正文元素的 JSON 数组；空白段落会被跳过，避免存入无意义内容。
+func buildPoemContent(paragraphs []string) []string {
+	items := make([]string, 0, len(paragraphs))
+	for _, paragraph := range paragraphs {
+		trimmedParagraph := strings.TrimSpace(paragraph)
+		if trimmedParagraph == "" {
+			continue
+		}
+		items = append(items, trimmedParagraph)
+	}
+	if len(items) == 0 {
+		return []string{}
+	}
+	return []string{strings.Join(items, "")}
 }
 
 // validatePoemAuthorReferences 校验待插入诗歌的作者外键是否存在。

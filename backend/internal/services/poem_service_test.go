@@ -18,7 +18,7 @@ func TestCreatePoemRejectsMissingDynastyBeforeCreatingPoet(t *testing.T) {
 
 	_, err := service.CreatePoem(&dto.PoemCreateRequest{
 		Title:      "测试",
-		Content:    "1111",
+		Content:    []string{"1111"},
 		DynastyID:  706545104525070300,
 		AuthorName: "李白",
 	})
@@ -50,7 +50,7 @@ func TestCreatePoemPrefersDynastyNameOverStaleDynastyID(t *testing.T) {
 
 	_, err := service.CreatePoem(&dto.PoemCreateRequest{
 		Title:       "test",
-		Content:     "1111",
+		Content:     []string{"1111", "2222"},
 		DynastyID:   706545104525070300,
 		DynastyName: "Tang",
 		AuthorName:  "Li Bai",
@@ -74,23 +74,48 @@ func TestCreatePoemPrefersDynastyNameOverStaleDynastyID(t *testing.T) {
 	if poemRepo.createdDynastyID != 1 {
 		t.Fatalf("poem dynasty ID = %d, want 1", poemRepo.createdDynastyID)
 	}
+	assertStringSliceEqual(t, poemRepo.createdContent, []string{"1111", "2222"})
+}
+
+func TestGetPoemByIDReturnsContentArray(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		existingPoem: &models.Poem{
+			BaseModel: models.BaseModel{ID: 1},
+			Title:     "静夜思",
+			Content:   []string{"床前明月光，", "疑是地上霜。"},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.GetPoemByID(1)
+
+	if err != nil {
+		t.Fatalf("GetPoemByID error = %v, want nil", err)
+	}
+	assertStringSliceEqual(t, resp.Content, []string{"床前明月光，", "疑是地上霜。"})
 }
 
 type fakePoemRepository struct {
 	createCalls      int
 	createdAuthorID  uint64
 	createdDynastyID uint64
+	createdContent   []string
+	existingPoem     *models.Poem
 }
 
 func (r *fakePoemRepository) Create(poem *models.Poem) error {
 	r.createCalls++
 	r.createdAuthorID = poem.AuthorID
 	r.createdDynastyID = poem.DynastyID
+	r.createdContent = append([]string(nil), poem.Content...)
 	poem.ID = 1
 	return nil
 }
 
 func (r *fakePoemRepository) GetByID(id uint64) (*models.Poem, error) {
+	if r.existingPoem != nil {
+		return r.existingPoem, nil
+	}
 	return &models.Poem{BaseModel: models.BaseModel{ID: id}}, nil
 }
 
@@ -226,4 +251,17 @@ func (r *fakePoetRepository) Update(poet *models.Poet) error {
 
 func (r *fakePoetRepository) Delete(id uint64) error {
 	return nil
+}
+
+func assertStringSliceEqual(t *testing.T, got []string, want []string) {
+	t.Helper()
+
+	if len(got) != len(want) {
+		t.Fatalf("slice length = %d, want %d; got %v", len(got), len(want), got)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Fatalf("slice[%d] = %q, want %q; got %v", i, got[i], want[i], got)
+		}
+	}
 }

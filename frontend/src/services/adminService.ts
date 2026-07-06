@@ -28,7 +28,7 @@ export interface AdminCreateUserRequest {
 
 export interface PoemCreateRequest {
   title: string;
-  content: string;
+  content: string[];
   authorId?: number | string;
   authorName?: string;
   dynastyId?: number | string;
@@ -43,7 +43,7 @@ export interface PoemCreateRequest {
 
 export interface PoemUpdateRequest {
   title?: string;
-  content?: string;
+  content?: string[];
   authorId?: number | string;
   dynastyId?: number | string;
   genre?: string;

@@ -67,7 +67,7 @@ export interface Poet {
 export interface Poem {
   id: number;
   title: string;
-  content: string;
+  content: string[];
   authorId: number;
   author?: Author;
   dynastyId: number;

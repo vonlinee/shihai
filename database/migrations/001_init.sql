@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS poets (
 CREATE TABLE IF NOT EXISTS poems (
     id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
-    content TEXT NOT NULL,
+    content JSONB NOT NULL DEFAULT '[]'::jsonb,
     author_id INTEGER REFERENCES poets(id),
     dynasty_id INTEGER REFERENCES dynasties(id),
     genre VARCHAR(50),
@@ -238,9 +238,9 @@ INSERT INTO poets (name, dynasty_id, biography, birth_year, death_year) VALUES
 
 -- Insert sample poems
 INSERT INTO poems (title, content, author_id, dynasty_id, genre, translation, appreciation) VALUES
-('静夜思', '床前明月光，疑是地上霜。举头望明月，低头思故乡。', 1, 1, '五言绝句', 
+('静夜思', '["床前明月光，","疑是地上霜。","举头望明月，","低头思故乡。"]'::jsonb, 1, 1, '五言绝句',
 '明亮的月光洒在床前的窗户纸上，好像地上泛起了一层霜。我禁不住抬起头来，看那天窗外空中的一轮明月，不由得低头沉思，想起远方的家乡。',
 '这首诗写的是在寂静的月夜思念家乡的感受。诗的前两句，是写诗人在作客他乡的特定环境中一刹那间所产生的错觉。'),
-('春晓', '春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。', 2, 1, '五言绝句',
+('春晓', '["春眠不觉晓，","处处闻啼鸟。","夜来风雨声，","花落知多少。"]'::jsonb, 2, 1, '五言绝句',
 '春天睡醒不觉天晓，处处听到鸟儿啼叫。夜里风雨声音，花儿不知道吹落了多少。',
 '这首诗是诗人隐居在鹿门山时所做，意境十分优美。诗人抓住春晨生活的一刹那，描绘了春晨的景色和感受。');

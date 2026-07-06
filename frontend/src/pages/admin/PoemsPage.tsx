@@ -11,6 +11,7 @@ import {
   useAdminCreatePoet, useAdminUpdatePoet, useAdminDeletePoet,
 } from '@/hooks/useAdmin'
 import { useNavigate } from 'react-router-dom'
+import { splitPoemContentInput } from '@/utils/poemContent'
 
 type TabKey = 'poems' | 'dynasties' | 'poets'
 
@@ -88,7 +89,7 @@ function PoemsTab() {
   const handleAddPoem = (e: React.FormEvent) => {
     e.preventDefault()
     const payload: Record<string, unknown> = {
-      title: formData.title, content: formData.content,
+      title: formData.title, content: splitPoemContentInput(formData.content),
       genre: typeof formData.genre === 'number' ? String(formData.genre) : formData.genre || '',
       translation: formData.translation, appreciation: formData.appreciation, annotation: formData.annotation,
     }

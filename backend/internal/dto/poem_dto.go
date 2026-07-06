@@ -12,37 +12,37 @@ type PoemListRequest struct {
 }
 
 type PoemCreateRequest struct {
-	Title        string `json:"title" binding:"required,max=200"`
-	Content      string `json:"content" binding:"required"`
-	AuthorID     uint64 `json:"authorId"`
-	AuthorName   string `json:"authorName"`
-	DynastyID    uint64 `json:"dynastyId"`
-	DynastyName  string `json:"dynastyName"`
-	Genre        string `json:"genre" binding:"max=50"`
-	Translation  string `json:"translation"`
-	Appreciation string `json:"appreciation"`
-	Annotation   string `json:"annotation"`
-	AudioURL     string `json:"audioUrl" binding:"max=500"`
-	CoverImage   string `json:"coverImage" binding:"max=500"`
+	Title        string   `json:"title" binding:"required,max=200"`
+	Content      []string `json:"content" binding:"required"`
+	AuthorID     uint64   `json:"authorId"`
+	AuthorName   string   `json:"authorName"`
+	DynastyID    uint64   `json:"dynastyId"`
+	DynastyName  string   `json:"dynastyName"`
+	Genre        string   `json:"genre" binding:"max=50"`
+	Translation  string   `json:"translation"`
+	Appreciation string   `json:"appreciation"`
+	Annotation   string   `json:"annotation"`
+	AudioURL     string   `json:"audioUrl" binding:"max=500"`
+	CoverImage   string   `json:"coverImage" binding:"max=500"`
 }
 
 type PoemUpdateRequest struct {
-	Title        string `json:"title" binding:"max=200"`
-	Content      string `json:"content"`
-	AuthorID     uint64 `json:"authorId"`
-	DynastyID    uint64 `json:"dynastyId"`
-	Genre        string `json:"genre" binding:"max=50"`
-	Translation  string `json:"translation"`
-	Appreciation string `json:"appreciation"`
-	Annotation   string `json:"annotation"`
-	AudioURL     string `json:"audioUrl" binding:"max=500"`
-	CoverImage   string `json:"coverImage" binding:"max=500"`
+	Title        string   `json:"title" binding:"max=200"`
+	Content      []string `json:"content"`
+	AuthorID     uint64   `json:"authorId"`
+	DynastyID    uint64   `json:"dynastyId"`
+	Genre        string   `json:"genre" binding:"max=50"`
+	Translation  string   `json:"translation"`
+	Appreciation string   `json:"appreciation"`
+	Annotation   string   `json:"annotation"`
+	AudioURL     string   `json:"audioUrl" binding:"max=500"`
+	CoverImage   string   `json:"coverImage" binding:"max=500"`
 }
 
 type PoemResponse struct {
 	ID           uint64          `json:"id"`
 	Title        string          `json:"title"`
-	Content      string          `json:"content"`
+	Content      []string        `json:"content"`
 	AuthorID     uint64          `json:"authorId"`
 	Author       AuthorResponse  `json:"author,omitempty"`
 	DynastyID    uint64          `json:"dynastyId"`

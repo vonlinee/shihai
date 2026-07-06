@@ -67,7 +67,7 @@ func (r *PoemRepository) List(page, pageSize int, keyword, dynasty, author, genr
 	query := r.db.Model(&models.Poem{}).Preload("Author").Preload("Dynasty")
 
 	if keyword != "" {
-		query = query.Where("title LIKE ? OR content LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where("title LIKE ? OR content::text LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	}
 	if dynasty != "" {
 		query = query.Joins("JOIN dynasty ON poem.dynasty_id = dynasty.id").

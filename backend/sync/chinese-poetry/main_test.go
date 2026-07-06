@@ -175,9 +175,24 @@ func TestBuildPoemModelsResolvesAuthorAndDynastyIDs(t *testing.T) {
 	if poemModels[0].Title != "静夜思" {
 		t.Fatalf("title = %q, want 静夜思", poemModels[0].Title)
 	}
-	if poemModels[0].Content != "床前明月光，疑是地上霜。" {
-		t.Fatalf("content = %q, want joined paragraphs", poemModels[0].Content)
+	assertStringSliceEqual(t, poemModels[0].Content, []string{"床前明月光，疑是地上霜。"})
+}
+
+func TestBuildPoemModelsStoresJoinedParagraphsAsSingleContentItem(t *testing.T) {
+	rawPoems := []poem{
+		{Author: "李白", Title: "静夜思", Paragraphs: []string{"床前明月光，", "疑是地上霜。", "举头望明月，", "低头思故乡。"}},
 	}
+	authorIDs := map[string]uint64{"李白": 101}
+
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202)
+
+	if len(skippedPoems) != 0 {
+		t.Fatalf("skipped poem count = %d, want 0", len(skippedPoems))
+	}
+	if len(poemModels) != 1 {
+		t.Fatalf("poem model count = %d, want 1", len(poemModels))
+	}
+	assertStringSliceEqual(t, poemModels[0].Content, []string{"床前明月光，疑是地上霜。举头望明月，低头思故乡。"})
 }
 
 func TestBuildPoemModelsSkipsPoemsWithoutKnownAuthor(t *testing.T) {

@@ -51,22 +51,22 @@ func (Poet) TableName() string {
 // Poem stores poem content and metadata.
 type Poem struct {
 	BaseModel
-	Title        string  `json:"title" gorm:"not null;size:200;comment:诗词标题"`
-	Content      string  `json:"content" gorm:"not null;type:text;comment:诗词内容"`
-	AuthorID     uint64  `json:"authorId" gorm:"comment:作者ID"`
-	Author       Author  `json:"author,omitempty"`
-	DynastyID    uint64  `json:"dynastyId" gorm:"comment:朝代ID"`
-	Dynasty      Dynasty `json:"dynasty,omitempty"`
-	Genre        string  `json:"genre" gorm:"size:50;comment:体裁"`
-	Translation  string  `json:"translation" gorm:"type:text;comment:译文"`
-	Appreciation string  `json:"appreciation" gorm:"type:text;comment:赏析"`
-	Annotation   string  `json:"annotation" gorm:"type:text;comment:注释"`
-	AudioURL     string  `json:"audioUrl" gorm:"size:500;comment:音频URL"`
-	CoverImage   string  `json:"coverImage" gorm:"size:500;comment:封面图URL"`
-	Views        int     `json:"views" gorm:"default:0;comment:浏览量"`
-	Likes        int     `json:"likes" gorm:"default:0;comment:点赞数"`
-	Dislikes     int     `json:"dislikes" gorm:"default:0;comment:点踩数"`
-	Favorites    int     `json:"favorites" gorm:"default:0;comment:收藏数"`
+	Title        string   `json:"title" gorm:"not null;size:200;comment:诗词标题"`
+	Content      []string `json:"content" gorm:"not null;serializer:json;type:jsonb;comment:诗词内容"`
+	AuthorID     uint64   `json:"authorId" gorm:"comment:作者ID"`
+	Author       Author   `json:"author,omitempty"`
+	DynastyID    uint64   `json:"dynastyId" gorm:"comment:朝代ID"`
+	Dynasty      Dynasty  `json:"dynasty,omitempty"`
+	Genre        string   `json:"genre" gorm:"size:50;comment:体裁"`
+	Translation  string   `json:"translation" gorm:"type:text;comment:译文"`
+	Appreciation string   `json:"appreciation" gorm:"type:text;comment:赏析"`
+	Annotation   string   `json:"annotation" gorm:"type:text;comment:注释"`
+	AudioURL     string   `json:"audioUrl" gorm:"size:500;comment:音频URL"`
+	CoverImage   string   `json:"coverImage" gorm:"size:500;comment:封面图URL"`
+	Views        int      `json:"views" gorm:"default:0;comment:浏览量"`
+	Likes        int      `json:"likes" gorm:"default:0;comment:点赞数"`
+	Dislikes     int      `json:"dislikes" gorm:"default:0;comment:点踩数"`
+	Favorites    int      `json:"favorites" gorm:"default:0;comment:收藏数"`
 }
 
 // TableName specifies the database table name.

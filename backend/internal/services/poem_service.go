@@ -124,7 +124,7 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 	if req.Title != "" {
 		poem.Title = req.Title
 	}
-	if req.Content != "" {
+	if len(req.Content) > 0 {
 		poem.Content = req.Content
 	}
 	if req.AuthorID > 0 {

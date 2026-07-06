@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { usePoem, useLikePoem } from '@/hooks/usePoems'
 import { useComments, useCreateComment, useVoteComment } from '@/hooks/useComments'
 import { useAuthStore } from '@/stores/authStore'
+import { PoemContent } from '@/components/poetry/PoemContent'
 
 export function PoemDetailPage() {
   const { id } = useParams()
@@ -67,9 +68,7 @@ export function PoemDetailPage() {
           <CardContent className="space-y-8">
             {/* Poem Content */}
             <div className="text-center py-8">
-              <p className="poetry-text text-xl leading-loose whitespace-pre-line">
-                {poem.content}
-              </p>
+              <PoemContent content={poem.content} className="text-xl leading-loose space-y-2" />
             </div>
 
             {/* Actions */}

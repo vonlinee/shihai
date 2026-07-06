@@ -52,6 +52,9 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 	if err := db.AutoMigrate(&models.Author{}); err != nil {
 		return err
 	}
+	if err := migratePoemContentToJSONB(db); err != nil {
+		return err
+	}
 
 	err = db.AutoMigrate(
 		&models.User{},
@@ -87,6 +90,44 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 		return err
 	}
 	return err
+}
+
+// migratePoemContentToJSONB 在 GORM 自动迁移前修复旧库中的诗词正文列类型。
+//
+// db 数据库连接。旧版本将 poem.content 存为普通文本；直接交给 AutoMigrate 改成 jsonb 时，
+// PostgreSQL 会把文本按 JSON 字面量解析，中文正文不是合法 JSON，因此会触发 22P02。
+func migratePoemContentToJSONB(db *gorm.DB) error {
+	for _, sql := range buildPoemContentJSONBMigrationSQL("poem") {
+		if err := db.Exec(sql).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildPoemContentJSONBMigrationSQL 构造诗词正文列的兼容迁移 SQL。
+//
+// tableName 待迁移的表名。返回的 SQL 会在列存在且不是 jsonb 时，将旧文本内容包装为单元素 JSON 数组。
+func buildPoemContentJSONBMigrationSQL(tableName string) []string {
+	return []string{
+		fmt.Sprintf(`
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = '%s'
+          AND column_name = 'content'
+          AND data_type <> 'jsonb'
+    ) THEN
+        ALTER TABLE "%s"
+            ALTER COLUMN content DROP DEFAULT,
+            ALTER COLUMN content TYPE JSONB
+            USING to_jsonb(ARRAY[content]),
+            ALTER COLUMN content SET DEFAULT '[]'::jsonb;
+    END IF;
+END $$;`, tableName, tableName),
+	}
 }
 
 // setTableComments 设置数据库表注释

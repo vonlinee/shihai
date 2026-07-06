@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRandomPoems } from '@/hooks/usePoems'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
+import { PoemContent } from '@/components/poetry/PoemContent'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -74,9 +75,7 @@ export function HomePage() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="poetry-text text-foreground/80 whitespace-pre-line">
-                    {poem.content}
-                  </p>
+                  <PoemContent content={poem.content} className="text-foreground/80" />
                 </CardContent>
               </Card>
             ))}

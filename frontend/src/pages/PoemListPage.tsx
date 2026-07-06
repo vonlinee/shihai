@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { usePoems, useDynasties } from '@/hooks/usePoems'
+import { PoemContent } from '@/components/poetry/PoemContent'
 
 export function PoemListPage() {
   const navigate = useNavigate()
@@ -133,9 +134,7 @@ export function PoemListPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="poetry-text text-foreground/80 whitespace-pre-line mb-4">
-                      {poem.content}
-                    </p>
+                    <PoemContent content={poem.content} className="text-foreground/80 mb-4" />
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{poem.genre}</span>
                       <span>·</span>
