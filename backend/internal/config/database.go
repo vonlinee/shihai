@@ -59,6 +59,7 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Dynasty{},
+		&models.PoemType{},
 		&models.Author{},
 		&models.Poet{},
 		&models.Poem{},
@@ -137,6 +138,7 @@ func setTableComments(db *gorm.DB) error {
 		"work_collection_item": "作品集条目表 - 存储作品集与不同类型作品的关联关系",
 		"user":                 "用户表 - 存储系统用户信息",
 		"dynasty":              "朝代表 - 存储历史朝代信息",
+		"poem_type":            "诗词类型表 - 存储诗词体裁分类信息",
 		"poet":                 "诗人表 - 存储诗人信息",
 		"author":               "作者表 - 存储作者信息",
 		"poem":                 "诗词表 - 存储古诗词内容",

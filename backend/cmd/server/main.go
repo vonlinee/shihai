@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"shihai/internal/config"
+	"shihai/internal/database"
 	"shihai/internal/handlers"
 	"shihai/internal/middleware"
 	"shihai/internal/models"
@@ -52,6 +53,8 @@ func main() {
 
 	// Initialize application
 	app := initApp(db)
+
+	database.Init(*configFile)
 
 	// Initialize default roles and permissions
 	if err := initRBACData(app); err != nil {

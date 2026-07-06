@@ -283,15 +283,15 @@ func (s *RBACService) toRoleResponse(role *models.Role) *dto.RoleResponse {
 
 // InitDefaultRolesAndPermissions 初始化默认角色和权限
 //
-// 调用时机：服务器启动时调用一次（cmd/server/main.go）。
+// 调用时机：服务器启动时调用一次（cmd/server/data_init.go）。
 //
 // 执行流程：
-//   1) 从 models.AllPermissions （permission_codes.go 中的全局唯一来源）逐条 UPSERT
-//      到 permission 表，确保所有接口权限点都存在。
-//   2) 从数据库读取全量权限编码，用于 admin 角色的自动全量同步。
-//   3) 逐个处理 DefaultRoles：
-//      - admin：直接获取全量权限，新增的接口权限会自动同步。
-//      - editor / reviewer / user：从 RolePermissionMap 中读取定义。
+//  1. 从 models.AllPermissions （permission_codes.go 中的全局唯一来源）逐条 UPSERT
+//     到 permission 表，确保所有接口权限点都存在。
+//  2. 从数据库读取全量权限编码，用于 admin 角色的自动全量同步。
+//  3. 逐个处理 DefaultRoles：
+//     - admin：直接获取全量权限，新增的接口权限会自动同步。
+//     - editor / reviewer / user：从 RolePermissionMap 中读取定义。
 //
 // 幂等性：本函数可以重复调用，不会产生重复数据。
 func (s *RBACService) InitDefaultRolesAndPermissions() error {

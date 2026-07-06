@@ -23,6 +23,9 @@ func (User) TableName() string {
 type Dynasty struct {
 	BaseModel
 	Name        string `json:"name" gorm:"not null;size:50;comment:朝代名称"`
+	NameEn      string `json:"nameEn" gorm:"size:100;comment:朝代英文名称"`
+	StartYear   *int   `json:"startYear" gorm:"comment:朝代开始年份"`
+	EndYear     *int   `json:"endYear" gorm:"comment:朝代结束年份"`
 	Period      string `json:"period" gorm:"size:100;comment:时期"`
 	Description string `json:"description" gorm:"type:text;comment:描述"`
 }
