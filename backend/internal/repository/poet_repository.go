@@ -40,14 +40,21 @@ func (r *PoetRepository) GetByAuthorID(authorID uint64) (*models.Poet, error) {
 }
 
 // List returns poet extensions, optionally filtered by author name.
-func (r *PoetRepository) List(keyword string) ([]models.Poet, error) {
+func (r *PoetRepository) List(keyword string, page, pageSize int) ([]models.Poet, int64, error) {
 	var poets []models.Poet
-	query := r.db.Preload("Author").Preload("Dynasty").Order("poet.id ASC")
+	var total int64
+	query := r.db.Model(&models.Poet{}).Preload("Author").Preload("Dynasty").Order("poet.id ASC")
 	if keyword != "" {
 		query = query.Joins("JOIN author ON poet.author_id = author.id").Where("author.name LIKE ?", "%"+keyword+"%")
 	}
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if page > 0 && pageSize > 0 {
+		query = query.Offset((page - 1) * pageSize).Limit(pageSize)
+	}
 	err := query.Find(&poets).Error
-	return poets, err
+	return poets, total, err
 }
 
 // Update updates a poet extension.

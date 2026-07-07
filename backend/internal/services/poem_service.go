@@ -48,7 +48,7 @@ type poetRepository interface {
 	Create(poet *models.Poet) error
 	GetByID(id uint64) (*models.Poet, error)
 	GetByAuthorID(authorID uint64) (*models.Poet, error)
-	List(keyword string) ([]models.Poet, error)
+	List(keyword string, page, pageSize int) ([]models.Poet, int64, error)
 	Update(poet *models.Poet) error
 	Delete(id uint64) error
 }
@@ -197,17 +197,17 @@ func (s *PoemService) GetDynastyList() ([]dto.DynastyResponse, error) {
 	return responses, nil
 }
 
-func (s *PoemService) GetPoetList(keyword string) ([]dto.PoetResponse, error) {
-	poets, err := s.poetRepo.List(keyword)
+func (s *PoemService) GetPoetList(keyword string, page, pageSize int) ([]dto.PoetResponse, int64, error) {
+	poets, total, err := s.poetRepo.List(keyword, page, pageSize)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	responses := make([]dto.PoetResponse, 0, len(poets))
 	for _, poet := range poets {
 		responses = append(responses, s.toPoetResponse(&poet))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *PoemService) GetGenreList() ([]string, error) {

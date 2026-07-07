@@ -8,6 +8,19 @@ export interface PoemListResponse {
   pageSize: number;
 }
 
+export interface PoetListParams {
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PoetListResponse {
+  list: Poet[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export const poemService = {
   getPoems(params?: PoemSearchParams): Promise<PoemListResponse> {
     return api.get<PoemListResponse>('/poems', params as Record<string, unknown>);
@@ -31,6 +44,10 @@ export const poemService = {
 
   getPoets(keyword?: string): Promise<Poet[]> {
     return api.get<Poet[]>('/poets', keyword ? { keyword } : undefined);
+  },
+
+  getPoetList(params: PoetListParams): Promise<PoetListResponse> {
+    return api.get<PoetListResponse>('/poets', params as Record<string, unknown>);
   },
 
   getGenres(): Promise<string[]> {

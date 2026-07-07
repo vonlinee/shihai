@@ -3,8 +3,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { Pagination } from '@/components/ui/Pagination'
 import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
-import { usePoems, useDynasties, usePoets, useGenres } from '@/hooks/usePoems'
+import { usePoems, useDynasties, usePoets, usePoetList, useGenres } from '@/hooks/usePoems'
 import {
   useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
   useAdminCreateDynasty, useAdminUpdateDynasty, useAdminDeleteDynasty,
@@ -103,11 +104,12 @@ function PoemsTab() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [showPoemDialog, setShowPoemDialog] = useState(false)
   const [editingPoemId, setEditingPoemId] = useState<number | null>(null)
   const [formData, setFormData] = useState<PoemFormData>(() => createEmptyPoemFormData())
 
-  const { data: poemData, isLoading } = usePoems({ keyword: searchQuery || undefined, page, pageSize: 10 })
+  const { data: poemData, isLoading } = usePoems({ keyword: searchQuery || undefined, page, pageSize })
   const { data: dynasties } = useDynasties()
   const { data: poets } = usePoets()
   const { data: genres } = useGenres()
@@ -252,13 +254,17 @@ function PoemsTab() {
               </table>
             </div>
           )}
-          {total > 10 && (
-            <div className="flex justify-center gap-2 mt-4">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>上一页</Button>
-              <span className="flex items-center px-4 text-sm text-muted-foreground">第 {page} 页</span>
-              <Button variant="outline" size="sm" disabled={page >= Math.ceil(total / 10)} onClick={() => setPage(page + 1)}>下一页</Button>
-            </div>
-          )}
+          <Pagination
+            className="mt-4"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize)
+              setPage(1)
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -421,7 +427,10 @@ function DynastiesTab() {
 // ─── Poets Tab ───────────────────────────────────────────────────────────────
 
 function PoetsTab() {
-  const { data: poets, isLoading } = usePoets()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const { data: poetData, isLoading } = usePoetList({ keyword: searchQuery || undefined, page, pageSize })
   const { data: dynasties } = useDynasties()
   const createMutation = useAdminCreatePoet()
   const updateMutation = useAdminUpdatePoet()
@@ -433,6 +442,8 @@ function PoetsTab() {
   })
 
   const dynastyOptions: ComboboxOption[] = (dynasties ?? []).map((d) => ({ value: d.id, label: d.name, description: d.period }))
+  const poets = poetData?.list ?? []
+  const total = poetData?.total ?? 0
 
   const openCreate = () => { setEditingId(null); setFormData({ name: '', dynastyId: undefined, biography: '', avatar: '', birthYear: '', deathYear: '' }); setShowDialog(true) }
   const openEdit = (p: { id: number; name: string; dynastyId?: number; biography?: string; avatar?: string; birthYear?: number; deathYear?: number }) => {
@@ -448,13 +459,22 @@ function PoetsTab() {
 
   return (
     <>
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="搜索诗人姓名..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }}
+          />
+        </div>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />添加诗人</Button>
       </div>
       <Card className="ink-border">
         <CardContent className="pt-6">
           {isLoading ? <div className="text-center py-8 text-muted-foreground">加载中...</div>
-            : (poets?.length ?? 0) === 0 ? <div className="text-center py-8 text-muted-foreground">暂无诗人数据</div>
+            : poets.length === 0 ? <div className="text-center py-8 text-muted-foreground">暂无诗人数据</div>
             : (
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -467,7 +487,7 @@ function PoetsTab() {
                     <th className="text-left py-3 px-4 font-medium">操作</th>
                   </tr></thead>
                   <tbody>
-                    {poets!.map((p) => (
+                    {poets.map((p) => (
                       <tr key={p.id} className="border-b last:border-0 hover:bg-muted/50">
                         <td className="py-3 px-4">{p.id}</td>
                         <td className="py-3 px-4 font-medium">{p.name}</td>
@@ -486,6 +506,17 @@ function PoetsTab() {
                 </table>
               </div>
             )}
+          <Pagination
+            className="mt-4"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize)
+              setPage(1)
+            }}
+          />
         </CardContent>
       </Card>
 

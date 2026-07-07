@@ -157,12 +157,30 @@ func (h *PoemHandler) GetDynastyList(c *gin.Context) {
 // GetPoetList 获取诗人列表
 func (h *PoemHandler) GetPoetList(c *gin.Context) {
 	keyword := c.Query("keyword")
-	poets, err := h.poemService.GetPoetList(keyword)
+	pageParam := c.Query("page")
+	pageSizeParam := c.Query("pageSize")
+	page, _ := strconv.Atoi(pageParam)
+	pageSize, _ := strconv.Atoi(pageSizeParam)
+	isPaginated := pageParam != "" || pageSizeParam != ""
+	if isPaginated {
+		if page <= 0 {
+			page = 1
+		}
+		if pageSize <= 0 {
+			pageSize = 10
+		}
+	}
+
+	poets, total, err := h.poemService.GetPoetList(keyword, page, pageSize)
 	if err != nil {
 		utils.InternalServerError(c, err.Error())
 		return
 	}
 
+	if isPaginated {
+		utils.PageSuccess(c, poets, total, page, pageSize)
+		return
+	}
 	utils.Success(c, poets)
 }
 

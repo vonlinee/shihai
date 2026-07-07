@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { poemService } from '@/services/poemService';
+import { poemService, type PoetListParams } from '@/services/poemService';
 import type { PoemSearchParams } from '@/types';
 import { toast } from 'sonner';
 
@@ -53,6 +53,14 @@ export function usePoets(keyword?: string) {
   return useQuery({
     queryKey: ['poets', keyword],
     queryFn: () => poemService.getPoets(keyword),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function usePoetList(params: PoetListParams) {
+  return useQuery({
+    queryKey: ['poets', 'list', params],
+    queryFn: () => poemService.getPoetList(params),
     staleTime: 1000 * 60 * 5,
   });
 }

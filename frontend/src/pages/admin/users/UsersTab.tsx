@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Pagination } from '@/components/ui/Pagination'
 import { Search, Plus, Edit2, Trash2, Shield, X } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useAdminUsers, useDeleteUser, useAdminCreateUser } from '@/hooks/useAdmin'
@@ -18,6 +19,7 @@ interface EditingUser {
 export function UsersTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [showRoleDialog, setShowRoleDialog] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null)
@@ -27,7 +29,7 @@ export function UsersTab() {
   const [addRoleIds, setAddRoleIds] = useState<number[]>([])
 
   const { data: usersData, isLoading } = useAdminUsers({
-    page, pageSize: 10, keyword: searchQuery || undefined,
+    page, pageSize, keyword: searchQuery || undefined,
   })
   const { data: rolesData } = useRoles()
   const deleteUserMutation = useDeleteUser()
@@ -35,6 +37,7 @@ export function UsersTab() {
   const assignRolesMutation = useAssignRolesToUser()
 
   const users = usersData?.list ?? []
+  const total = usersData?.total ?? 0
   const roles = rolesData?.list ?? []
 
   const handleManageRoles = (user: EditingUser) => {
@@ -181,6 +184,17 @@ export function UsersTab() {
               </table>
             </div>
           )}
+          <Pagination
+            className="mt-4"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize)
+              setPage(1)
+            }}
+          />
         </CardContent>
       </Card>
 

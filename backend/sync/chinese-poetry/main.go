@@ -56,6 +56,9 @@ func main() {
 		return
 	}
 	syncAllPoem(*db, root+"/全唐诗")
+	if err := config.MigrateMissingPoetsFromPoems(db); err != nil {
+		log.Fatalf("补齐诗人数据失败: %s", err)
+	}
 }
 
 func syncAllPoem(db gorm.DB, path string) {

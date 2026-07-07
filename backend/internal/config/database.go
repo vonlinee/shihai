@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"shihai/internal/models"
+	"shihai/pkg/utils"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -55,6 +56,9 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 	if err := migratePoemContentToJSONB(db); err != nil {
 		return err
 	}
+	if err := migrateLegacyPoetSchema(db); err != nil {
+		return err
+	}
 
 	err = db.AutoMigrate(
 		&models.User{},
@@ -83,6 +87,9 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 		&models.Permission{},
 	)
 	if err != nil {
+		return err
+	}
+	if err := MigrateMissingPoetsFromPoems(db); err != nil {
 		return err
 	}
 
@@ -128,6 +135,101 @@ BEGIN
             ALTER COLUMN content SET DEFAULT '[]'::jsonb;
     END IF;
 END $$;`, tableName, tableName),
+	}
+}
+
+// migrateLegacyPoetSchema 兼容旧版本 poet 表中的冗余作者字段。
+//
+// db 数据库连接。旧表曾直接在 poet 上保存 name、biography、avatar，当前模型已迁移到 author 表；
+// 若这些历史列仍带 NOT NULL 约束，补齐 poet 扩展记录时会因未写入旧列而失败。
+func migrateLegacyPoetSchema(db *gorm.DB) error {
+	for _, sql := range buildLegacyPoetSchemaMigrationSQL("poet") {
+		if err := db.Exec(sql).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildLegacyPoetSchemaMigrationSQL 构造旧 poet 表冗余字段的兼容迁移 SQL。
+//
+// tableName 待迁移的表名。返回的 SQL 会在历史列存在时解除 NOT NULL 约束，使当前 Poet 模型能够只写扩展字段。
+func buildLegacyPoetSchemaMigrationSQL(tableName string) []string {
+	return []string{
+		fmt.Sprintf(`
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = '%s'
+          AND column_name = 'name'
+          AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE "%s" ALTER COLUMN "name" DROP NOT NULL;
+    END IF;
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = '%s'
+          AND column_name = 'biography'
+          AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE "%s" ALTER COLUMN "biography" DROP NOT NULL;
+    END IF;
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = '%s'
+          AND column_name = 'avatar'
+          AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE "%s" ALTER COLUMN "avatar" DROP NOT NULL;
+    END IF;
+END $$;`, tableName, tableName, tableName, tableName, tableName, tableName),
+	}
+}
+
+// MigrateMissingPoetsFromPoems 为历史诗词作者补齐诗人扩展记录。
+//
+// db 数据库连接。旧版同步脚本会导入 author 和 poem，但不会同步创建 poet 记录；这会导致后台诗人管理列表为空。
+// 该迁移只为已经被 poem.author_id 引用且尚无 poet 记录的作者创建诗人扩展，不会把未被诗词引用的普通作者误加入诗人列表。
+func MigrateMissingPoetsFromPoems(db *gorm.DB) error {
+	for _, sql := range buildMissingPoetMigrationSQL() {
+		if err := db.Exec(sql, utils.GenerateID()).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildMissingPoetMigrationSQL 构造从诗词作者补齐诗人扩展记录的迁移 SQL。
+//
+// 返回的 SQL 会按 poem.author_id 去重，并跳过已经存在 poet 记录的作者。
+func buildMissingPoetMigrationSQL() []string {
+	return []string{
+		`
+INSERT INTO "poet" ("id", "created_at", "updated_at", "deleted_at", "created_by", "updated_by", "author_id", "dynasty_id", "birth_year", "death_year")
+SELECT
+    ? + ROW_NUMBER() OVER (ORDER BY missing_author.author_id) AS id,
+    NOW(),
+    NOW(),
+    NULL,
+    0,
+    0,
+    missing_author.author_id,
+    missing_author.dynasty_id,
+    0,
+    0
+FROM (
+    SELECT DISTINCT p.author_id, MIN(p.dynasty_id) OVER (PARTITION BY p.author_id) AS dynasty_id
+    FROM "poem" p
+    LEFT JOIN "poet" existing_poet ON existing_poet.author_id = p.author_id
+        AND existing_poet.deleted_at IS NULL
+    WHERE p.author_id > 0
+      AND p.deleted_at IS NULL
+      AND existing_poet.id IS NULL
+) missing_author`,
 	}
 }
 

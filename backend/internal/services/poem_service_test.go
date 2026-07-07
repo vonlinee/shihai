@@ -95,6 +95,41 @@ func TestGetPoemByIDReturnsContentArray(t *testing.T) {
 	assertStringSliceEqual(t, resp.Content, []string{"床前明月光，", "疑是地上霜。"})
 }
 
+func TestGetPoetListReturnsPaginatedPoets(t *testing.T) {
+	poetRepo := &fakePoetRepository{
+		listPoets: []models.Poet{
+			{
+				BaseModel: models.BaseModel{ID: 1},
+				AuthorID:  11,
+				Author:    models.Author{Name: "Li Bai"},
+			},
+		},
+		listTotal: 12,
+	}
+	service := NewPoemService(&fakePoemRepository{}, &fakeDynastyRepository{}, &fakeAuthorRepository{}, poetRepo)
+
+	poets, total, err := service.GetPoetList("Li", 2, 3)
+
+	if err != nil {
+		t.Fatalf("GetPoetList error = %v, want nil", err)
+	}
+	if total != 12 {
+		t.Fatalf("total = %d, want 12", total)
+	}
+	if poetRepo.listKeyword != "Li" {
+		t.Fatalf("keyword = %q, want Li", poetRepo.listKeyword)
+	}
+	if poetRepo.listPage != 2 {
+		t.Fatalf("page = %d, want 2", poetRepo.listPage)
+	}
+	if poetRepo.listPageSize != 3 {
+		t.Fatalf("pageSize = %d, want 3", poetRepo.listPageSize)
+	}
+	if len(poets) != 1 || poets[0].Name != "Li Bai" {
+		t.Fatalf("poets = %#v, want one Li Bai", poets)
+	}
+}
+
 type fakePoemRepository struct {
 	createCalls      int
 	createdAuthorID  uint64
@@ -223,6 +258,11 @@ type fakePoetRepository struct {
 	createCalls      int
 	createdAuthorID  uint64
 	createdDynastyID uint64
+	listKeyword      string
+	listPage         int
+	listPageSize     int
+	listPoets        []models.Poet
+	listTotal        int64
 }
 
 func (r *fakePoetRepository) Create(poet *models.Poet) error {
@@ -241,8 +281,11 @@ func (r *fakePoetRepository) GetByAuthorID(authorID uint64) (*models.Poet, error
 	return nil, errors.New("not found")
 }
 
-func (r *fakePoetRepository) List(keyword string) ([]models.Poet, error) {
-	return nil, nil
+func (r *fakePoetRepository) List(keyword string, page, pageSize int) ([]models.Poet, int64, error) {
+	r.listKeyword = keyword
+	r.listPage = page
+	r.listPageSize = pageSize
+	return r.listPoets, r.listTotal, nil
 }
 
 func (r *fakePoetRepository) Update(poet *models.Poet) error {

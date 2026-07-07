@@ -21,3 +21,44 @@ func TestBuildPoemContentJSONBMigrationSQLWrapsTextContent(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildLegacyPoetSchemaMigrationSQLDropsOldNotNullColumns(t *testing.T) {
+	sqlStatements := buildLegacyPoetSchemaMigrationSQL("poet")
+	sql := strings.Join(sqlStatements, "\n")
+
+	for _, want := range []string{
+		`WHERE table_name = 'poet'`,
+		`AND column_name = 'name'`,
+		`ALTER TABLE "poet" ALTER COLUMN "name" DROP NOT NULL`,
+		`ALTER TABLE "poet" ALTER COLUMN "biography" DROP NOT NULL`,
+		`ALTER TABLE "poet" ALTER COLUMN "avatar" DROP NOT NULL`,
+	} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("legacy poet migration sql %q does not contain %q", sql, want)
+		}
+	}
+}
+
+func TestBuildMissingPoetMigrationSQLCreatesPoetsForPoemAuthors(t *testing.T) {
+	sqlStatements := buildMissingPoetMigrationSQL()
+	sql := strings.Join(sqlStatements, "\n")
+
+	for _, want := range []string{
+		`INSERT INTO "poet"`,
+		`? + ROW_NUMBER()`,
+		`SELECT DISTINCT p.author_id`,
+		`FROM "poem" p`,
+		`LEFT JOIN "poet" existing_poet ON existing_poet.author_id = p.author_id`,
+		`WHERE p.author_id > 0`,
+		`AND p.deleted_at IS NULL`,
+		`AND existing_poet.deleted_at IS NULL`,
+		`AND existing_poet.id IS NULL`,
+	} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("missing poet migration sql %q does not contain %q", sql, want)
+		}
+	}
+	if strings.Contains(sql, `:id`) {
+		t.Fatalf("missing poet migration sql %q should not use postgres-invalid named placeholder :id", sql)
+	}
+}

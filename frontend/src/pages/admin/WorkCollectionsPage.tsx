@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { Pagination } from '@/components/ui/Pagination'
 import { Edit2, Plus, Search, Trash2, X } from 'lucide-react'
 import {
   useAdminAddWorkCollectionItem,
@@ -27,6 +28,7 @@ interface CollectionFormState {
 export function AdminWorkCollectionsPage() {
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [showDialog, setShowDialog] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [formData, setFormData] = useState<CollectionFormState>({
@@ -38,7 +40,7 @@ export function AdminWorkCollectionsPage() {
   const [selectedPoemId, setSelectedPoemId] = useState<number | undefined>()
   const [sortOrder, setSortOrder] = useState('0')
 
-  const { data, isLoading } = useAdminWorkCollections({ page, pageSize: 10, keyword: keyword || undefined })
+  const { data, isLoading } = useAdminWorkCollections({ page, pageSize, keyword: keyword || undefined })
   const { data: detail } = useAdminWorkCollection(editingId)
   const { data: poemData } = usePoems({ page: 1, pageSize: 50 })
   const createMutation = useAdminCreateWorkCollection()
@@ -184,13 +186,17 @@ export function AdminWorkCollectionsPage() {
               </table>
             </div>
           )}
-          {total > 10 && (
-            <div className="flex justify-center gap-2 mt-4">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>上一页</Button>
-              <span className="flex items-center px-4 text-sm text-muted-foreground">第 {page} 页</span>
-              <Button variant="outline" size="sm" disabled={page >= Math.ceil(total / 10)} onClick={() => setPage(page + 1)}>下一页</Button>
-            </div>
-          )}
+          <Pagination
+            className="mt-4"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize)
+              setPage(1)
+            }}
+          />
         </CardContent>
       </Card>
 

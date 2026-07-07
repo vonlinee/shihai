@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, Filter, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/Pagination'
 import { usePoems, useDynasties } from '@/hooks/usePoems'
 import { PoemContent } from '@/components/poetry/PoemContent'
 
@@ -14,13 +14,14 @@ export function PoemListPage() {
   const [selectedDynasty, setSelectedDynasty] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const { data: poemData, isLoading } = usePoems({
     keyword: searchQuery || undefined,
     dynastyId: selectedDynasty ? Number(selectedDynasty) : undefined,
     genre: selectedGenre || undefined,
     page,
-    pageSize: 10,
+    pageSize,
   })
 
   const { data: dynasties } = useDynasties()
@@ -148,30 +149,17 @@ export function PoemListPage() {
             </div>
           )}
 
-          {/* Pagination */}
-          {total > 10 && (
-            <div className="flex justify-center gap-2 mt-8">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                上一页
-              </Button>
-              <span className="flex items-center px-4 text-sm text-muted-foreground">
-                第 {page} 页 / 共 {Math.ceil(total / 10)} 页
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= Math.ceil(total / 10)}
-                onClick={() => setPage(page + 1)}
-              >
-                下一页
-              </Button>
-            </div>
-          )}
+          <Pagination
+            className="mt-8"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize)
+              setPage(1)
+            }}
+          />
         </div>
       </div>
     </div>
