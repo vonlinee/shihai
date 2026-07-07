@@ -6,20 +6,64 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
 import { usePoems, useDynasties, usePoets, useGenres } from '@/hooks/usePoems'
 import {
-  useAdminDeletePoem, useAdminCreatePoem,
+  useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
   useAdminCreateDynasty, useAdminUpdateDynasty, useAdminDeleteDynasty,
   useAdminCreatePoet, useAdminUpdatePoet, useAdminDeletePoet,
 } from '@/hooks/useAdmin'
 import { useNavigate } from 'react-router-dom'
 import { splitPoemContentInput } from '@/utils/poemContent'
+import type { Poem } from '@/types'
+import type { PoemCreateRequest, PoemUpdateRequest } from '@/services/adminService'
 
 type TabKey = 'poems' | 'dynasties' | 'poets'
+type PoemFormData = {
+  title: string
+  content: string
+  authorId?: string
+  authorName?: string
+  dynastyId?: string
+  dynastyName?: string
+  genre: string | number | undefined
+  translation: string
+  appreciation: string
+  annotation: string
+}
+type PoemTextField = 'translation' | 'appreciation' | 'annotation'
 
 const tabs: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
   { key: 'poems', label: '诗词', icon: BookOpen },
   { key: 'dynasties', label: '朝代', icon: Crown },
   { key: 'poets', label: '诗人', icon: User },
 ]
+
+const emptyPoemFormData: PoemFormData = {
+  title: '',
+  content: '',
+  genre: '',
+  translation: '',
+  appreciation: '',
+  annotation: '',
+}
+
+const poemTextFields: { key: PoemTextField; label: string; placeholder: string }[] = [
+  { key: 'translation', label: '译文', placeholder: '白话文翻译' },
+  { key: 'appreciation', label: '赏析', placeholder: '诗词赏析' },
+  { key: 'annotation', label: '注释', placeholder: '字词注释' },
+]
+
+function createEmptyPoemFormData(): PoemFormData {
+  return { ...emptyPoemFormData }
+}
+
+function formatPoemContentForInput(content: Poem['content']): string {
+  return content.join('\n')
+}
+
+function toPoemUpdateId(id: string | undefined): number | undefined {
+  if (!id) return undefined
+  const parsed = Number(id)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -59,16 +103,9 @@ function PoemsTab() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [formData, setFormData] = useState<{
-    title: string; content: string
-    authorId?: string; authorName?: string
-    dynastyId?: string; dynastyName?: string
-    genre: string | number | undefined
-    translation: string; appreciation: string; annotation: string
-  }>({
-    title: '', content: '', genre: '', translation: '', appreciation: '', annotation: '',
-  })
+  const [showPoemDialog, setShowPoemDialog] = useState(false)
+  const [editingPoemId, setEditingPoemId] = useState<number | null>(null)
+  const [formData, setFormData] = useState<PoemFormData>(() => createEmptyPoemFormData())
 
   const { data: poemData, isLoading } = usePoems({ keyword: searchQuery || undefined, page, pageSize: 10 })
   const { data: dynasties } = useDynasties()
@@ -81,26 +118,85 @@ function PoemsTab() {
 
   const deletePoemMutation = useAdminDeletePoem()
   const createPoemMutation = useAdminCreatePoem()
+  const updatePoemMutation = useAdminUpdatePoem()
   const poems = poemData?.list ?? []
   const total = poemData?.total ?? 0
 
   const handleDelete = (id: number) => { if (confirm('确定要删除该诗词吗？')) deletePoemMutation.mutate(id) }
 
-  const handleAddPoem = (e: React.FormEvent) => {
-    e.preventDefault()
-    const payload: Record<string, unknown> = {
-      title: formData.title, content: splitPoemContentInput(formData.content),
+  const closePoemDialog = () => {
+    setShowPoemDialog(false)
+  }
+
+  const openCreatePoemDialog = () => {
+    setEditingPoemId(null)
+    setFormData(createEmptyPoemFormData())
+    setShowPoemDialog(true)
+  }
+
+  const openEditPoemDialog = (poem: Poem) => {
+    setEditingPoemId(poem.id)
+    setFormData({
+      title: poem.title,
+      content: formatPoemContentForInput(poem.content),
+      authorId: poem.authorId ? String(poem.authorId) : undefined,
+      authorName: poem.author?.name,
+      dynastyId: poem.dynastyId ? String(poem.dynastyId) : undefined,
+      dynastyName: poem.dynasty?.name,
+      genre: poem.genre || '',
+      translation: poem.translation || '',
+      appreciation: poem.appreciation || '',
+      annotation: poem.annotation || '',
+    })
+    setShowPoemDialog(true)
+  }
+
+  const resetPoemDialog = () => {
+    setEditingPoemId(null)
+    setFormData(createEmptyPoemFormData())
+    setShowPoemDialog(false)
+  }
+
+  const buildCreatePayload = (): PoemCreateRequest => {
+    const payload: PoemCreateRequest = {
+      title: formData.title,
+      content: splitPoemContentInput(formData.content),
       genre: typeof formData.genre === 'number' ? String(formData.genre) : formData.genre || '',
-      translation: formData.translation, appreciation: formData.appreciation, annotation: formData.annotation,
+      translation: formData.translation,
+      appreciation: formData.appreciation,
+      annotation: formData.annotation,
     }
     if (formData.dynastyName) payload.dynastyName = formData.dynastyName
     if (formData.authorName) payload.authorName = formData.authorName
-    createPoemMutation.mutate(payload as any, {
-      onSuccess: () => {
-        setShowAddDialog(false)
-        setFormData({ title: '', content: '', genre: '', translation: '', appreciation: '', annotation: '' })
-      },
-    })
+    return payload
+  }
+
+  const buildUpdatePayload = (): PoemUpdateRequest => {
+    const payload: PoemUpdateRequest = {
+      title: formData.title,
+      content: splitPoemContentInput(formData.content),
+      genre: typeof formData.genre === 'number' ? String(formData.genre) : formData.genre || '',
+      translation: formData.translation,
+      appreciation: formData.appreciation,
+      annotation: formData.annotation,
+    }
+    const dynastyId = toPoemUpdateId(formData.dynastyId)
+    const authorId = toPoemUpdateId(formData.authorId)
+    if (dynastyId) payload.dynastyId = dynastyId
+    if (authorId) payload.authorId = authorId
+    return payload
+  }
+
+  const handlePoemSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editingPoemId) {
+      updatePoemMutation.mutate(
+        { id: editingPoemId, data: buildUpdatePayload() },
+        { onSuccess: resetPoemDialog },
+      )
+      return
+    }
+    createPoemMutation.mutate(buildCreatePayload(), { onSuccess: resetPoemDialog })
   }
 
   return (
@@ -111,7 +207,7 @@ function PoemsTab() {
           <Input placeholder="搜索诗词标题或作者..." className="pl-10" value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }} />
         </div>
-        <Button onClick={() => setShowAddDialog(true)}><Plus className="h-4 w-4 mr-2" />添加诗词</Button>
+        <Button onClick={openCreatePoemDialog}><Plus className="h-4 w-4 mr-2" />添加诗词</Button>
       </div>
 
       <Card className="ink-border">
@@ -146,7 +242,7 @@ function PoemsTab() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <Button variant="ghost" size="sm" onClick={() => navigate(`/poems/${poem.id}`)}><Eye className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm"><Edit2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEditPoemDialog(poem)}><Edit2 className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDelete(poem.id)}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
                         </div>
                       </td>
@@ -166,15 +262,15 @@ function PoemsTab() {
         </CardContent>
       </Card>
 
-      {/* Add Poem Dialog */}
-      {showAddDialog && (
+      {/* Poem Dialog */}
+      {showPoemDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
-              <h2 className="text-xl font-bold font-serif">添加诗词</h2>
-              <button onClick={() => setShowAddDialog(false)} className="p-1 hover:bg-muted rounded"><X className="h-5 w-5" /></button>
+              <h2 className="text-xl font-bold font-serif">{editingPoemId ? '编辑诗词' : '添加诗词'}</h2>
+              <button onClick={closePoemDialog} className="p-1 hover:bg-muted rounded"><X className="h-5 w-5" /></button>
             </div>
-            <form onSubmit={handleAddPoem} className="space-y-4 p-6 pt-4 overflow-y-auto">
+            <form onSubmit={handlePoemSubmit} className="space-y-4 p-6 pt-4 overflow-y-auto">
               <div className="space-y-2">
                 <label className="text-sm font-medium">标题 *</label>
                 <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="诗词标题" required />
@@ -188,13 +284,13 @@ function PoemsTab() {
                   <label className="text-sm font-medium">作者</label>
                   <Combobox options={poetOptions} value={formData.authorId}
                     onChange={(val, option) => { if (option) setFormData({ ...formData, authorId: String(val), authorName: option.label }); else setFormData({ ...formData, authorId: undefined, authorName: String(val || '') }) }}
-                    placeholder="选择或输入作者" allowCustom />
+                    placeholder={editingPoemId ? '选择作者' : '选择或输入作者'} allowCustom={!editingPoemId} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">朝代</label>
                   <Combobox options={dynastyOptions} value={formData.dynastyId}
                     onChange={(val, option) => { if (option) setFormData({ ...formData, dynastyId: String(val), dynastyName: option.label }); else setFormData({ ...formData, dynastyId: undefined, dynastyName: String(val || '') }) }}
-                    placeholder="选择或输入朝代" allowCustom />
+                    placeholder={editingPoemId ? '选择朝代' : '选择或输入朝代'} allowCustom={!editingPoemId} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -202,17 +298,19 @@ function PoemsTab() {
                 <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} placeholder="诗词内容" required rows={4}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
               </div>
-              {['translation', 'appreciation', 'annotation'].map((field) => (
-                <div key={field} className="space-y-2">
-                  <label className="text-sm font-medium">{{ translation: '译文', appreciation: '赏析', annotation: '注释' }[field]}</label>
-                  <textarea value={(formData as any)[field]} onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                    placeholder={{ translation: '白话文翻译', appreciation: '诗词赏析', annotation: '字词注释' }[field]} rows={3}
+              {poemTextFields.map((field) => (
+                <div key={field.key} className="space-y-2">
+                  <label className="text-sm font-medium">{field.label}</label>
+                  <textarea value={formData[field.key]} onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                    placeholder={field.placeholder} rows={3}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
                 </div>
               ))}
               <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" className="bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={() => setShowAddDialog(false)}>取消</Button>
-                <Button type="submit" disabled={createPoemMutation.isPending}>{createPoemMutation.isPending ? '提交中...' : '添加'}</Button>
+                <Button type="button" className="bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={closePoemDialog}>取消</Button>
+                <Button type="submit" disabled={createPoemMutation.isPending || updatePoemMutation.isPending}>
+                  {(createPoemMutation.isPending || updatePoemMutation.isPending) ? '提交中...' : editingPoemId ? '保存' : '添加'}
+                </Button>
               </div>
             </form>
           </div>
