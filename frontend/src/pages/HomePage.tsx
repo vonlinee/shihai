@@ -65,16 +65,16 @@ export function HomePage() {
             {(featuredPoems ?? []).map((poem) => (
               <Card 
                 key={poem.id} 
-                className="cursor-pointer hover:shadow-lg transition-shadow ink-border"
+                className="h-full min-h-[220px] cursor-pointer hover:shadow-lg transition-shadow ink-border flex flex-col p-6"
                 onClick={() => navigate(`/poems/${poem.id}`)}
               >
-                <CardHeader className="pb-3">
+                <CardHeader className="p-0 space-y-2 text-center">
                   <CardTitle className="font-serif text-xl">{poem.title}</CardTitle>
                   <p className="text-sm text-muted-foreground">
                     [{poem.dynasty?.name}] {poem.author?.name}
                   </p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex justify-center p-0 pt-5 text-center">
                   <PoemContent content={poem.content} className="text-foreground/80" />
                 </CardContent>
               </Card>
