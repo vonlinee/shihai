@@ -331,6 +331,14 @@ poems.map((poem, index) => <PoemCard key={index} poem={poem} />)
 {count && <Badge count={count} />}
 ```
 
+### 4.6 弹窗与提示
+
+- 禁止使用浏览器原生 `alert`、`confirm`、`prompt` 以及 `window.alert`、`window.confirm`、`window.prompt`。
+- 删除、批量删除、权限变更等确认类操作，统一使用项目已有弹窗组件，例如 `src/components/ui/ConfirmDialog.tsx`。
+- 成功、失败、信息类非阻塞提示统一使用项目已有 toast 方案，例如 `sonner`。
+- 危险操作的确认按钮文案必须明确，样式使用 destructive 语义，避免只写“确定”。
+- 新增页面或交互提交前，应检查是否引入了原生弹窗调用。
+
 ---
 
 ## 五、Hooks 规范
@@ -494,6 +502,13 @@ export const poemService = {
 
 - 列表接口分页参数统一使用 `page`（从 1 开始）和 `pageSize`。
 - 空字符串、undefined、null 的可选参数不传给后端（在 httpClient 中过滤）。
+
+### 7.4 雪花 ID 处理
+
+- 后端响应中的雪花 ID 按字符串处理，前端类型中的 ID 优先声明为 `string`；兼容历史数据时可临时使用 `string | number`，但进入业务状态前应归一化为字符串。
+- 表格选择、批量操作、`Map`/`Set` key、React `key`、路由参数和删除/更新接口参数都必须使用字符串 ID。
+- 禁止对雪花 ID 使用 `Number()`、`parseInt()`、一元 `+` 等方式强转为数字，除非能确认该字段不是雪花 ID。
+- 向后端提交 ID 时优先传字符串，避免超过 `Number.MAX_SAFE_INTEGER` 后出现精度丢失、误选多行或删除错误数据。
 
 ---
 

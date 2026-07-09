@@ -494,6 +494,26 @@ GET    /api/v1/poems/:id/comments  # 获取诗词评论
 | 404    | 资源不存在                     |
 | 500    | 服务器内部错误                 |
 
+### 5.6 雪花 ID 序列化
+
+- 数据库模型和领域对象中的雪花 ID 使用 `uint64`，不要为了前端展示在 Model 的 JSON 标签上添加 `,string`。
+- 外部响应必须通过 DTO 返回，凡是返回给前端的雪花 ID 字段必须使用 `json:",string"`，避免 JavaScript `Number` 精度丢失。
+- 请求 DTO 不依赖 `json:",string"` 作为兼容方案；需要接收前端提交的 ID 时，应使用统一的请求 ID 类型或自定义反序列化逻辑，兼容字符串和数字格式。
+- JWT、用户信息等会被前端读取的载荷中，雪花 ID 输出也应字符串化；解析时尽量兼容历史数字格式。
+- 修改涉及 ID 的前后端契约时，应补充序列化和反序列化测试。
+
+```go
+// 响应 DTO：返回给前端时字符串化雪花 ID
+type PoemResponse struct {
+    ID uint64 `json:"id,string"`
+}
+
+// 数据库模型：保持领域类型，不在 Model 上添加 ,string
+type Poem struct {
+    BaseModel
+}
+```
+
 ---
 
 ## 六、错误处理规范
