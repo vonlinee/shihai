@@ -145,14 +145,15 @@ type AuthorResponse struct {
 }
 
 type PoetResponse struct {
-	ID        uint64 `json:"id,string"`
-	AuthorID  uint64 `json:"authorId,string"`
-	Name      string `json:"name"`
-	DynastyID uint64 `json:"dynastyId,string"`
-	Biography string `json:"biography"`
-	Avatar    string `json:"avatar"`
-	BirthYear int    `json:"birthYear"`
-	DeathYear int    `json:"deathYear"`
+	ID        uint64          `json:"id,string"`
+	AuthorID  uint64          `json:"authorId,string"`
+	Name      string          `json:"name"`
+	DynastyID uint64          `json:"dynastyId,string"`
+	Dynasty   DynastyResponse `json:"dynasty,omitempty"`
+	Biography string          `json:"biography"`
+	Avatar    string          `json:"avatar"`
+	BirthYear int             `json:"birthYear"`
+	DeathYear int             `json:"deathYear"`
 }
 
 type DynastyResponse struct {

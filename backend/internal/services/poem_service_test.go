@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -166,6 +167,55 @@ func TestBatchDeleteResourcesRejectsEmptyIDs(t *testing.T) {
 	}
 }
 
+func TestUpdatePoetReturnsChangedDynasty(t *testing.T) {
+	poetRepo := &fakePoetRepository{
+		existingPoet: &models.Poet{
+			BaseModel: models.BaseModel{ID: 1},
+			AuthorID:  11,
+			Author:    models.Author{BaseModel: models.BaseModel{ID: 11}, Name: "李白"},
+			DynastyID: 100,
+			Dynasty:   models.Dynasty{BaseModel: models.BaseModel{ID: 100}, Name: "唐"},
+		},
+	}
+	dynastyRepo := &fakeDynastyRepository{
+		existingByID: map[uint64]*models.Dynasty{
+			200: {BaseModel: models.BaseModel{ID: 200}, Name: "宋", Period: "960-1279"},
+		},
+	}
+	service := NewPoemService(&fakePoemRepository{}, dynastyRepo, &fakeAuthorRepository{}, poetRepo)
+
+	resp, err := service.UpdatePoet(1, &dto.PoetUpdateRequest{DynastyID: dto.RequestID(200)})
+
+	if err != nil {
+		t.Fatalf("UpdatePoet error = %v, want nil", err)
+	}
+	if poetRepo.updatedPoet == nil {
+		t.Fatal("updated poet = nil, want saved poet")
+	}
+	if poetRepo.updatedPoet.DynastyID != 200 {
+		t.Fatalf("updated DynastyID = %d, want 200", poetRepo.updatedPoet.DynastyID)
+	}
+
+	data, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatalf("Marshal response error = %v, want nil", err)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(data, &body); err != nil {
+		t.Fatalf("Unmarshal response error = %v, want nil", err)
+	}
+	dynasty, ok := body["dynasty"].(map[string]any)
+	if !ok {
+		t.Fatalf("dynasty = %#v, want object", body["dynasty"])
+	}
+	if dynasty["id"] != "200" {
+		t.Fatalf("dynasty.id = %#v, want string ID 200", dynasty["id"])
+	}
+	if dynasty["name"] != "宋" {
+		t.Fatalf("dynasty.name = %#v, want 宋", dynasty["name"])
+	}
+}
+
 type fakePoemRepository struct {
 	createCalls      int
 	createdAuthorID  uint64
@@ -306,6 +356,8 @@ type fakePoetRepository struct {
 	createCalls      int
 	createdAuthorID  uint64
 	createdDynastyID uint64
+	existingPoet     *models.Poet
+	updatedPoet      *models.Poet
 	listKeyword      string
 	listPage         int
 	listPageSize     int
@@ -323,6 +375,9 @@ func (r *fakePoetRepository) Create(poet *models.Poet) error {
 }
 
 func (r *fakePoetRepository) GetByID(id uint64) (*models.Poet, error) {
+	if r.existingPoet != nil {
+		return r.existingPoet, nil
+	}
 	return &models.Poet{BaseModel: models.BaseModel{ID: id}}, nil
 }
 
@@ -338,6 +393,8 @@ func (r *fakePoetRepository) List(keyword string, page, pageSize int) ([]models.
 }
 
 func (r *fakePoetRepository) Update(poet *models.Poet) error {
+	copied := *poet
+	r.updatedPoet = &copied
 	return nil
 }
 

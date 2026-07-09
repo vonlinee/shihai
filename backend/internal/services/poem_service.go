@@ -278,6 +278,15 @@ func (s *PoemService) BatchDeleteDynasties(ids []uint64) error {
 }
 
 func (s *PoemService) CreatePoet(req *dto.PoetCreateRequest) (*dto.PoetResponse, error) {
+	var dynasty *models.Dynasty
+	if req.DynastyID > 0 {
+		loadedDynasty, err := s.dynastyRepo.GetByID(uint64(req.DynastyID))
+		if err != nil {
+			return nil, errors.New("dynasty not found")
+		}
+		dynasty = loadedDynasty
+	}
+
 	author := &models.Author{
 		Name:      req.Name,
 		Biography: req.Biography,
@@ -297,6 +306,9 @@ func (s *PoemService) CreatePoet(req *dto.PoetCreateRequest) (*dto.PoetResponse,
 		return nil, err
 	}
 	poet.Author = *author
+	if dynasty != nil {
+		poet.Dynasty = *dynasty
+	}
 	return responsePtr(s.toPoetResponse(poet)), nil
 }
 
@@ -319,7 +331,12 @@ func (s *PoemService) UpdatePoet(id uint64, req *dto.PoetUpdateRequest) (*dto.Po
 		author.Name = req.Name
 	}
 	if req.DynastyID > 0 {
-		poet.DynastyID = uint64(req.DynastyID)
+		dynasty, err := s.dynastyRepo.GetByID(uint64(req.DynastyID))
+		if err != nil {
+			return nil, errors.New("dynasty not found")
+		}
+		poet.DynastyID = dynasty.ID
+		poet.Dynasty = *dynasty
 	}
 	if req.Biography != "" {
 		author.Biography = req.Biography
@@ -447,7 +464,7 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 }
 
 func (s *PoemService) toPoetResponse(poet *models.Poet) dto.PoetResponse {
-	return dto.PoetResponse{
+	resp := dto.PoetResponse{
 		ID:        poet.ID,
 		AuthorID:  poet.AuthorID,
 		Name:      poet.Author.Name,
@@ -457,6 +474,15 @@ func (s *PoemService) toPoetResponse(poet *models.Poet) dto.PoetResponse {
 		BirthYear: poet.BirthYear,
 		DeathYear: poet.DeathYear,
 	}
+	if poet.Dynasty.ID > 0 {
+		resp.Dynasty = dto.DynastyResponse{
+			ID:          poet.Dynasty.ID,
+			Name:        poet.Dynasty.Name,
+			Period:      poet.Dynasty.Period,
+			Description: poet.Dynasty.Description,
+		}
+	}
+	return resp
 }
 
 func responsePtr[T any](value T) *T {
