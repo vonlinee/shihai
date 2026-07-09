@@ -223,7 +223,6 @@ function PoemsTab() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
                     <th className="text-left py-3 px-4 font-medium">标题</th>
                     <th className="text-left py-3 px-4 font-medium">作者</th>
                     <th className="text-left py-3 px-4 font-medium">朝代</th>
@@ -235,7 +234,6 @@ function PoemsTab() {
                 <tbody>
                   {poems.map((poem) => (
                     <tr key={poem.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4">{poem.id}</td>
                       <td className="py-3 px-4 font-medium">{poem.title}</td>
                       <td className="py-3 px-4">{poem.author?.name}</td>
                       <td className="py-3 px-4">{poem.dynasty?.name}</td>
@@ -361,7 +359,6 @@ function DynastiesTab() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
                     <th className="text-left py-3 px-4 font-medium">朝代名称</th>
                     <th className="text-left py-3 px-4 font-medium">时期</th>
                     <th className="text-left py-3 px-4 font-medium">描述</th>
@@ -370,7 +367,6 @@ function DynastiesTab() {
                   <tbody>
                     {dynasties!.map((d) => (
                       <tr key={d.id} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="py-3 px-4">{d.id}</td>
                         <td className="py-3 px-4 font-medium">{d.name}</td>
                         <td className="py-3 px-4 text-muted-foreground">{d.period || '-'}</td>
                         <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">{d.description || '-'}</td>
@@ -479,7 +475,6 @@ function PoetsTab() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
                     <th className="text-left py-3 px-4 font-medium">姓名</th>
                     <th className="text-left py-3 px-4 font-medium">朝代</th>
                     <th className="text-left py-3 px-4 font-medium">生卒年</th>
@@ -489,7 +484,6 @@ function PoetsTab() {
                   <tbody>
                     {poets.map((p) => (
                       <tr key={p.id} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="py-3 px-4">{p.id}</td>
                         <td className="py-3 px-4 font-medium">{p.name}</td>
                         <td className="py-3 px-4 text-muted-foreground">{p.dynasty?.name || '-'}</td>
                         <td className="py-3 px-4 text-muted-foreground">{p.birthYear && p.deathYear ? `${p.birthYear}-${p.deathYear}` : '-'}</td>
