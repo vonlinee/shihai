@@ -15,7 +15,7 @@ type RoleUpdateRequest struct {
 
 // RoleResponse 角色响应，包含角色信息和关联的权限编码列表
 type RoleResponse struct {
-	ID          uint64   `json:"id"`                    // 角色ID
+	ID          uint64   `json:"id,string"`             // 角色ID
 	Name        string   `json:"name"`                  // 角色名称
 	Description string   `json:"description"`           // 角色描述
 	IsActive    bool     `json:"isActive"`              // 是否启用
@@ -37,13 +37,13 @@ type AssignPermissionRequest struct {
 // AssignRoleRequest 分配角色请求，为用户指定角色ID列表
 // 会替换该用户的所有角色，而非追加
 type AssignRoleRequest struct {
-	RoleIDs []uint64 `json:"roleIds" binding:"required"` // 角色ID列表
+	RoleIDs IDList `json:"roleIds" binding:"required"` // 角色ID列表
 }
 
 // UserRoleResponse 用户角色响应，返回用户的所有角色信息
 type UserRoleResponse struct {
-	UserID uint64         `json:"userId"` // 用户ID
-	Roles  []RoleResponse `json:"roles"`  // 角色列表
+	UserID uint64         `json:"userId,string"` // 用户ID
+	Roles  []RoleResponse `json:"roles"`         // 角色列表
 }
 
 // CheckPermissionRequest 检查权限请求，用于验证当前用户是否拥有指定权限
@@ -69,7 +69,7 @@ type PermissionUpdateRequest struct {
 
 // PermissionResponse 权限响应
 type PermissionResponse struct {
-	ID          uint64 `json:"id"`          // 权限ID
+	ID          uint64 `json:"id,string"`   // 权限ID
 	Code        string `json:"code"`        // 权限编码
 	Name        string `json:"name"`        // 权限名称
 	Description string `json:"description"` // 权限描述

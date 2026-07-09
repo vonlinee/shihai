@@ -49,6 +49,10 @@ func (r *DynastyRepository) Delete(id uint64) error {
 	return r.db.Delete(&models.Dynasty{}, id).Error
 }
 
+func (r *DynastyRepository) BatchDelete(ids []uint64) error {
+	return r.db.Where("id IN ?", ids).Delete(&models.Dynasty{}).Error
+}
+
 // List 获取所有朝代
 func (r *DynastyRepository) List() ([]models.Dynasty, error) {
 	var dynasties []models.Dynasty

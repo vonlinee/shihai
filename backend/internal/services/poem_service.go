@@ -19,6 +19,7 @@ type poemRepository interface {
 	GetByID(id uint64) (*models.Poem, error)
 	Update(poem *models.Poem) error
 	Delete(id uint64) error
+	BatchDelete(ids []uint64) error
 	List(page, pageSize int, keyword, dynasty, author, genre string) ([]models.Poem, int64, error)
 	IncrementViews(id uint64) error
 	IncrementLikes(id uint64) error
@@ -32,6 +33,7 @@ type dynastyRepository interface {
 	GetByName(name string) (*models.Dynasty, error)
 	Update(dynasty *models.Dynasty) error
 	Delete(id uint64) error
+	BatchDelete(ids []uint64) error
 	List() ([]models.Dynasty, error)
 }
 
@@ -51,6 +53,7 @@ type poetRepository interface {
 	List(keyword string, page, pageSize int) ([]models.Poet, int64, error)
 	Update(poet *models.Poet) error
 	Delete(id uint64) error
+	BatchDelete(ids []uint64) error
 }
 
 func NewPoemService(poemRepo poemRepository, dynastyRepo dynastyRepository, authorRepo authorRepository, poetRepo poetRepository) *PoemService {
@@ -86,12 +89,12 @@ func (s *PoemService) GetPoemByID(id uint64) (*dto.PoemResponse, error) {
 }
 
 func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse, error) {
-	dynastyID, err := s.resolveDynastyID(req.DynastyID, req.DynastyName)
+	dynastyID, err := s.resolveDynastyID(uint64(req.DynastyID), req.DynastyName)
 	if err != nil {
 		return nil, err
 	}
 
-	authorID, err := s.resolveAuthorID(req.AuthorID, req.AuthorName, dynastyID)
+	authorID, err := s.resolveAuthorID(uint64(req.AuthorID), req.AuthorName, dynastyID)
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +131,10 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 		poem.Content = req.Content
 	}
 	if req.AuthorID > 0 {
-		poem.AuthorID = req.AuthorID
+		poem.AuthorID = uint64(req.AuthorID)
 	}
 	if req.DynastyID > 0 {
-		poem.DynastyID = req.DynastyID
+		poem.DynastyID = uint64(req.DynastyID)
 	}
 	if req.Genre != "" {
 		poem.Genre = req.Genre
@@ -160,6 +163,13 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 
 func (s *PoemService) DeletePoem(id uint64) error {
 	return s.poemRepo.Delete(id)
+}
+
+func (s *PoemService) BatchDeletePoems(ids []uint64) error {
+	if err := validateBatchDeleteIDs(ids); err != nil {
+		return err
+	}
+	return s.poemRepo.BatchDelete(ids)
 }
 
 func (s *PoemService) LikePoem(id uint64) error {
@@ -260,6 +270,13 @@ func (s *PoemService) DeleteDynasty(id uint64) error {
 	return s.dynastyRepo.Delete(id)
 }
 
+func (s *PoemService) BatchDeleteDynasties(ids []uint64) error {
+	if err := validateBatchDeleteIDs(ids); err != nil {
+		return err
+	}
+	return s.dynastyRepo.BatchDelete(ids)
+}
+
 func (s *PoemService) CreatePoet(req *dto.PoetCreateRequest) (*dto.PoetResponse, error) {
 	author := &models.Author{
 		Name:      req.Name,
@@ -272,7 +289,7 @@ func (s *PoemService) CreatePoet(req *dto.PoetCreateRequest) (*dto.PoetResponse,
 
 	poet := &models.Poet{
 		AuthorID:  author.ID,
-		DynastyID: req.DynastyID,
+		DynastyID: uint64(req.DynastyID),
 		BirthYear: req.BirthYear,
 		DeathYear: req.DeathYear,
 	}
@@ -302,7 +319,7 @@ func (s *PoemService) UpdatePoet(id uint64, req *dto.PoetUpdateRequest) (*dto.Po
 		author.Name = req.Name
 	}
 	if req.DynastyID > 0 {
-		poet.DynastyID = req.DynastyID
+		poet.DynastyID = uint64(req.DynastyID)
 	}
 	if req.Biography != "" {
 		author.Biography = req.Biography
@@ -329,6 +346,13 @@ func (s *PoemService) UpdatePoet(id uint64, req *dto.PoetUpdateRequest) (*dto.Po
 
 func (s *PoemService) DeletePoet(id uint64) error {
 	return s.poetRepo.Delete(id)
+}
+
+func (s *PoemService) BatchDeletePoets(ids []uint64) error {
+	if err := validateBatchDeleteIDs(ids); err != nil {
+		return err
+	}
+	return s.poetRepo.BatchDelete(ids)
 }
 
 func (s *PoemService) resolveDynastyID(reqDynastyID uint64, dynastyName string) (uint64, error) {
@@ -437,4 +461,16 @@ func (s *PoemService) toPoetResponse(poet *models.Poet) dto.PoetResponse {
 
 func responsePtr[T any](value T) *T {
 	return &value
+}
+
+func validateBatchDeleteIDs(ids []uint64) error {
+	if len(ids) == 0 {
+		return errors.New("ids cannot be empty")
+	}
+	for _, id := range ids {
+		if id == 0 {
+			return errors.New("ids must be greater than 0")
+		}
+	}
+	return nil
 }

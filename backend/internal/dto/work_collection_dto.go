@@ -24,9 +24,9 @@ type WorkCollectionUpdateRequest struct {
 }
 
 type WorkCollectionItemCreateRequest struct {
-	WorkType  string `json:"workType" binding:"required"`
-	WorkID    uint64 `json:"workId" binding:"required"`
-	SortOrder int    `json:"sortOrder"`
+	WorkType  string    `json:"workType" binding:"required"`
+	WorkID    RequestID `json:"workId" binding:"required"`
+	SortOrder int       `json:"sortOrder"`
 }
 
 type WorkCollectionItemUpdateRequest struct {
@@ -34,7 +34,7 @@ type WorkCollectionItemUpdateRequest struct {
 }
 
 type WorkCollectionResponse struct {
-	ID          uint64                       `json:"id"`
+	ID          uint64                       `json:"id,string"`
 	Title       string                       `json:"title"`
 	Description string                       `json:"description"`
 	CoverImage  string                       `json:"coverImage"`
@@ -46,10 +46,10 @@ type WorkCollectionResponse struct {
 }
 
 type WorkCollectionItemResponse struct {
-	ID           uint64    `json:"id"`
-	CollectionID uint64    `json:"collectionId"`
+	ID           uint64    `json:"id,string"`
+	CollectionID uint64    `json:"collectionId,string"`
 	WorkType     string    `json:"workType"`
-	WorkID       uint64    `json:"workId"`
+	WorkID       uint64    `json:"workId,string"`
 	SortOrder    int       `json:"sortOrder"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`

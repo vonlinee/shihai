@@ -9,7 +9,7 @@ import (
 
 // AnnouncementResponse 公告响应
 type AnnouncementResponse struct {
-	ID        uint64    `json:"id"`
+	ID        uint64    `json:"id,string"`
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
 	IsPinned  bool      `json:"isPinned"`

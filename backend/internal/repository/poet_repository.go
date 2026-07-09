@@ -66,3 +66,7 @@ func (r *PoetRepository) Update(poet *models.Poet) error {
 func (r *PoetRepository) Delete(id uint64) error {
 	return r.db.Delete(&models.Poet{}, id).Error
 }
+
+func (r *PoetRepository) BatchDelete(ids []uint64) error {
+	return r.db.Where("id IN ?", ids).Delete(&models.Poet{}).Error
+}

@@ -110,6 +110,21 @@ func (h *PoemHandler) DeletePoem(c *gin.Context) {
 }
 
 // LikePoem 点赞诗词
+func (h *PoemHandler) BatchDeletePoems(c *gin.Context) {
+	var req dto.BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.poemService.BatchDeletePoems(req.IDs); err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "poems deleted successfully", nil)
+}
+
 func (h *PoemHandler) LikePoem(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -253,6 +268,21 @@ func (h *PoemHandler) DeleteDynasty(c *gin.Context) {
 }
 
 // CreatePoet 创建诗人
+func (h *PoemHandler) BatchDeleteDynasties(c *gin.Context) {
+	var req dto.BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.poemService.BatchDeleteDynasties(req.IDs); err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "dynasties deleted successfully", nil)
+}
+
 func (h *PoemHandler) CreatePoet(c *gin.Context) {
 	var req dto.PoetCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -307,4 +337,19 @@ func (h *PoemHandler) DeletePoet(c *gin.Context) {
 	}
 
 	utils.SuccessWithMessage(c, "poet deleted successfully", nil)
+}
+
+func (h *PoemHandler) BatchDeletePoets(c *gin.Context) {
+	var req dto.BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.poemService.BatchDeletePoets(req.IDs); err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "poets deleted successfully", nil)
 }

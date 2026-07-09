@@ -59,6 +59,10 @@ func (r *PoemRepository) Delete(id uint64) error {
 	return r.db.Delete(&models.Poem{}, id).Error
 }
 
+func (r *PoemRepository) BatchDelete(ids []uint64) error {
+	return r.db.Where("id IN ?", ids).Delete(&models.Poem{}).Error
+}
+
 // List 获取诗词列表
 func (r *PoemRepository) List(page, pageSize int, keyword, dynasty, author, genre string) ([]models.Poem, int64, error) {
 	var poems []models.Poem

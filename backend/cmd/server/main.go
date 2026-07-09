@@ -277,14 +277,17 @@ func setupRoutes(r *gin.Engine, app *App) {
 			// Poems
 			admin.POST("/poems", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreatePoem)
 			admin.PUT("/poems/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoem)
+			admin.DELETE("/poems", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.BatchDeletePoems)
 			admin.DELETE("/poems/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeletePoem)
 
 			// Dynasties & Poets（复用 poem:* 权限，不独立划分权限点）
 			admin.POST("/dynasties", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreateDynasty)
 			admin.PUT("/dynasties/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdateDynasty)
+			admin.DELETE("/dynasties", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.BatchDeleteDynasties)
 			admin.DELETE("/dynasties/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeleteDynasty)
 			admin.POST("/poets", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreatePoet)
 			admin.PUT("/poets/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoet)
+			admin.DELETE("/poets", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.BatchDeletePoets)
 			admin.DELETE("/poets/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeletePoet)
 
 			// Work Collections

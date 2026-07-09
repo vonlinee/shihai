@@ -11,10 +11,10 @@ type RegisterRequest struct {
 
 // AdminCreateUserRequest 管理员创建用户请求，支持指定角色
 type AdminCreateUserRequest struct {
-	Username string   `json:"username" binding:"required,min=3,max=50"`  // 用户名，3-50字符
-	Password string   `json:"password" binding:"required,min=6,max=100"` // 密码，6-100字符
-	Name     string   `json:"name" binding:"max=50"`                     // 显示名称，可选
-	RoleIds  []uint64 `json:"roleIds"`                                   // 角色ID列表，为空则分配默认 user 角色
+	Username string `json:"username" binding:"required,min=3,max=50"`  // 用户名，3-50字符
+	Password string `json:"password" binding:"required,min=6,max=100"` // 密码，6-100字符
+	Name     string `json:"name" binding:"max=50"`                     // 显示名称，可选
+	RoleIds  IDList `json:"roleIds"`                                   // 角色ID列表，为空则分配默认 user 角色
 }
 
 // LoginRequest 登录请求
@@ -41,7 +41,7 @@ type ChangePasswordRequest struct {
 // UserResponse 用户响应，包含用户基本信息和角色信息
 // Role 为主角色（优先级：admin > editor > reviewer > user），Roles 为所有角色列表
 type UserResponse struct {
-	ID        uint64    `json:"id"`        // 用户ID
+	ID        uint64    `json:"id,string"` // 用户ID
 	Username  string    `json:"username"`  // 用户名
 	Name      string    `json:"name"`      // 显示名称
 	Avatar    string    `json:"avatar"`    // 头像URL

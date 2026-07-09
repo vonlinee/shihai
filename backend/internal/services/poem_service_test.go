@@ -130,12 +130,49 @@ func TestGetPoetListReturnsPaginatedPoets(t *testing.T) {
 	}
 }
 
+func TestBatchDeleteResourcesPassesIDsToRepositories(t *testing.T) {
+	poemRepo := &fakePoemRepository{}
+	dynastyRepo := &fakeDynastyRepository{}
+	poetRepo := &fakePoetRepository{}
+	service := NewPoemService(poemRepo, dynastyRepo, &fakeAuthorRepository{}, poetRepo)
+
+	if err := service.BatchDeletePoems([]uint64{1, 2, 3}); err != nil {
+		t.Fatalf("BatchDeletePoems error = %v, want nil", err)
+	}
+	assertUint64SliceEqual(t, poemRepo.batchDeletedIDs, []uint64{1, 2, 3})
+
+	if err := service.BatchDeleteDynasties([]uint64{4, 5}); err != nil {
+		t.Fatalf("BatchDeleteDynasties error = %v, want nil", err)
+	}
+	assertUint64SliceEqual(t, dynastyRepo.batchDeletedIDs, []uint64{4, 5})
+
+	if err := service.BatchDeletePoets([]uint64{6, 7}); err != nil {
+		t.Fatalf("BatchDeletePoets error = %v, want nil", err)
+	}
+	assertUint64SliceEqual(t, poetRepo.batchDeletedIDs, []uint64{6, 7})
+}
+
+func TestBatchDeleteResourcesRejectsEmptyIDs(t *testing.T) {
+	service := NewPoemService(&fakePoemRepository{}, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	if err := service.BatchDeletePoems(nil); err == nil {
+		t.Fatal("BatchDeletePoems error = nil, want error")
+	}
+	if err := service.BatchDeleteDynasties(nil); err == nil {
+		t.Fatal("BatchDeleteDynasties error = nil, want error")
+	}
+	if err := service.BatchDeletePoets(nil); err == nil {
+		t.Fatal("BatchDeletePoets error = nil, want error")
+	}
+}
+
 type fakePoemRepository struct {
 	createCalls      int
 	createdAuthorID  uint64
 	createdDynastyID uint64
 	createdContent   []string
 	existingPoem     *models.Poem
+	batchDeletedIDs  []uint64
 }
 
 func (r *fakePoemRepository) Create(poem *models.Poem) error {
@@ -162,6 +199,11 @@ func (r *fakePoemRepository) Delete(id uint64) error {
 	return nil
 }
 
+func (r *fakePoemRepository) BatchDelete(ids []uint64) error {
+	r.batchDeletedIDs = append([]uint64(nil), ids...)
+	return nil
+}
+
 func (r *fakePoemRepository) List(page, pageSize int, keyword, dynasty, author, genre string) ([]models.Poem, int64, error) {
 	return nil, 0, nil
 }
@@ -183,8 +225,9 @@ func (r *fakePoemRepository) DistinctGenres() ([]string, error) {
 }
 
 type fakeDynastyRepository struct {
-	existingByID   map[uint64]*models.Dynasty
-	existingByName map[string]*models.Dynasty
+	existingByID    map[uint64]*models.Dynasty
+	existingByName  map[string]*models.Dynasty
+	batchDeletedIDs []uint64
 }
 
 func (r *fakeDynastyRepository) Create(dynasty *models.Dynasty) error {
@@ -215,6 +258,11 @@ func (r *fakeDynastyRepository) Update(dynasty *models.Dynasty) error {
 }
 
 func (r *fakeDynastyRepository) Delete(id uint64) error {
+	return nil
+}
+
+func (r *fakeDynastyRepository) BatchDelete(ids []uint64) error {
+	r.batchDeletedIDs = append([]uint64(nil), ids...)
 	return nil
 }
 
@@ -263,6 +311,7 @@ type fakePoetRepository struct {
 	listPageSize     int
 	listPoets        []models.Poet
 	listTotal        int64
+	batchDeletedIDs  []uint64
 }
 
 func (r *fakePoetRepository) Create(poet *models.Poet) error {
@@ -296,6 +345,11 @@ func (r *fakePoetRepository) Delete(id uint64) error {
 	return nil
 }
 
+func (r *fakePoetRepository) BatchDelete(ids []uint64) error {
+	r.batchDeletedIDs = append([]uint64(nil), ids...)
+	return nil
+}
+
 func assertStringSliceEqual(t *testing.T, got []string, want []string) {
 	t.Helper()
 
@@ -305,6 +359,19 @@ func assertStringSliceEqual(t *testing.T, got []string, want []string) {
 	for i := range got {
 		if got[i] != want[i] {
 			t.Fatalf("slice[%d] = %q, want %q; got %v", i, got[i], want[i], got)
+		}
+	}
+}
+
+func assertUint64SliceEqual(t *testing.T, got []uint64, want []uint64) {
+	t.Helper()
+
+	if len(got) != len(want) {
+		t.Fatalf("slice length = %d, want %d; got %v", len(got), len(want), got)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Fatalf("slice[%d] = %d, want %d; got %v", i, got[i], want[i], got)
 		}
 	}
 }

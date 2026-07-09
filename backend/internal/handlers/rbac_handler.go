@@ -167,7 +167,7 @@ func (h *RBACHandler) AssignRolesToUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.rbacService.AssignRolesToUser(userID, req.RoleIDs); err != nil {
+	if err := h.rbacService.AssignRolesToUser(userID, []uint64(req.RoleIDs)); err != nil {
 		utils.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}

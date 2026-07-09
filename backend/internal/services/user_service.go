@@ -102,7 +102,7 @@ func (s *UserService) AdminCreateUser(req *dto.AdminCreateUserRequest) (*dto.Use
 	}
 
 	// 分配指定角色，如果没有指定则分配默认 user 角色
-	roleIds := req.RoleIds
+	roleIds := []uint64(req.RoleIds)
 	if len(roleIds) == 0 {
 		role, err := s.roleRepo.GetByName("user")
 		if err == nil {

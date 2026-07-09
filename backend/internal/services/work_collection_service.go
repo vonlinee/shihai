@@ -117,11 +117,12 @@ func (s *WorkCollectionService) AddItem(collectionID uint64, req *dto.WorkCollec
 	}
 
 	workType := strings.TrimSpace(req.WorkType)
-	if err := s.validateWorkReference(workType, req.WorkID); err != nil {
+	workID := uint64(req.WorkID)
+	if err := s.validateWorkReference(workType, workID); err != nil {
 		return nil, err
 	}
 
-	if existing, err := s.collectionRepo.FindItemByWork(collectionID, workType, req.WorkID); err == nil && existing != nil {
+	if existing, err := s.collectionRepo.FindItemByWork(collectionID, workType, workID); err == nil && existing != nil {
 		return nil, errors.New("work collection item already exists")
 	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) && !strings.Contains(err.Error(), "not found") {
 		return nil, err
@@ -130,7 +131,7 @@ func (s *WorkCollectionService) AddItem(collectionID uint64, req *dto.WorkCollec
 	item := &models.WorkCollectionItem{
 		CollectionID: collectionID,
 		WorkType:     workType,
-		WorkID:       req.WorkID,
+		WorkID:       workID,
 		SortOrder:    req.SortOrder,
 	}
 	if err := s.collectionRepo.CreateItem(item); err != nil {

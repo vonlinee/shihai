@@ -33,10 +33,10 @@ func (s *CommentService) GetCommentsByPoem(poemID uint64, page, pageSize int) ([
 // CreateComment 创建评论
 func (s *CommentService) CreateComment(userID *uint64, req *dto.CommentCreateRequest) (*dto.CommentResponse, error) {
 	comment := &models.Comment{
-		PoemID:      req.PoemID,
+		PoemID:      uint64(req.PoemID),
 		UserID:      userID,
 		Content:     req.Content,
-		ParentID:    req.ParentID,
+		ParentID:    dto.RequestIDPtrValue(req.ParentID),
 		VisitorID:   req.VisitorID,
 		VisitorName: req.VisitorName,
 	}
@@ -48,7 +48,7 @@ func (s *CommentService) CreateComment(userID *uint64, req *dto.CommentCreateReq
 
 	// 如果是回复，增加父评论的回复数
 	if req.ParentID != nil {
-		s.commentRepo.IncrementReplyCount(*req.ParentID)
+		s.commentRepo.IncrementReplyCount(uint64(*req.ParentID))
 	}
 
 	return s.toCommentResponse(comment), nil
@@ -72,18 +72,19 @@ func (s *CommentService) DeleteComment(id uint64, userID uint64) error {
 // VoteComment 评论投票（点赞/点踩）
 func (s *CommentService) VoteComment(userID *uint64, visitorID string, req *dto.CommentVoteRequest) error {
 	// 检查评论是否存在
-	_, err := s.commentRepo.GetByID(req.CommentID)
+	commentID := uint64(req.CommentID)
+	_, err := s.commentRepo.GetByID(commentID)
 	if err != nil {
 		return errors.New("comment not found")
 	}
 
 	// 检查是否已投票
-	existingVote, err := s.commentRepo.GetVote(req.CommentID, userID, visitorID)
+	existingVote, err := s.commentRepo.GetVote(commentID, userID, visitorID)
 
 	if err != nil {
 		// 未投票，创建新投票
 		vote := &models.CommentVote{
-			CommentID: req.CommentID,
+			CommentID: commentID,
 			UserID:    userID,
 			VisitorID: visitorID,
 			Type:      req.Type,
@@ -95,9 +96,9 @@ func (s *CommentService) VoteComment(userID *uint64, visitorID string, req *dto.
 
 		// 更新评论计数
 		if req.Type == "like" {
-			return s.commentRepo.IncrementLikes(req.CommentID)
+			return s.commentRepo.IncrementLikes(commentID)
 		}
-		return s.commentRepo.IncrementDislikes(req.CommentID)
+		return s.commentRepo.IncrementDislikes(commentID)
 	}
 
 	// 已投票
@@ -115,11 +116,11 @@ func (s *CommentService) VoteComment(userID *uint64, visitorID string, req *dto.
 
 	// 更新计数（简化处理）
 	if req.Type == "like" {
-		s.commentRepo.IncrementLikes(req.CommentID)
-		s.commentRepo.IncrementDislikes(req.CommentID) // 需要减1，这里简化
+		s.commentRepo.IncrementLikes(commentID)
+		s.commentRepo.IncrementDislikes(commentID) // 需要减1，这里简化
 	} else {
-		s.commentRepo.IncrementDislikes(req.CommentID)
-		s.commentRepo.IncrementLikes(req.CommentID) // 需要减1，这里简化
+		s.commentRepo.IncrementDislikes(commentID)
+		s.commentRepo.IncrementLikes(commentID) // 需要减1，这里简化
 	}
 
 	return nil
@@ -160,4 +161,3 @@ func (s *CommentService) toCommentResponse(comment *models.Comment) *dto.Comment
 
 	return resp
 }
-
