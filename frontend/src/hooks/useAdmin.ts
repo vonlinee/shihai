@@ -17,6 +17,8 @@ import {
 } from '@/services/adminService';
 import { toast } from 'sonner';
 
+type AdminID = string | number;
+
 export function useAdminUsers(params?: UserListParams) {
   return useQuery({
     queryKey: ['admin', 'users', params],
@@ -73,7 +75,7 @@ export function useAdminUpdatePoem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: PoemUpdateRequest }) =>
+    mutationFn: ({ id, data }: { id: AdminID; data: PoemUpdateRequest }) =>
       adminService.updatePoem(id, data),
     onSuccess: () => {
       toast.success('诗词更新成功');
@@ -89,7 +91,7 @@ export function useAdminDeletePoem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => adminService.deletePoem(id),
+    mutationFn: (id: AdminID) => adminService.deletePoem(id),
     onSuccess: () => {
       toast.success('诗词已删除');
       queryClient.invalidateQueries({ queryKey: ['poems'] });
@@ -113,6 +115,21 @@ export function useAdminWorkCollections(params?: WorkCollectionListParams) {
   return useQuery({
     queryKey: ['admin', 'workCollections', params],
     queryFn: () => adminService.getWorkCollections(params),
+  });
+}
+
+export function useAdminBatchDeletePoems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: AdminID[]) => adminService.batchDeletePoems(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`已删除 ${ids.length} 首诗词`);
+      queryClient.invalidateQueries({ queryKey: ['poems'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '批量删除失败');
+    },
   });
 }
 
@@ -233,7 +250,7 @@ export function useAdminCreateDynasty() {
 export function useAdminUpdateDynasty() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: DynastyUpdateRequest }) =>
+    mutationFn: ({ id, data }: { id: AdminID; data: DynastyUpdateRequest }) =>
       adminService.updateDynasty(id, data),
     onSuccess: () => {
       toast.success('朝代更新成功');
@@ -248,13 +265,27 @@ export function useAdminUpdateDynasty() {
 export function useAdminDeleteDynasty() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => adminService.deleteDynasty(id),
+    mutationFn: (id: AdminID) => adminService.deleteDynasty(id),
     onSuccess: () => {
       toast.success('朝代已删除');
       queryClient.invalidateQueries({ queryKey: ['dynasties'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || '删除失败');
+    },
+  });
+}
+
+export function useAdminBatchDeleteDynasties() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: AdminID[]) => adminService.batchDeleteDynasties(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`已删除 ${ids.length} 个朝代`);
+      queryClient.invalidateQueries({ queryKey: ['dynasties'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '批量删除失败');
     },
   });
 }
@@ -278,7 +309,7 @@ export function useAdminCreatePoet() {
 export function useAdminUpdatePoet() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: PoetUpdateRequest }) =>
+    mutationFn: ({ id, data }: { id: AdminID; data: PoetUpdateRequest }) =>
       adminService.updatePoet(id, data),
     onSuccess: () => {
       toast.success('诗人更新成功');
@@ -293,13 +324,27 @@ export function useAdminUpdatePoet() {
 export function useAdminDeletePoet() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => adminService.deletePoet(id),
+    mutationFn: (id: AdminID) => adminService.deletePoet(id),
     onSuccess: () => {
       toast.success('诗人已删除');
       queryClient.invalidateQueries({ queryKey: ['poets'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || '删除失败');
+    },
+  });
+}
+
+export function useAdminBatchDeletePoets() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: AdminID[]) => adminService.batchDeletePoets(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`已删除 ${ids.length} 位诗人`);
+      queryClient.invalidateQueries({ queryKey: ['poets'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '批量删除失败');
     },
   });
 }

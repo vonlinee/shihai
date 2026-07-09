@@ -1,6 +1,8 @@
 import { api } from './api';
 import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem } from '@/types';
 
+type AdminID = string | number;
+
 // ─── User Admin ──────────────────────────────────────────────────────────────
 
 export interface UserListResponse {
@@ -165,12 +167,16 @@ export const adminService = {
     return api.post<Poem>('/admin/poems', data);
   },
 
-  updatePoem(id: number, data: PoemUpdateRequest): Promise<Poem> {
+  updatePoem(id: AdminID, data: PoemUpdateRequest): Promise<Poem> {
     return api.put<Poem>(`/admin/poems/${id}`, data);
   },
 
-  deletePoem(id: number): Promise<void> {
+  deletePoem(id: AdminID): Promise<void> {
     return api.delete<void>(`/admin/poems/${id}`);
+  },
+
+  batchDeletePoems(ids: AdminID[]): Promise<void> {
+    return api.delete<void>('/admin/poems', { ids });
   },
 
   // Work Collections
@@ -234,12 +240,16 @@ export const adminService = {
     return api.post<Dynasty>('/admin/dynasties', data);
   },
 
-  updateDynasty(id: number, data: DynastyUpdateRequest): Promise<Dynasty> {
+  updateDynasty(id: AdminID, data: DynastyUpdateRequest): Promise<Dynasty> {
     return api.put<Dynasty>(`/admin/dynasties/${id}`, data);
   },
 
-  deleteDynasty(id: number): Promise<void> {
+  deleteDynasty(id: AdminID): Promise<void> {
     return api.delete<void>(`/admin/dynasties/${id}`);
+  },
+
+  batchDeleteDynasties(ids: AdminID[]): Promise<void> {
+    return api.delete<void>('/admin/dynasties', { ids });
   },
 
   // Poets
@@ -247,11 +257,15 @@ export const adminService = {
     return api.post<Poet>('/admin/poets', data);
   },
 
-  updatePoet(id: number, data: PoetUpdateRequest): Promise<Poet> {
+  updatePoet(id: AdminID, data: PoetUpdateRequest): Promise<Poet> {
     return api.put<Poet>(`/admin/poets/${id}`, data);
   },
 
-  deletePoet(id: number): Promise<void> {
+  deletePoet(id: AdminID): Promise<void> {
     return api.delete<void>(`/admin/poets/${id}`);
+  },
+
+  batchDeletePoets(ids: AdminID[]): Promise<void> {
+    return api.delete<void>('/admin/poets', { ids });
   },
 };

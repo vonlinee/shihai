@@ -8,7 +8,7 @@ export interface HttpClient {
   get<T = unknown>(url: string, params?: Record<string, unknown>): Promise<T>;
   post<T = unknown>(url: string, data?: unknown): Promise<T>;
   put<T = unknown>(url: string, data?: unknown): Promise<T>;
-  delete<T = unknown>(url: string): Promise<T>;
+  delete<T = unknown>(url: string, data?: unknown): Promise<T>;
 }
 
 // ─── Auth token helpers (lazily imported to avoid circular deps) ─────────────
@@ -110,8 +110,8 @@ export class AxiosHttpClient implements HttpClient {
     return this.instance.put(url, data) as Promise<T>;
   }
 
-  async delete<T = unknown>(url: string): Promise<T> {
-    return this.instance.delete(url) as Promise<T>;
+  async delete<T = unknown>(url: string, data?: unknown): Promise<T> {
+    return this.instance.delete(url, { data }) as Promise<T>;
   }
 }
 
@@ -182,8 +182,8 @@ export class FetchHttpClient implements HttpClient {
     return this.request<T>('PUT', url, data);
   }
 
-  async delete<T = unknown>(url: string): Promise<T> {
-    return this.request<T>('DELETE', url);
+  async delete<T = unknown>(url: string, data?: unknown): Promise<T> {
+    return this.request<T>('DELETE', url, data);
   }
 }
 
