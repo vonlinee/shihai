@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Plus, Edit2, Trash2, Shield, X } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useAdminUsers, useDeleteUser, useAdminCreateUser } from '@/hooks/useAdmin'
@@ -118,24 +119,23 @@ export function UsersTab() {
           ) : users.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无用户数据</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
-                    <th className="text-left py-3 px-4 font-medium">用户</th>
-                    <th className="text-left py-3 px-4 font-medium">姓名</th>
-                    <th className="text-left py-3 px-4 font-medium">角色</th>
-                    <th className="text-left py-3 px-4 font-medium">状态</th>
-                    <th className="text-left py-3 px-4 font-medium">注册时间</th>
-                    <th className="text-left py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>用户</TableHead>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>注册时间</TableHead>
+                  <TableHead>操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {users.map((user) => (
-                    <tr key={user.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4">{user.id}</td>
-                      <td className="py-3 px-4">
+                    <TableRow key={user.id}>
+                      <TableCell>{user.id}</TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-3">
                           <UserAvatar
                             avatar={user.avatar}
@@ -144,9 +144,9 @@ export function UsersTab() {
                           />
                           <span>{user.username}</span>
                         </div>
-                      </td>
-                      <td className="py-3 px-4">{user.name}</td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>{user.name}</TableCell>
+                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map((r) => (
                             <span key={r} className={`px-2 py-1 rounded text-xs ${getRoleBadgeColor(r)}`}>
@@ -154,18 +154,18 @@ export function UsersTab() {
                             </span>
                           ))}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <span className={`px-2 py-1 rounded text-xs ${
                           user.isActive ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'
                         }`}>
                           {user.isActive ? '正常' : '禁用'}
                         </span>
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 h-8 w-8 p-0"
                             onClick={() => handleManageRoles({
@@ -185,12 +185,11 @@ export function UsersTab() {
                             <Trash2 className="h-4 w-4 text-cinnabar" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           )}
           <Pagination
             className="mt-4"

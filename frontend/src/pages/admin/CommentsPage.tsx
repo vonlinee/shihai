@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Trash2, CheckCircle, XCircle } from 'lucide-react'
 import { useAdminComments } from '@/hooks/useAdmin'
 import { useDeleteComment } from '@/hooks/useComments'
@@ -56,25 +57,24 @@ export function AdminCommentsPage() {
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">加载中...</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
-                    <th className="text-left py-3 px-4 font-medium">评论内容</th>
-                    <th className="text-left py-3 px-4 font-medium">用户</th>
-                    <th className="text-left py-3 px-4 font-medium">状态</th>
-                    <th className="text-left py-3 px-4 font-medium">发布时间</th>
-                    <th className="text-left py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>评论内容</TableHead>
+                  <TableHead>用户</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>发布时间</TableHead>
+                  <TableHead>操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {comments.map((comment) => (
-                    <tr key={comment.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4">{comment.id}</td>
-                      <td className="py-3 px-4 max-w-xs truncate">{comment.content}</td>
-                      <td className="py-3 px-4">{comment.user?.name ?? comment.visitorName ?? '匿名'}</td>
-                      <td className="py-3 px-4">
+                    <TableRow key={comment.id}>
+                      <TableCell>{comment.id}</TableCell>
+                      <TableCell className="max-w-xs truncate">{comment.content}</TableCell>
+                      <TableCell>{comment.user?.name ?? comment.visitorName ?? '匿名'}</TableCell>
+                      <TableCell>
                         <span className={`px-2 py-1 rounded text-xs ${
                           comment.isDeleted
                             ? 'bg-red-500/10 text-red-500'
@@ -82,11 +82,11 @@ export function AdminCommentsPage() {
                         }`}>
                           {comment.isDeleted ? '已删除' : '正常'}
                         </span>
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {new Date(comment.createdAt).toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Button variant="ghost" size="sm">
                             <CheckCircle className="h-4 w-4 text-green-500" />
@@ -102,12 +102,11 @@ export function AdminCommentsPage() {
                             <Trash2 className="h-4 w-4 text-cinnabar" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

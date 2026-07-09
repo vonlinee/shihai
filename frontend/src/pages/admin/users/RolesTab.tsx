@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Plus, Trash2, X, Pencil } from 'lucide-react'
 import { useRoles, useCreateRole, useUpdateRole, useDeleteRole } from '@/hooks/useRbac'
 import { getRoleBadgeColor } from './utils'
@@ -69,31 +70,30 @@ export function RolesTab() {
           ) : filteredRoles.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无角色数据</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">角色名称</th>
-                    <th className="text-left py-3 px-4 font-medium">描述</th>
-                    <th className="text-left py-3 px-4 font-medium">状态</th>
-                    <th className="text-right py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>角色名称</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {filteredRoles.map((role) => (
-                    <tr key={role.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4">
+                    <TableRow key={role.id}>
+                      <TableCell>
                         <span className={`px-2 py-1 rounded text-xs ${getRoleBadgeColor(role.name)}`}>
                           {role.name}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">{role.description}</td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>{role.description}</TableCell>
+                      <TableCell>
                         <span className={`text-xs ${role.isActive ? 'text-green-600' : 'text-red-600'}`}>
                           {role.isActive ? '启用' : '禁用'}
                         </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 h-8 w-8 p-0"
                             onClick={() => { setEditingRoleId(role.id); setFormData({ name: role.name, description: role.description, isActive: role.isActive }); setShowDialog(true) }}>
@@ -105,12 +105,11 @@ export function RolesTab() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

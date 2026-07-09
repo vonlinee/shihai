@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, FolderTree } from 'lucide-react'
 import { usePermissions, useCreatePermission, useUpdatePermission, useDeletePermission } from '@/hooks/useRbac'
 import { getModuleDisplayName } from './utils'
@@ -167,29 +168,28 @@ export function PermissionsTab() {
           ) : filteredPermissions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无权限数据</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="text-left py-3 px-4 font-medium w-[28%]">模块 / 权限编码</th>
-                    <th className="text-left py-3 px-4 font-medium w-[16%]">权限名称</th>
-                    <th className="text-left py-3 px-4 font-medium">描述</th>
-                    <th className="text-left py-3 px-4 font-medium w-[80px]">状态</th>
-                    <th className="text-right py-3 px-4 font-medium w-[120px]">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-[28%]">模块 / 权限编码</TableHead>
+                  <TableHead className="w-[16%]">权限名称</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead className="w-[80px]">状态</TableHead>
+                  <TableHead className="w-[120px] text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {groupedByModule.map(([module, perms]) => {
                     const collapsed = collapsedModules.has(module)
                     return (
                       <Fragment key={module}>
                         {/* 父行：模块层级 */}
-                        <tr
+                        <TableRow
                           key={`module-${module}`}
                           className="border-b bg-muted/20 hover:bg-muted/40 cursor-pointer"
                           onClick={() => toggleModule(module)}
                         >
-                          <td className="py-3 px-4 font-medium">
+                          <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               {collapsed ? (
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -199,27 +199,27 @@ export function PermissionsTab() {
                               <span>{getModuleDisplayName(module)}</span>
                               <span className="text-xs font-mono text-muted-foreground">({module})</span>
                             </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground" colSpan={3}>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground" colSpan={3}>
                             共 {perms.length} 个权限点
-                          </td>
-                          <td className="py-3 px-4" />
-                        </tr>
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
 
                         {/* 子行：模块下的权限点 */}
                         {!collapsed && perms.map((perm) => (
-                          <tr key={perm.id} className="border-b last:border-0 hover:bg-muted/30">
-                            <td className="py-3 px-4 font-mono text-sm pl-12 text-muted-foreground">
+                          <TableRow key={perm.id} className="hover:bg-muted/30">
+                            <TableCell className="pl-12 font-mono text-sm text-muted-foreground">
                               {perm.code}
-                            </td>
-                            <td className="py-3 px-4 font-medium">{perm.name}</td>
-                            <td className="py-3 px-4 text-sm text-muted-foreground">{perm.description}</td>
-                            <td className="py-3 px-4">
+                            </TableCell>
+                            <TableCell className="font-medium">{perm.name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{perm.description}</TableCell>
+                            <TableCell>
                               <span className={`text-xs ${perm.isActive ? 'text-green-600' : 'text-red-600'}`}>
                                 {perm.isActive ? '启用' : '禁用'}
                               </span>
-                            </td>
-                            <td className="py-3 px-4 text-right">
+                            </TableCell>
+                            <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button
                                   className="bg-secondary text-secondary-foreground hover:bg-secondary/90 h-8 w-8 p-0"
@@ -234,15 +234,14 @@ export function PermissionsTab() {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
                       </Fragment>
                     )
                   })}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

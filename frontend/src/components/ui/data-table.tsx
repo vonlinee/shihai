@@ -1,0 +1,627 @@
+import {
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type Column,
+  type ColumnOrderState,
+  type ColumnSizingState,
+  type OnChangeFn,
+  type RowData,
+  type SortingState,
+  type VisibilityState,
+  flexRender,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
+import { Check, ChevronDown, ChevronUp, ChevronsUpDown, Clipboard, Filter, GripVertical, Info, X } from 'lucide-react'
+
+import { cn } from '@/utils/cn'
+
+import { Input } from './input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'
+
+interface DataTableFilterOption {
+  label: string
+  value: string
+}
+
+declare module '@tanstack/react-table' {
+  interface ColumnMeta<TData extends RowData, TValue> {
+    align?: 'left' | 'center' | 'right'
+    className?: string
+    copyable?: boolean | ((value: TValue, row: TData) => string)
+    draggable?: boolean
+    emptyText?: ReactNode
+    filterOptions?: DataTableFilterOption[]
+    filterPlaceholder?: string
+    filterVariant?: 'text' | 'select' | 'multiSelect'
+    fixed?: 'left' | 'right'
+    headerClassName?: string
+    hidden?: boolean
+    loading?: boolean
+    minWidth?: number | string
+    resizable?: boolean
+    tooltip?: ReactNode
+    width?: number | string
+  }
+}
+
+export type DataTableColumn<TData, TValue = unknown> = ColumnDef<TData, TValue>
+
+interface DataTableProps<TData> {
+  className?: string
+  columnFilters?: ColumnFiltersState
+  columnOrder?: ColumnOrderState
+  columnSizing?: ColumnSizingState
+  columnVisibility?: VisibilityState
+  columns: DataTableColumn<TData, unknown>[]
+  data: TData[]
+  emptyText?: string
+  enableColumnDragging?: boolean
+  enableColumnFilters?: boolean
+  enableColumnResizing?: boolean
+  enableSorting?: boolean
+  getRowId?: (originalRow: TData, index: number) => string
+  loading?: boolean
+  loadingText?: string
+  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>
+  onColumnOrderChange?: OnChangeFn<ColumnOrderState>
+  onColumnSizingChange?: OnChangeFn<ColumnSizingState>
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+  onSortingChange?: OnChangeFn<SortingState>
+  sorting?: SortingState
+  tableClassName?: string
+}
+
+function toCssSize(value: number | string | undefined): string | undefined {
+  if (typeof value === 'number') return `${value}px`
+  return value
+}
+
+function toNumericSize(value: number | string | undefined): number | undefined {
+  if (typeof value === 'number') return value
+  return undefined
+}
+
+function getTextAlignClass(align: 'left' | 'center' | 'right' | undefined) {
+  if (align === 'center') return 'text-center'
+  if (align === 'right') return 'text-right'
+  return 'text-left'
+}
+
+function getColumnId<TData>(column: DataTableColumn<TData, unknown>, index: number): string {
+  if (column.id) return column.id
+  if ('accessorKey' in column && typeof column.accessorKey === 'string') return column.accessorKey
+  return `column-${index}`
+}
+
+function getInitialColumnOrder<TData>(columns: DataTableColumn<TData, unknown>[]) {
+  return columns.map((column, index) => getColumnId(column, index))
+}
+
+function getInitialColumnVisibility<TData>(columns: DataTableColumn<TData, unknown>[]) {
+  return columns.reduce<VisibilityState>((visibility, column, index) => {
+    if (column.meta?.hidden) visibility[getColumnId(column, index)] = false
+    return visibility
+  }, {})
+}
+
+function normalizeColumns<TData>(columns: DataTableColumn<TData, unknown>[]) {
+  return columns.map((column) => {
+    const filterVariant = column.meta?.filterVariant
+    const filterFn = column.filterFn ?? (
+      filterVariant === 'select'
+        ? (row, columnId, filterValue) => String(row.getValue(columnId) ?? '') === String(filterValue)
+        : filterVariant === 'multiSelect'
+          ? (row, columnId, filterValue) => {
+            if (!Array.isArray(filterValue) || filterValue.length === 0) return true
+            return filterValue.includes(String(row.getValue(columnId) ?? ''))
+          }
+          : undefined
+    )
+
+    return {
+      ...column,
+      enableResizing: column.enableResizing ?? column.meta?.resizable !== false,
+      filterFn,
+      minSize: column.minSize ?? toNumericSize(column.meta?.minWidth),
+      size: column.size ?? toNumericSize(column.meta?.width),
+    }
+  })
+}
+
+function getPinnedOffset(
+  orderedColumns: { id: string; fixed?: 'left' | 'right'; width: number }[],
+  columnId: string,
+  fixed: 'left' | 'right' | undefined,
+) {
+  if (!fixed) return undefined
+
+  const columnIndex = orderedColumns.findIndex((column) => column.id === columnId)
+  if (columnIndex < 0) return undefined
+
+  const pinnedColumns = fixed === 'left'
+    ? orderedColumns.slice(0, columnIndex)
+    : orderedColumns.slice(columnIndex + 1)
+
+  const offset = pinnedColumns
+    .filter((column) => column.fixed === fixed)
+    .reduce((sum, column) => sum + column.width, 0)
+
+  return offset ? `${offset}px` : '0px'
+}
+
+function getColumnFilterOptions<TData>(column: Column<TData, unknown>): DataTableFilterOption[] {
+  const customOptions = column.columnDef.meta?.filterOptions
+  if (customOptions) return customOptions
+
+  return Array.from(column.getFacetedUniqueValues().keys())
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+    .slice(0, 50)
+    .map((value) => {
+      const text = String(value)
+      return { label: text, value: text }
+    })
+}
+
+function isEmptyCellValue(value: unknown) {
+  return value === undefined || value === null || value === ''
+}
+
+function getCopyText<TData, TValue>(copyable: boolean | ((value: TValue, row: TData) => string), value: TValue, row: TData) {
+  if (typeof copyable === 'function') return copyable(value, row)
+  return isEmptyCellValue(value) ? '' : String(value)
+}
+
+interface ColumnFilterMenuProps<TData> {
+  column: Column<TData, unknown>
+  placeholder?: string
+}
+
+function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<TData>) {
+  const filterVariant = column.columnDef.meta?.filterVariant ?? 'text'
+  const rawFilterValue = column.getFilterValue()
+  const textFilterValue = (rawFilterValue as string | undefined) ?? ''
+  const selectedValues = Array.isArray(rawFilterValue) ? rawFilterValue.map(String) : []
+  const filterOptions = getColumnFilterOptions(column)
+  const hasFilter = filterVariant === 'multiSelect'
+    ? selectedValues.length > 0
+    : textFilterValue.trim().length > 0
+
+  const toggleMultiSelectFilter = (value: string) => {
+    const nextValue = selectedValues.includes(value)
+      ? selectedValues.filter((item) => item !== value)
+      : [...selectedValues, value]
+    column.setFilterValue(nextValue.length > 0 ? nextValue : undefined)
+  }
+
+  return (
+    <DropdownMenuPrimitive.Root>
+      <DropdownMenuPrimitive.Trigger asChild>
+        <button
+          type="button"
+          aria-label="筛选"
+          className={cn(
+            'inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-background/80 hover:text-foreground',
+            hasFilter && 'bg-background text-primary shadow-sm',
+          )}
+        >
+          <Filter className="h-3.5 w-3.5" />
+        </button>
+      </DropdownMenuPrimitive.Trigger>
+      <DropdownMenuPrimitive.Portal>
+        <DropdownMenuPrimitive.Content
+          align="end"
+          sideOffset={8}
+          className="z-50 w-56 rounded-md border bg-popover p-2 text-popover-foreground shadow-md"
+        >
+          <div className="flex items-center gap-2">
+            {filterVariant === 'text' && (
+              <Input
+                value={textFilterValue}
+                onChange={(event) => column.setFilterValue(event.target.value)}
+                placeholder={placeholder ?? '筛选...'}
+                className="h-8 text-xs"
+              />
+            )}
+            {filterVariant !== 'text' && (
+              <div className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
+                {placeholder ?? '选择筛选项'}
+              </div>
+            )}
+            {hasFilter && (
+              <button
+                type="button"
+                aria-label="清除筛选"
+                onClick={() => column.setFilterValue(undefined)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {filterOptions.length > 0 && (
+            <div className="mt-2 max-h-56 overflow-y-auto">
+              {filterOptions.map((option) => {
+                const selected = filterVariant === 'multiSelect'
+                  ? selectedValues.includes(option.value)
+                  : textFilterValue === option.value
+                return (
+                  <DropdownMenuPrimitive.Item
+                    key={option.value}
+                    onSelect={(event) => {
+                      if (filterVariant === 'multiSelect') {
+                        event.preventDefault()
+                        toggleMultiSelectFilter(option.value)
+                        return
+                      }
+                      column.setFilterValue(selected ? undefined : option.value)
+                    }}
+                    className="flex cursor-pointer select-none items-center justify-between rounded-sm px-2 py-1.5 text-xs outline-none hover:bg-muted"
+                  >
+                    <span className="truncate">{option.label}</span>
+                    {selected && <Check className="ml-2 h-3.5 w-3.5 shrink-0 text-primary" />}
+                  </DropdownMenuPrimitive.Item>
+                )
+              })}
+            </div>
+          )}
+        </DropdownMenuPrimitive.Content>
+      </DropdownMenuPrimitive.Portal>
+    </DropdownMenuPrimitive.Root>
+  )
+}
+
+export function DataTable<TData>({
+  className,
+  columnFilters,
+  columnOrder,
+  columnSizing,
+  columnVisibility,
+  columns,
+  data,
+  emptyText = '暂无数据',
+  enableColumnDragging = false,
+  enableColumnFilters = false,
+  enableColumnResizing = true,
+  enableSorting = true,
+  getRowId,
+  loading = false,
+  loadingText = '加载中...',
+  onColumnFiltersChange,
+  onColumnOrderChange,
+  onColumnSizingChange,
+  onColumnVisibilityChange,
+  onSortingChange,
+  sorting,
+  tableClassName,
+}: DataTableProps<TData>) {
+  const tableColumns = useMemo(() => normalizeColumns(columns), [columns])
+  const initialColumnOrder = useMemo(() => getInitialColumnOrder(tableColumns), [tableColumns])
+  const initialColumnVisibility = useMemo(() => getInitialColumnVisibility(tableColumns), [tableColumns])
+  const [internalColumnFilters, setInternalColumnFilters] = useState<ColumnFiltersState>([])
+  const [internalColumnOrder, setInternalColumnOrder] = useState<ColumnOrderState>(initialColumnOrder)
+  const [internalColumnSizing, setInternalColumnSizing] = useState<ColumnSizingState>({})
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(initialColumnVisibility)
+  const [internalSorting, setInternalSorting] = useState<SortingState>([])
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null)
+  const [resizeGuideX, setResizeGuideX] = useState<number | null>(null)
+  const tableWrapperRef = useRef<HTMLDivElement>(null)
+
+  const activeColumnOrder = columnOrder ?? internalColumnOrder
+  const activeColumnFilters = columnFilters ?? internalColumnFilters
+  const activeColumnSizing = columnSizing ?? internalColumnSizing
+  const activeColumnVisibility = columnVisibility ?? internalColumnVisibility
+  const activeSorting = sorting ?? internalSorting
+
+  const handleColumnOrderChange: OnChangeFn<ColumnOrderState> = (updater) => {
+    if (onColumnOrderChange) {
+      onColumnOrderChange(updater)
+      return
+    }
+    setInternalColumnOrder(updater)
+  }
+
+  const table = useReactTable({
+    columnResizeMode: 'onEnd',
+    columns: tableColumns,
+    data,
+    enableColumnResizing,
+    enableSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getRowId,
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: onColumnFiltersChange ?? setInternalColumnFilters,
+    onColumnOrderChange: handleColumnOrderChange,
+    onColumnSizingChange: onColumnSizingChange ?? setInternalColumnSizing,
+    onColumnVisibilityChange: onColumnVisibilityChange ?? setInternalColumnVisibility,
+    onSortingChange: onSortingChange ?? setInternalSorting,
+    state: {
+      columnFilters: activeColumnFilters,
+      columnOrder: activeColumnOrder,
+      columnSizing: activeColumnSizing,
+      columnVisibility: activeColumnVisibility,
+      sorting: activeSorting,
+    },
+  })
+
+  const leafColumns = table.getVisibleLeafColumns()
+  const orderedColumns = leafColumns.map((column) => ({
+    fixed: column.columnDef.meta?.fixed,
+    id: column.id,
+    width: column.getSize(),
+  }))
+  const moveColumn = (fromColumnId: string, toColumnId: string) => {
+    if (fromColumnId === toColumnId) return
+
+    const nextOrder = [...activeColumnOrder]
+    const fromIndex = nextOrder.indexOf(fromColumnId)
+    const toIndex = nextOrder.indexOf(toColumnId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    nextOrder.splice(fromIndex, 1)
+    nextOrder.splice(toIndex, 0, fromColumnId)
+    handleColumnOrderChange(nextOrder)
+  }
+
+  const updateResizeGuide = (clientX: number) => {
+    const rect = tableWrapperRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const nextX = Math.max(0, Math.min(rect.width, clientX - rect.left))
+    setResizeGuideX(nextX)
+  }
+
+  const beginColumnResize = (
+    event: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>,
+    resizeHandler: (event: unknown) => void,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if ('touches' in event) {
+      const firstTouch = event.touches[0]
+      if (firstTouch) updateResizeGuide(firstTouch.clientX)
+    } else {
+      updateResizeGuide(event.clientX)
+    }
+
+    const handleMouseMove = (moveEvent: MouseEvent) => updateResizeGuide(moveEvent.clientX)
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      const touch = moveEvent.touches[0]
+      if (touch) updateResizeGuide(touch.clientX)
+    }
+    const clearGuide = () => {
+      setResizeGuideX(null)
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', clearGuide)
+      window.removeEventListener('dragend', clearGuide)
+      window.removeEventListener('blur', clearGuide)
+      window.removeEventListener('contextmenu', clearGuide)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', clearGuide)
+      window.removeEventListener('touchcancel', clearGuide)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', clearGuide)
+    window.addEventListener('dragend', clearGuide)
+    window.addEventListener('blur', clearGuide)
+    window.addEventListener('contextmenu', clearGuide)
+    window.addEventListener('touchmove', handleTouchMove)
+    window.addEventListener('touchend', clearGuide)
+    window.addEventListener('touchcancel', clearGuide)
+
+    resizeHandler(event)
+  }
+
+  return (
+    <div ref={tableWrapperRef} className={cn('relative w-full', className)}>
+      {resizeGuideX !== null && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 bottom-0 z-30 w-px bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]"
+          style={{ left: `${resizeGuideX}px` }}
+        />
+      )}
+      <Table className={cn('min-w-full table-fixed', tableClassName)}>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                const meta = header.column.columnDef.meta
+                const fixedOffset = getPinnedOffset(orderedColumns, header.column.id, meta?.fixed)
+                const canDrag = enableColumnDragging && meta?.draggable !== false
+                const canResize = enableColumnResizing && header.column.getCanResize()
+                const canSort = header.column.getCanSort()
+                const sortDirection = header.column.getIsSorted()
+                const width = toCssSize(enableColumnResizing ? header.getSize() : meta?.width ?? header.getSize())
+                const minWidth = toCssSize(meta?.minWidth)
+
+                return (
+                  <TableHead
+                    key={header.id}
+                    draggable={canDrag && resizeGuideX === null}
+                    onDragStart={(event) => {
+                      if (!canDrag || resizeGuideX !== null) {
+                        event.preventDefault()
+                        return
+                      }
+                      setDraggingColumnId(header.column.id)
+                    }}
+                    onDragOver={(event) => {
+                      if (!canDrag) return
+                      event.preventDefault()
+                    }}
+                    onDrop={() => {
+                      if (draggingColumnId && canDrag) moveColumn(draggingColumnId, header.column.id)
+                      setDraggingColumnId(null)
+                    }}
+                    onDragEnd={() => setDraggingColumnId(null)}
+                    style={{
+                      left: meta?.fixed === 'left' ? fixedOffset : undefined,
+                      minWidth,
+                      right: meta?.fixed === 'right' ? fixedOffset : undefined,
+                      width,
+                    }}
+                    className={cn(
+                      'relative select-none',
+                      getTextAlignClass(meta?.align),
+                      meta?.fixed && 'sticky z-20 shadow-sm',
+                      meta?.fixed === 'left' && 'left-0',
+                      meta?.fixed === 'right' && 'right-0',
+                      draggingColumnId === header.column.id && 'opacity-60',
+                      meta?.headerClassName,
+                    )}
+                  >
+                    <div className={cn('flex items-center gap-2', meta?.align === 'right' && 'justify-end', meta?.align === 'center' && 'justify-center')}>
+                      {canDrag && <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                      <button
+                        type="button"
+                        disabled={!canSort}
+                        onClick={header.column.getToggleSortingHandler()}
+                        className={cn(
+                          'inline-flex min-w-0 items-center gap-1 rounded-sm text-left font-semibold',
+                          canSort && 'hover:text-primary',
+                          !canSort && 'cursor-default',
+                        )}
+                      >
+                        <span className="truncate">
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </span>
+                        {canSort && (
+                          sortDirection === 'asc'
+                            ? <ChevronUp className="h-3.5 w-3.5 shrink-0" />
+                            : sortDirection === 'desc'
+                              ? <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                              : <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        )}
+                      </button>
+                      {meta?.tooltip && (
+                        <span
+                          className="inline-flex h-5 w-5 items-center justify-center text-muted-foreground"
+                          title={typeof meta.tooltip === 'string' ? meta.tooltip : undefined}
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                      {enableColumnFilters && header.column.getCanFilter() && (
+                        <ColumnFilterMenu
+                          column={header.column}
+                          placeholder={meta?.filterPlaceholder}
+                        />
+                      )}
+                    </div>
+                    {canResize && (
+                      <button
+                        type="button"
+                        aria-label="调整列宽"
+                        draggable={false}
+                        onDoubleClick={() => header.column.resetSize()}
+                        onDragStart={(event) => event.preventDefault()}
+                        onMouseDown={(event) => beginColumnResize(event, header.getResizeHandler())}
+                        onTouchStart={(event) => beginColumnResize(event, header.getResizeHandler())}
+                        className={cn(
+                          'absolute right-0 top-0 h-full w-2 cursor-col-resize touch-none select-none',
+                          'after:absolute after:right-0 after:top-1/2 after:h-6 after:w-px after:-translate-y-1/2 after:bg-border',
+                          'hover:after:bg-primary',
+                          header.column.getIsResizing() && 'after:bg-primary after:opacity-0',
+                        )}
+                      />
+                    )}
+                  </TableHead>
+                )
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={leafColumns.length} className="h-24 text-center text-muted-foreground">
+                {loadingText}
+              </TableCell>
+            </TableRow>
+          ) : table.getRowModel().rows.length > 0 ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => {
+                  const meta = cell.column.columnDef.meta
+                  const fixedOffset = getPinnedOffset(orderedColumns, cell.column.id, meta?.fixed)
+                  const width = toCssSize(enableColumnResizing ? cell.column.getSize() : meta?.width ?? cell.column.getSize())
+                  const minWidth = toCssSize(meta?.minWidth)
+                  const cellValue = cell.getValue()
+                  const isEmpty = isEmptyCellValue(cellValue)
+                  const copyable = meta?.copyable
+                  const shouldCopy = Boolean(copyable) && !isEmpty && !meta?.loading
+                  const renderedCell = meta?.loading
+                    ? <span className="block h-4 w-20 animate-pulse rounded bg-muted" />
+                    : isEmpty && meta?.emptyText !== undefined
+                      ? meta.emptyText
+                      : flexRender(cell.column.columnDef.cell, cell.getContext())
+
+                  return (
+                    <TableCell
+                      key={cell.id}
+                      style={{
+                        left: meta?.fixed === 'left' ? fixedOffset : undefined,
+                        minWidth,
+                        right: meta?.fixed === 'right' ? fixedOffset : undefined,
+                        width,
+                      }}
+                      className={cn(
+                        getTextAlignClass(meta?.align),
+                        meta?.fixed && 'sticky z-10 bg-background shadow-sm',
+                        meta?.fixed === 'left' && 'left-0',
+                        meta?.fixed === 'right' && 'right-0',
+                        meta?.className,
+                      )}
+                    >
+                      <div className={cn('flex min-w-0 items-center gap-2', meta?.align === 'right' && 'justify-end', meta?.align === 'center' && 'justify-center')}>
+                        <div className="min-w-0 truncate">{renderedCell}</div>
+                        {shouldCopy && (
+                          <button
+                            type="button"
+                            aria-label="复制"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              if (copyable) void navigator.clipboard?.writeText(getCopyText(copyable, cellValue, row.original))
+                            }}
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            <Clipboard className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )
+                })}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={leafColumns.length} className="h-24 text-center text-muted-foreground">
+                {emptyText}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}

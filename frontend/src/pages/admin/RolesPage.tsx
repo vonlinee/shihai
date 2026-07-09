@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useRoles, useCreateRole, useUpdateRole, useDeleteRole } from '@/hooks/useRbac'
 
 export function RolesPage() {
@@ -119,22 +120,21 @@ export function RolesPage() {
               暂无角色数据
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">角色名称</th>
-                    <th className="text-left py-3 px-4 font-medium">描述</th>
-                    <th className="text-left py-3 px-4 font-medium">状态</th>
-                    <th className="text-right py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>角色名称</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {filteredRoles.map((role) => (
-                    <tr key={role.id} className="border-b">
-                      <td className="py-3 px-4 font-medium">{role.name}</td>
-                      <td className="py-3 px-4">{role.description}</td>
-                      <td className="py-3 px-4">
+                    <TableRow key={role.id}>
+                      <TableCell className="font-medium">{role.name}</TableCell>
+                      <TableCell>{role.description}</TableCell>
+                      <TableCell>
                         {role.isActive ? (
                           <span className="inline-flex items-center gap-1 text-green-600">
                             启用
@@ -144,8 +144,8 @@ export function RolesPage() {
                             禁用
                           </span>
                         )}
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
@@ -168,12 +168,11 @@ export function RolesPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

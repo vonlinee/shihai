@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Edit2, Plus, Search, Trash2, X } from 'lucide-react'
 import {
   useAdminAddWorkCollectionItem,
@@ -161,37 +162,35 @@ export function AdminWorkCollectionsPage() {
           ) : collections.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无作品集数据</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
-                    <th className="text-left py-3 px-4 font-medium">标题</th>
-                    <th className="text-left py-3 px-4 font-medium">状态</th>
-                    <th className="text-left py-3 px-4 font-medium">作品数</th>
-                    <th className="text-left py-3 px-4 font-medium">创建时间</th>
-                    <th className="text-left py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>标题</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>作品数</TableHead>
+                  <TableHead>创建时间</TableHead>
+                  <TableHead>操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {collections.map((collection) => (
-                    <tr key={collection.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4">{collection.id}</td>
-                      <td className="py-3 px-4 font-medium">{collection.title}</td>
-                      <td className="py-3 px-4">{collection.isPublished ? '已发布' : '草稿'}</td>
-                      <td className="py-3 px-4">{collection.itemCount}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{new Date(collection.createdAt).toLocaleDateString()}</td>
-                      <td className="py-3 px-4">
+                    <TableRow key={collection.id}>
+                      <TableCell>{collection.id}</TableCell>
+                      <TableCell className="font-medium">{collection.title}</TableCell>
+                      <TableCell>{collection.isPublished ? '已发布' : '草稿'}</TableCell>
+                      <TableCell>{collection.itemCount}</TableCell>
+                      <TableCell className="text-muted-foreground">{new Date(collection.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(collection)}><Edit2 className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDelete(collection.id)}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           )}
           <Pagination
             className="mt-4"
@@ -269,21 +268,21 @@ export function AdminWorkCollectionsPage() {
                     {(detail?.items?.length ?? 0) === 0 ? (
                       <div className="text-center py-6 text-muted-foreground text-sm">暂无作品条目</div>
                     ) : (
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b bg-muted/40">
-                            <th className="text-left py-2 px-3 text-sm font-medium">类型</th>
-                            <th className="text-left py-2 px-3 text-sm font-medium">作品</th>
-                            <th className="text-left py-2 px-3 text-sm font-medium">排序</th>
-                            <th className="text-left py-2 px-3 text-sm font-medium">操作</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40">
+                            <TableHead className="h-10 px-3 text-sm">类型</TableHead>
+                            <TableHead className="h-10 px-3 text-sm">作品</TableHead>
+                            <TableHead className="h-10 px-3 text-sm">排序</TableHead>
+                            <TableHead className="h-10 px-3 text-sm">操作</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {detail!.items!.map((item) => (
-                            <tr key={item.id} className="border-b last:border-0">
-                              <td className="py-2 px-3 text-sm">{item.workType}</td>
-                              <td className="py-2 px-3 text-sm">{poemTitleById.get(item.workId) || `#${item.workId}`}</td>
-                              <td className="py-2 px-3">
+                            <TableRow key={item.id}>
+                              <TableCell className="px-3 py-2 text-sm">{item.workType}</TableCell>
+                              <TableCell className="px-3 py-2 text-sm">{poemTitleById.get(item.workId) || `#${item.workId}`}</TableCell>
+                              <TableCell className="px-3 py-2">
                                 <Input
                                   type="number"
                                   className="h-8 w-24"
@@ -295,8 +294,8 @@ export function AdminWorkCollectionsPage() {
                                     }
                                   }}
                                 />
-                              </td>
-                              <td className="py-2 px-3">
+                              </TableCell>
+                              <TableCell className="px-3 py-2">
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -305,11 +304,11 @@ export function AdminWorkCollectionsPage() {
                                 >
                                   <Trash2 className="h-4 w-4 text-cinnabar" />
                                 </Button>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     )}
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { usePermissions, useCreatePermission, useUpdatePermission, useDeletePermission } from '@/hooks/useRbac'
 
 export function PermissionsPage() {
@@ -164,31 +165,30 @@ export function PermissionsPage() {
             </div>
           ) : selectedModule ? (
             // Show table view when module is selected
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">权限编码</th>
-                    <th className="text-left py-3 px-4 font-medium">权限名称</th>
-                    <th className="text-left py-3 px-4 font-medium">描述</th>
-                    <th className="text-left py-3 px-4 font-medium">状态</th>
-                    <th className="text-right py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>权限编码</TableHead>
+                  <TableHead>权限名称</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                   {filteredPermissions.map((perm) => (
-                    <tr key={perm.id} className="border-b">
-                      <td className="py-3 px-4 font-mono text-sm">{perm.code}</td>
-                      <td className="py-3 px-4 font-medium">{perm.name}</td>
-                      <td className="py-3 px-4">{perm.description}</td>
-                      <td className="py-3 px-4">
+                    <TableRow key={perm.id}>
+                      <TableCell className="font-mono text-sm">{perm.code}</TableCell>
+                      <TableCell className="font-medium">{perm.name}</TableCell>
+                      <TableCell>{perm.description}</TableCell>
+                      <TableCell>
                         {perm.isActive ? (
                           <span className="text-green-600">启用</span>
                         ) : (
                           <span className="text-red-600">禁用</span>
                         )}
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
@@ -203,12 +203,11 @@ export function PermissionsPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           ) : (
             // Show grouped view when no module selected
             <div className="space-y-6">

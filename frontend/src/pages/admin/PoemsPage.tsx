@@ -1,8 +1,10 @@
-import { useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
@@ -249,6 +251,76 @@ function PoemsTab() {
     createPoemMutation.mutate(buildCreatePayload(), { onSuccess: resetPoemDialog })
   }
 
+  const poemColumns = useMemo<DataTableColumn<Poem>[]>(
+    () => [
+      {
+        id: 'select',
+        header: () => (
+          <Checkbox
+            aria-label="选择当前页诗词"
+            checked={allVisiblePoemsSelected}
+            onCheckedChange={() => setSelectedPoemIds((ids) => toggleAllVisibleIds(ids, visiblePoemIds))}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            aria-label={`选择诗词 ${row.original.title}`}
+            checked={selectedPoemIds.includes(toEntityId(row.original.id))}
+            onCheckedChange={() => setSelectedPoemIds((ids) => toggleSelectedId(ids, toEntityId(row.original.id)))}
+          />
+        ),
+        enableColumnFilter: false,
+        enableSorting: false,
+        meta: { draggable: false, fixed: 'left', width: 56 },
+      },
+      {
+        accessorKey: 'title',
+        header: '标题',
+        cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
+        meta: { filterPlaceholder: '筛选标题', fixed: 'left', width: 220 },
+      },
+      {
+        accessorFn: (poem) => poem.author?.name ?? '',
+        id: 'author',
+        header: '作者',
+        cell: ({ row }) => row.original.author?.name,
+        meta: { filterPlaceholder: '筛选作者', width: 160 },
+      },
+      {
+        accessorFn: (poem) => poem.dynasty?.name ?? '',
+        id: 'dynasty',
+        header: '朝代',
+        cell: ({ row }) => row.original.dynasty?.name,
+        meta: { filterPlaceholder: '筛选朝代', width: 140 },
+      },
+      {
+        accessorKey: 'genre',
+        header: '体裁',
+        meta: { filterPlaceholder: '筛选体裁', width: 140 },
+      },
+      {
+        accessorKey: 'views',
+        header: '浏览量',
+        meta: { align: 'center', width: 120 },
+      },
+      {
+        id: 'actions',
+        header: '操作',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/poems/${row.original.id}`)}><Eye className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => openEditPoemDialog(row.original)}><Edit2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
+          </div>
+        ),
+        enableColumnFilter: false,
+        enableSorting: false,
+        meta: { draggable: false, fixed: 'right', width: 150 },
+      },
+    ],
+    [allVisiblePoemsSelected, handleDelete, navigate, openEditPoemDialog, selectedPoemIds, visiblePoemIds],
+  )
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -279,54 +351,14 @@ function PoemsTab() {
           ) : poems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无诗词数据</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="w-12 py-3 px-4">
-                      <input
-                        type="checkbox"
-                        aria-label="选择当前页诗词"
-                        checked={allVisiblePoemsSelected}
-                        onChange={() => setSelectedPoemIds((ids) => toggleAllVisibleIds(ids, visiblePoemIds))}
-                      />
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium">标题</th>
-                    <th className="text-left py-3 px-4 font-medium">作者</th>
-                    <th className="text-left py-3 px-4 font-medium">朝代</th>
-                    <th className="text-left py-3 px-4 font-medium">体裁</th>
-                    <th className="text-left py-3 px-4 font-medium">浏览量</th>
-                    <th className="text-left py-3 px-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {poems.map((poem) => (
-                    <tr key={poem.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-3 px-4">
-                        <input
-                          type="checkbox"
-                          aria-label={`选择诗词 ${poem.title}`}
-                          checked={selectedPoemIds.includes(toEntityId(poem.id))}
-                          onChange={() => setSelectedPoemIds((ids) => toggleSelectedId(ids, toEntityId(poem.id)))}
-                        />
-                      </td>
-                      <td className="py-3 px-4 font-medium">{poem.title}</td>
-                      <td className="py-3 px-4">{poem.author?.name}</td>
-                      <td className="py-3 px-4">{poem.dynasty?.name}</td>
-                      <td className="py-3 px-4">{poem.genre}</td>
-                      <td className="py-3 px-4">{poem.views}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => navigate(`/poems/${poem.id}`)}><Eye className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => openEditPoemDialog(poem)}><Edit2 className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(poem.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={poemColumns}
+              data={poems}
+              emptyText="暂无诗词数据"
+              enableColumnDragging
+              enableColumnFilters
+              getRowId={(poem) => toEntityId(poem.id)}
+            />
           )}
           <Pagination
             className="mt-4"
@@ -456,6 +488,67 @@ function DynastiesTab() {
     batchDeleteMutation.mutate(selectedDynastyIds, { onSuccess: () => setSelectedDynastyIds([]) })
   }
 
+  type DynastyRow = (typeof dynastiesList)[number]
+
+  const dynastyColumns = useMemo<DataTableColumn<DynastyRow>[]>(
+    () => [
+      {
+        id: 'select',
+        header: () => (
+          <Checkbox
+            aria-label="选择全部朝代"
+            checked={allVisibleDynastiesSelected}
+            onCheckedChange={() => setSelectedDynastyIds((ids) => toggleAllVisibleIds(ids, visibleDynastyIds))}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            aria-label={`选择朝代 ${row.original.name}`}
+            checked={selectedDynastyIds.includes(toEntityId(row.original.id))}
+            onCheckedChange={() => setSelectedDynastyIds((ids) => toggleSelectedId(ids, toEntityId(row.original.id)))}
+          />
+        ),
+        enableColumnFilter: false,
+        enableSorting: false,
+        meta: { draggable: false, fixed: 'left', width: 56 },
+      },
+      {
+        accessorKey: 'name',
+        header: '朝代名称',
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+        meta: { filterPlaceholder: '筛选朝代', fixed: 'left', width: 180 },
+      },
+      {
+        accessorFn: (dynasty) => dynasty.period ?? '',
+        id: 'period',
+        header: '时期',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.period || '-'}</span>,
+        meta: { filterPlaceholder: '筛选时期', width: 160 },
+      },
+      {
+        accessorFn: (dynasty) => dynasty.description ?? '',
+        id: 'description',
+        header: '描述',
+        cell: ({ row }) => <span className="block max-w-xs truncate text-muted-foreground">{row.original.description || '-'}</span>,
+        meta: { filterPlaceholder: '筛选描述', minWidth: 260 },
+      },
+      {
+        id: 'actions',
+        header: '操作',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}><Edit2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
+          </div>
+        ),
+        enableColumnFilter: false,
+        enableSorting: false,
+        meta: { draggable: false, fixed: 'right', width: 120 },
+      },
+    ],
+    [allVisibleDynastiesSelected, handleDelete, openEdit, selectedDynastyIds, visibleDynastyIds],
+  )
+
   return (
     <>
       <div className="flex items-center justify-end gap-2">
@@ -476,47 +569,14 @@ function DynastiesTab() {
           {isLoading ? <div className="text-center py-8 text-muted-foreground">加载中...</div>
             : dynastiesList.length === 0 ? <div className="text-center py-8 text-muted-foreground">暂无朝代数据</div>
             : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead><tr className="border-b">
-                    <th className="w-12 py-3 px-4">
-                      <input
-                        type="checkbox"
-                        aria-label="选择全部朝代"
-                        checked={allVisibleDynastiesSelected}
-                        onChange={() => setSelectedDynastyIds((ids) => toggleAllVisibleIds(ids, visibleDynastyIds))}
-                      />
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium">朝代名称</th>
-                    <th className="text-left py-3 px-4 font-medium">时期</th>
-                    <th className="text-left py-3 px-4 font-medium">描述</th>
-                    <th className="text-left py-3 px-4 font-medium">操作</th>
-                  </tr></thead>
-                  <tbody>
-                    {dynastiesList.map((d) => (
-                      <tr key={d.id} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="py-3 px-4">
-                          <input
-                            type="checkbox"
-                            aria-label={`选择朝代 ${d.name}`}
-                            checked={selectedDynastyIds.includes(toEntityId(d.id))}
-                            onChange={() => setSelectedDynastyIds((ids) => toggleSelectedId(ids, toEntityId(d.id)))}
-                          />
-                        </td>
-                        <td className="py-3 px-4 font-medium">{d.name}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{d.period || '-'}</td>
-                        <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">{d.description || '-'}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Edit2 className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(d.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={dynastyColumns}
+                data={dynastiesList}
+                emptyText="暂无朝代数据"
+                enableColumnDragging
+                enableColumnFilters
+                getRowId={(dynasty) => toEntityId(dynasty.id)}
+              />
             )}
         </CardContent>
       </Card>
@@ -618,6 +678,78 @@ function PoetsTab() {
     batchDeleteMutation.mutate(selectedPoetIds, { onSuccess: () => setSelectedPoetIds([]) })
   }
 
+  type PoetRow = (typeof poets)[number]
+
+  const poetColumns = useMemo<DataTableColumn<PoetRow>[]>(
+    () => [
+      {
+        id: 'select',
+        header: () => (
+          <Checkbox
+            aria-label="选择当前页诗人"
+            checked={allVisiblePoetsSelected}
+            onCheckedChange={() => setSelectedPoetIds((ids) => toggleAllVisibleIds(ids, visiblePoetIds))}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            aria-label={`选择诗人 ${row.original.name}`}
+            checked={selectedPoetIds.includes(toEntityId(row.original.id))}
+            onCheckedChange={() => setSelectedPoetIds((ids) => toggleSelectedId(ids, toEntityId(row.original.id)))}
+          />
+        ),
+        enableColumnFilter: false,
+        enableSorting: false,
+        meta: { draggable: false, fixed: 'left', width: 56 },
+      },
+      {
+        accessorKey: 'name',
+        header: '姓名',
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+        meta: { filterPlaceholder: '筛选姓名', fixed: 'left', width: 180 },
+      },
+      {
+        accessorFn: (poet) => poet.dynasty?.name ?? '',
+        id: 'dynasty',
+        header: '朝代',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.dynasty?.name || '-'}</span>,
+        meta: { filterPlaceholder: '筛选朝代', width: 150 },
+      },
+      {
+        accessorFn: (poet) => (poet.birthYear && poet.deathYear ? `${poet.birthYear}-${poet.deathYear}` : ''),
+        id: 'years',
+        header: '生卒年',
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {row.original.birthYear && row.original.deathYear ? `${row.original.birthYear}-${row.original.deathYear}` : '-'}
+          </span>
+        ),
+        meta: { filterPlaceholder: '筛选年份', width: 160 },
+      },
+      {
+        accessorFn: (poet) => poet.biography ?? '',
+        id: 'biography',
+        header: '简介',
+        cell: ({ row }) => <span className="block max-w-xs truncate text-muted-foreground">{row.original.biography || '-'}</span>,
+        meta: { filterPlaceholder: '筛选简介', minWidth: 260 },
+      },
+      {
+        id: 'actions',
+        header: '操作',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}><Edit2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
+          </div>
+        ),
+        enableColumnFilter: false,
+        enableSorting: false,
+        meta: { draggable: false, fixed: 'right', width: 120 },
+      },
+    ],
+    [allVisiblePoetsSelected, handleDelete, openEdit, selectedPoetIds, visiblePoetIds],
+  )
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -649,49 +781,14 @@ function PoetsTab() {
           {isLoading ? <div className="text-center py-8 text-muted-foreground">加载中...</div>
             : poets.length === 0 ? <div className="text-center py-8 text-muted-foreground">暂无诗人数据</div>
             : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead><tr className="border-b">
-                    <th className="w-12 py-3 px-4">
-                      <input
-                        type="checkbox"
-                        aria-label="选择当前页诗人"
-                        checked={allVisiblePoetsSelected}
-                        onChange={() => setSelectedPoetIds((ids) => toggleAllVisibleIds(ids, visiblePoetIds))}
-                      />
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium">姓名</th>
-                    <th className="text-left py-3 px-4 font-medium">朝代</th>
-                    <th className="text-left py-3 px-4 font-medium">生卒年</th>
-                    <th className="text-left py-3 px-4 font-medium">简介</th>
-                    <th className="text-left py-3 px-4 font-medium">操作</th>
-                  </tr></thead>
-                  <tbody>
-                    {poets.map((p) => (
-                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="py-3 px-4">
-                          <input
-                            type="checkbox"
-                            aria-label={`选择诗人 ${p.name}`}
-                            checked={selectedPoetIds.includes(toEntityId(p.id))}
-                            onChange={() => setSelectedPoetIds((ids) => toggleSelectedId(ids, toEntityId(p.id)))}
-                          />
-                        </td>
-                        <td className="py-3 px-4 font-medium">{p.name}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{p.dynasty?.name || '-'}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{p.birthYear && p.deathYear ? `${p.birthYear}-${p.deathYear}` : '-'}</td>
-                        <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">{p.biography || '-'}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Edit2 className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(p.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={poetColumns}
+                data={poets}
+                emptyText="暂无诗人数据"
+                enableColumnDragging
+                enableColumnFilters
+                getRowId={(poet) => toEntityId(poet.id)}
+              />
             )}
           <Pagination
             className="mt-4"

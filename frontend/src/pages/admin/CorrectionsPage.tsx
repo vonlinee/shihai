@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, CheckCircle, XCircle, Eye } from 'lucide-react'
 
 const mockCorrections = [
@@ -38,30 +39,29 @@ export function AdminCorrectionsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">ID</th>
-                  <th className="text-left py-3 px-4 font-medium">诗词</th>
-                  <th className="text-left py-3 px-4 font-medium">纠错类型</th>
-                  <th className="text-left py-3 px-4 font-medium">原文</th>
-                  <th className="text-left py-3 px-4 font-medium">建议修改</th>
-                  <th className="text-left py-3 px-4 font-medium">提交用户</th>
-                  <th className="text-left py-3 px-4 font-medium">状态</th>
-                  <th className="text-left py-3 px-4 font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>诗词</TableHead>
+                <TableHead>纠错类型</TableHead>
+                <TableHead>原文</TableHead>
+                <TableHead>建议修改</TableHead>
+                <TableHead>提交用户</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
                 {mockCorrections.map((correction) => (
-                  <tr key={correction.id} className="border-b last:border-0 hover:bg-muted/50">
-                    <td className="py-3 px-4">{correction.id}</td>
-                    <td className="py-3 px-4 font-medium">{correction.poem}</td>
-                    <td className="py-3 px-4">{typeLabels[correction.type]}</td>
-                    <td className="py-3 px-4 max-w-xs truncate text-muted-foreground">{correction.original}</td>
-                    <td className="py-3 px-4 max-w-xs truncate">{correction.suggested}</td>
-                    <td className="py-3 px-4">{correction.user}</td>
-                    <td className="py-3 px-4">
+                  <TableRow key={correction.id}>
+                    <TableCell>{correction.id}</TableCell>
+                    <TableCell className="font-medium">{correction.poem}</TableCell>
+                    <TableCell>{typeLabels[correction.type]}</TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground">{correction.original}</TableCell>
+                    <TableCell className="max-w-xs truncate">{correction.suggested}</TableCell>
+                    <TableCell>{correction.user}</TableCell>
+                    <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${
                         correction.status === 'approved' ? 'bg-green-500/10 text-green-500' :
                         correction.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
@@ -69,8 +69,8 @@ export function AdminCorrectionsPage() {
                       }`}>
                         {correction.status === 'approved' ? '已通过' : correction.status === 'pending' ? '待审核' : '已驳回'}
                       </span>
-                    </td>
-                    <td className="py-3 px-4">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
@@ -82,12 +82,11 @@ export function AdminCorrectionsPage() {
                           <XCircle className="h-4 w-4 text-cinnabar" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
