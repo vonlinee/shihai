@@ -13,38 +13,42 @@ export function HomePage() {
   const { data: announcementsData, isLoading: announcementsLoading } = useAnnouncements(1, 5)
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
+      {/* Search Section */}
+      <section className="container pt-6">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-2xl mx-auto">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="搜索诗词、诗人..."
+              className="h-12 pl-10"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  navigate(`/poems?keyword=${e.currentTarget.value}`)
+                }
+              }}
+            />
+          </div>
+          <Button className="h-12 px-6" onClick={() => navigate('/poems')}>
+            开始探索
+          </Button>
+        </div>
+      </section>
+
       {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
+      <section className="relative py-2 lg:py-4 overflow-hidden">
         <div className="container relative z-10">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h1 className="text-4xl md:text-6xl font-serif font-bold text-ink">
+          <div className="max-w-3xl mx-auto text-center space-y-3">
+            <h1 className="text-3xl md:text-5xl font-serif font-bold text-ink">
               品味<span className="text-cinnabar">诗词</span>之美
             </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
               识海古诗词学习平台，汇聚千年文化精华，让您在诗词的海洋中自由遨游
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="搜索诗词、诗人..." 
-                  className="pl-10"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      navigate(`/poems?keyword=${e.currentTarget.value}`)
-                    }
-                  }}
-                />
-              </div>
-              <Button onClick={() => navigate('/poems')}>
-                开始探索
-              </Button>
-            </div>
           </div>
         </div>
         {/* Decorative background */}
-        <div className="absolute inset-0 -z-10 opacity-5">
+        <div className="absolute inset-0 -z-10 opacity-5 hidden md:block">
           <div className="absolute top-10 left-10 text-9xl font-serif text-ink">诗</div>
           <div className="absolute bottom-10 right-10 text-9xl font-serif text-ink">词</div>
         </div>
