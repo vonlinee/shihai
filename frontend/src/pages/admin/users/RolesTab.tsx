@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Search, Plus, Trash2, X, Pencil } from 'lucide-react'
 import { useRoles, useCreateRole, useUpdateRole, useDeleteRole } from '@/hooks/useRbac'
 import { getRoleBadgeColor } from './utils'
@@ -16,6 +17,7 @@ export function RolesTab() {
   const createMutation = useCreateRole()
   const updateMutation = useUpdateRole()
   const deleteMutation = useDeleteRole()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const roles = rolesData?.list ?? []
   const filteredRoles = roles.filter((r) =>
@@ -34,6 +36,17 @@ export function RolesTab() {
       createMutation.mutate({ name: formData.name, description: formData.description },
         { onSuccess: () => { setShowDialog(false); resetForm() } })
     }
+  }
+
+  const handleDelete = async (role: { id: number; name: string }) => {
+    const confirmed = await confirm({
+      title: '删除角色',
+      description: `确定要删除角色 "${role.name}" 吗？此操作不可撤销。`,
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
+    deleteMutation.mutate(role.id)
   }
 
   return (
@@ -87,7 +100,7 @@ export function RolesTab() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 h-8 w-8 p-0"
-                            onClick={() => { if (confirm(`确定要删除角色 "${role.name}" 吗？`)) deleteMutation.mutate(role.id) }}
+                            onClick={() => handleDelete(role)}
                             disabled={role.name === 'admin'}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -139,6 +152,7 @@ export function RolesTab() {
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </>
   )
 }

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/Pagination'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Search, Plus, Edit2, Trash2, Shield, X } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useAdminUsers, useDeleteUser, useAdminCreateUser } from '@/hooks/useAdmin'
@@ -35,6 +36,7 @@ export function UsersTab() {
   const deleteUserMutation = useDeleteUser()
   const createUserMutation = useAdminCreateUser()
   const assignRolesMutation = useAssignRolesToUser()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const users = usersData?.list ?? []
   const total = usersData?.total ?? 0
@@ -57,8 +59,14 @@ export function UsersTab() {
     )
   }
 
-  const handleDeleteUser = (userId: number) => {
-    if (!confirm('确定要删除该用户吗？')) return
+  const handleDeleteUser = async (userId: number) => {
+    const confirmed = await confirm({
+      title: '删除用户',
+      description: '确定要删除该用户吗？此操作不可撤销。',
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
     deleteUserMutation.mutate(userId)
   }
 
@@ -285,6 +293,7 @@ export function UsersTab() {
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </>
   )
 }

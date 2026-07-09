@@ -2,6 +2,7 @@ import { useMemo, useState, Fragment } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Search, Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, FolderTree } from 'lucide-react'
 import { usePermissions, useCreatePermission, useUpdatePermission, useDeletePermission } from '@/hooks/useRbac'
 import { getModuleDisplayName } from './utils'
@@ -41,6 +42,7 @@ export function PermissionsTab() {
   const createMutation = useCreatePermission()
   const updateMutation = useUpdatePermission()
   const deleteMutation = useDeletePermission()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const permissions: PermissionRow[] = permissionsData?.list ?? []
 
@@ -108,8 +110,15 @@ export function PermissionsTab() {
     setShowDialog(true)
   }
 
-  const handleDelete = (perm: PermissionRow) => {
-    if (confirm(`确定要删除权限 "${perm.name}" 吗？`)) deleteMutation.mutate(perm.id)
+  const handleDelete = async (perm: PermissionRow) => {
+    const confirmed = await confirm({
+      title: '删除权限',
+      description: `确定要删除权限 "${perm.name}" 吗？此操作不可撤销。`,
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
+    deleteMutation.mutate(perm.id)
   }
 
   return (
@@ -311,6 +320,7 @@ export function PermissionsTab() {
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </>
   )
 }

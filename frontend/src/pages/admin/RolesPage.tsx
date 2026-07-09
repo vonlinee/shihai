@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useRoles, useCreateRole, useUpdateRole, useDeleteRole } from '@/hooks/useRbac'
 
 export function RolesPage() {
@@ -19,6 +21,7 @@ export function RolesPage() {
   const createRoleMutation = useCreateRole()
   const updateRoleMutation = useUpdateRole()
   const deleteRoleMutation = useDeleteRole()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const roles = rolesData?.list ?? []
 
@@ -38,7 +41,13 @@ export function RolesPage() {
   }
 
   const handleDelete = async (role: { id: number; name: string }) => {
-    if (!confirm(`确定要删除角色 "${role.name}" 吗？`)) return
+    const confirmed = await confirm({
+      title: '删除角色',
+      description: `确定要删除角色 "${role.name}" 吗？此操作不可撤销。`,
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
     deleteRoleMutation.mutate(role.id)
   }
 
@@ -60,7 +69,7 @@ export function RolesPage() {
 
   const handleManagePermissions = (role: { name: string }) => {
     // TODO: Open permission management dialog
-    alert(`管理角色 "${role.name}" 的权限`)
+    toast.info(`管理角色 "${role.name}" 的权限`)
   }
 
   const resetForm = () => {
@@ -229,6 +238,7 @@ export function RolesPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </div>
   )
 }

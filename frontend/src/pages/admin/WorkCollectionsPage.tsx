@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { Pagination } from '@/components/ui/Pagination'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Edit2, Plus, Search, Trash2, X } from 'lucide-react'
 import {
   useAdminAddWorkCollectionItem,
@@ -49,6 +50,7 @@ export function AdminWorkCollectionsPage() {
   const addItemMutation = useAdminAddWorkCollectionItem()
   const updateItemMutation = useAdminUpdateWorkCollectionItem()
   const deleteItemMutation = useAdminDeleteWorkCollectionItem()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const collections = data?.list ?? []
   const total = data?.total ?? 0
@@ -110,10 +112,15 @@ export function AdminWorkCollectionsPage() {
     }
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm('确定要删除该作品集吗？')) {
-      deleteMutation.mutate(id)
-    }
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: '删除作品集',
+      description: '确定要删除该作品集吗？此操作不可撤销。',
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
+    deleteMutation.mutate(id)
   }
 
   const handleAddItem = () => {
@@ -318,6 +325,7 @@ export function AdminWorkCollectionsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </div>
   )
 }

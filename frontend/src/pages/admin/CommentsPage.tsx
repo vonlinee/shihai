@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Search, Trash2, CheckCircle, XCircle } from 'lucide-react'
 import { useAdminComments } from '@/hooks/useAdmin'
 import { useDeleteComment } from '@/hooks/useComments'
@@ -12,6 +13,7 @@ export function AdminCommentsPage() {
 
   const { data: commentsData, isLoading } = useAdminComments(page, 20)
   const deleteCommentMutation = useDeleteComment()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const comments = (commentsData?.list ?? []) as Array<{
     id: number;
@@ -23,8 +25,14 @@ export function AdminCommentsPage() {
     isDeleted: boolean;
   }>
 
-  const handleDelete = (id: number) => {
-    if (!confirm('确定要删除该评论吗？')) return
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: '删除评论',
+      description: '确定要删除该评论吗？此操作不可撤销。',
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
     deleteCommentMutation.mutate(id)
   }
 
@@ -103,6 +111,7 @@ export function AdminCommentsPage() {
           )}
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   )
 }

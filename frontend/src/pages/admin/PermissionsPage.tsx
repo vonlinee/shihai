@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usePermissions, useCreatePermission, useUpdatePermission, useDeletePermission } from '@/hooks/useRbac'
 
 export function PermissionsPage() {
@@ -22,6 +23,7 @@ export function PermissionsPage() {
   const createPermissionMutation = useCreatePermission()
   const updatePermissionMutation = useUpdatePermission()
   const deletePermissionMutation = useDeletePermission()
+  const { confirm, ConfirmDialog } = useConfirmDialog()
 
   const permissions = permissionsData?.list ?? []
 
@@ -54,7 +56,13 @@ export function PermissionsPage() {
   }
 
   const handleDelete = async (permission: { id: number; name: string }) => {
-    if (!confirm(`确定要删除权限 "${permission.name}" 吗？`)) return
+    const confirmed = await confirm({
+      title: '删除权限',
+      description: `确定要删除权限 "${permission.name}" 吗？此操作不可撤销。`,
+      confirmText: '删除',
+      destructive: true,
+    })
+    if (!confirmed) return
     deletePermissionMutation.mutate(permission.id)
   }
 
@@ -335,6 +343,7 @@ export function PermissionsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </div>
   )
 }
