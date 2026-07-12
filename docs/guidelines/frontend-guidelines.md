@@ -128,6 +128,7 @@ src/
 - `hooks/` 只放 Custom Hooks，文件名以 `use` 开头。
 - `services/` 只负责网络请求，不包含业务逻辑判断。
 - `stores/` 每个状态域对应一个文件，以 `Store` 命名（如 `authStore.ts`）。
+- 模块内专用的工具函数、Hooks、类型定义和辅助组件应放在对应模块目录内；只有被多个业务模块稳定复用的能力，才提升到全局 `hooks/`、`utils/`、`types/` 或通用组件目录。
 - 新增业务模块时，在 `components/`、`hooks/`、`services/` 下同步创建对应文件，保持各层完整。
 
 ---
