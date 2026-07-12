@@ -24,13 +24,16 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { Check, ChevronDown, ChevronUp, ChevronsUpDown, Clipboard, Filter, GripVertical, Info, X } from 'lucide-react'
 
 import { cn } from '@/utils/cn'
 
+import { Button } from './button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu'
 import { Input } from './input'
+import { Skeleton } from './skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
 
 interface DataTableFilterOption {
   label: string
@@ -208,25 +211,26 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
   }
 
   return (
-    <DropdownMenuPrimitive.Root>
-      <DropdownMenuPrimitive.Trigger asChild>
-        <button
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
           type="button"
           aria-label="筛选"
+          variant="ghost"
+          size="icon"
           className={cn(
             'inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-background/80 hover:text-foreground',
             hasFilter && 'bg-background text-primary shadow-sm',
           )}
         >
           <Filter className="h-3.5 w-3.5" />
-        </button>
-      </DropdownMenuPrimitive.Trigger>
-      <DropdownMenuPrimitive.Portal>
-        <DropdownMenuPrimitive.Content
-          align="end"
-          sideOffset={8}
-          className="z-50 w-56 rounded-md border bg-popover p-2 text-popover-foreground shadow-md"
-        >
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-56 p-2"
+      >
           <div className="flex items-center gap-2">
             {filterVariant === 'text' && (
               <Input
@@ -242,14 +246,16 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
               </div>
             )}
             {hasFilter && (
-              <button
+              <Button
                 type="button"
                 aria-label="清除筛选"
                 onClick={() => column.setFilterValue(undefined)}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
+              </Button>
             )}
           </div>
           {filterOptions.length > 0 && (
@@ -259,7 +265,7 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
                   ? selectedValues.includes(option.value)
                   : textFilterValue === option.value
                 return (
-                  <DropdownMenuPrimitive.Item
+                  <DropdownMenuItem
                     key={option.value}
                     onSelect={(event) => {
                       if (filterVariant === 'multiSelect') {
@@ -269,18 +275,17 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
                       }
                       column.setFilterValue(selected ? undefined : option.value)
                     }}
-                    className="flex cursor-pointer select-none items-center justify-between rounded-sm px-2 py-1.5 text-xs outline-none hover:bg-muted"
+                    className="cursor-pointer justify-between text-xs"
                   >
                     <span className="truncate">{option.label}</span>
                     {selected && <Check className="ml-2 h-3.5 w-3.5 shrink-0 text-primary" />}
-                  </DropdownMenuPrimitive.Item>
+                  </DropdownMenuItem>
                 )
               })}
             </div>
           )}
-        </DropdownMenuPrimitive.Content>
-      </DropdownMenuPrimitive.Portal>
-    </DropdownMenuPrimitive.Root>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -431,7 +436,8 @@ export function DataTable<TData>({
   }
 
   return (
-    <div ref={tableWrapperRef} className={cn('relative w-full', className)}>
+    <TooltipProvider delayDuration={200}>
+      <div ref={tableWrapperRef} className={cn('relative w-full', className)}>
       {resizeGuideX !== null && (
         <div
           aria-hidden="true"
@@ -513,12 +519,14 @@ export function DataTable<TData>({
                         )}
                       </button>
                       {meta?.tooltip && (
-                        <span
-                          className="inline-flex h-5 w-5 items-center justify-center text-muted-foreground"
-                          title={typeof meta.tooltip === 'string' ? meta.tooltip : undefined}
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex h-5 w-5 items-center justify-center text-muted-foreground">
+                              <Info className="h-3.5 w-3.5" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{meta.tooltip}</TooltipContent>
+                        </Tooltip>
                       )}
                       {enableColumnFilters && header.column.getCanFilter() && (
                         <ColumnFilterMenu
@@ -570,7 +578,7 @@ export function DataTable<TData>({
                   const copyable = meta?.copyable
                   const shouldCopy = Boolean(copyable) && !isEmpty && !meta?.loading
                   const renderedCell = meta?.loading
-                    ? <span className="block h-4 w-20 animate-pulse rounded bg-muted" />
+                    ? <Skeleton className="h-4 w-20" />
                     : isEmpty && meta?.emptyText !== undefined
                       ? meta.emptyText
                       : flexRender(cell.column.columnDef.cell, cell.getContext())
@@ -595,17 +603,19 @@ export function DataTable<TData>({
                       <div className={cn('flex min-w-0 items-center gap-2', meta?.align === 'right' && 'justify-end', meta?.align === 'center' && 'justify-center')}>
                         <div className="min-w-0 truncate">{renderedCell}</div>
                         {shouldCopy && (
-                          <button
+                          <Button
                             type="button"
                             aria-label="复制"
+                            variant="ghost"
+                            size="icon"
                             onClick={(event) => {
                               event.stopPropagation()
                               if (copyable) void navigator.clipboard?.writeText(getCopyText(copyable, cellValue, row.original))
                             }}
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="h-6 w-6 shrink-0 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                           >
                             <Clipboard className="h-3.5 w-3.5" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </TableCell>
@@ -622,6 +632,7 @@ export function DataTable<TData>({
           )}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
