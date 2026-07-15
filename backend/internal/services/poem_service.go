@@ -2,16 +2,18 @@ package services
 
 import (
 	"errors"
+	"strings"
 
 	"shihai/internal/dto"
 	"shihai/internal/models"
 )
 
 type PoemService struct {
-	poemRepo    poemRepository
-	dynastyRepo dynastyRepository
-	authorRepo  authorRepository
-	poetRepo    poetRepository
+	poemRepo           poemRepository
+	dynastyRepo        dynastyRepository
+	authorRepo         authorRepository
+	poetRepo           poetRepository
+	poemAnnotationRepo poemAnnotationReader
 }
 
 type poemRepository interface {
@@ -56,6 +58,14 @@ type poetRepository interface {
 	BatchDelete(ids []uint64) error
 }
 
+type poemAnnotationReader interface {
+	ListByPoemID(poemID uint64) ([]models.PoemAnnotation, error)
+	GetByID(id uint64) (*models.PoemAnnotation, error)
+	Create(annotation *models.PoemAnnotation) error
+	Update(annotation *models.PoemAnnotation) error
+	Delete(id uint64) error
+}
+
 func NewPoemService(poemRepo poemRepository, dynastyRepo dynastyRepository, authorRepo authorRepository, poetRepo poetRepository) *PoemService {
 	return &PoemService{
 		poemRepo:    poemRepo,
@@ -63,6 +73,10 @@ func NewPoemService(poemRepo poemRepository, dynastyRepo dynastyRepository, auth
 		authorRepo:  authorRepo,
 		poetRepo:    poetRepo,
 	}
+}
+
+func (s *PoemService) SetPoemAnnotationRepository(annotationRepo poemAnnotationReader) {
+	s.poemAnnotationRepo = annotationRepo
 }
 
 func (s *PoemService) GetPoemList(req *dto.PoemListRequest) ([]dto.PoemResponse, int64, error) {
@@ -85,7 +99,15 @@ func (s *PoemService) GetPoemByID(id uint64) (*dto.PoemResponse, error) {
 	}
 
 	_ = s.poemRepo.IncrementViews(id)
-	return s.toPoemResponse(poem), nil
+	resp := s.toPoemResponse(poem)
+	if s.poemAnnotationRepo != nil {
+		annotations, err := s.poemAnnotationRepo.ListByPoemID(id)
+		if err != nil {
+			return nil, err
+		}
+		resp.Annotations = toPoemAnnotationResponses(annotations)
+	}
+	return resp, nil
 }
 
 func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse, error) {
@@ -115,7 +137,12 @@ func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse,
 	if err := s.poemRepo.Create(poem); err != nil {
 		return nil, err
 	}
-	return s.GetPoemByID(poem.ID)
+	if req.Annotations != nil {
+		if err := s.syncPoemAnnotations(poem, *req.Annotations); err != nil {
+			return nil, err
+		}
+	}
+	return s.toPoemResponseWithAnnotations(poem)
 }
 
 func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.PoemResponse, error) {
@@ -158,7 +185,89 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 	if err := s.poemRepo.Update(poem); err != nil {
 		return nil, err
 	}
-	return s.toPoemResponse(poem), nil
+	if req.Annotations != nil {
+		if err := s.syncPoemAnnotations(poem, *req.Annotations); err != nil {
+			return nil, err
+		}
+	}
+	return s.toPoemResponseWithAnnotations(poem)
+}
+
+func (s *PoemService) syncPoemAnnotations(poem *models.Poem, requests []dto.PoemAnnotationUpsertRequest) error {
+	if s.poemAnnotationRepo == nil {
+		return errors.New("poem annotation repository not configured")
+	}
+
+	existing, err := s.poemAnnotationRepo.ListByPoemID(poem.ID)
+	if err != nil {
+		return err
+	}
+	existingByID := make(map[uint64]models.PoemAnnotation, len(existing))
+	for _, annotation := range existing {
+		existingByID[annotation.ID] = annotation
+	}
+
+	desired := make([]models.PoemAnnotation, 0, len(requests))
+	seenIDs := make(map[uint64]struct{}, len(requests))
+	for _, req := range requests {
+		annotation := models.PoemAnnotation{
+			PoemID:       poem.ID,
+			TargetField:  normalizeAnnotationTarget(req.TargetField),
+			StartLine:    req.StartLine,
+			StartOffset:  req.StartOffset,
+			EndLine:      req.EndLine,
+			EndOffset:    req.EndOffset,
+			SelectedText: req.SelectedText,
+			Title:        strings.TrimSpace(req.Title),
+			Content:      strings.TrimSpace(req.Content),
+			Type:         normalizeAnnotationType(req.Type),
+			DisplayOrder: req.DisplayOrder,
+		}
+		if req.ID > 0 {
+			id := uint64(req.ID)
+			current, ok := existingByID[id]
+			if !ok || current.PoemID != poem.ID {
+				return errPoemAnnotationNotFound
+			}
+			annotation.BaseModel = current.BaseModel
+			seenIDs[id] = struct{}{}
+		}
+		desired = append(desired, annotation)
+	}
+	if err := validatePoemAnnotationSet(poem.Content, desired); err != nil {
+		return err
+	}
+
+	for i := range desired {
+		if desired[i].ID > 0 {
+			if err := s.poemAnnotationRepo.Update(&desired[i]); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := s.poemAnnotationRepo.Create(&desired[i]); err != nil {
+			return err
+		}
+	}
+	for _, annotation := range existing {
+		if _, ok := seenIDs[annotation.ID]; !ok {
+			if err := s.poemAnnotationRepo.Delete(annotation.ID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func validatePoemAnnotationSet(content []string, annotations []models.PoemAnnotation) error {
+	validated := make([]models.PoemAnnotation, 0, len(annotations))
+	for i := range annotations {
+		if err := validatePoemAnnotation(content, &annotations[i], annotations[i].ID, validated); err != nil {
+			return err
+		}
+		validated = append(validated, annotations[i])
+	}
+	return nil
 }
 
 func (s *PoemService) DeletePoem(id uint64) error {
@@ -461,6 +570,19 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 		}
 	}
 	return resp
+}
+
+func (s *PoemService) toPoemResponseWithAnnotations(poem *models.Poem) (*dto.PoemResponse, error) {
+	resp := s.toPoemResponse(poem)
+	if s.poemAnnotationRepo == nil {
+		return resp, nil
+	}
+	annotations, err := s.poemAnnotationRepo.ListByPoemID(poem.ID)
+	if err != nil {
+		return nil, err
+	}
+	resp.Annotations = toPoemAnnotationResponses(annotations)
+	return resp, nil
 }
 
 func (s *PoemService) toPoetResponse(poet *models.Poet) dto.PoetResponse {

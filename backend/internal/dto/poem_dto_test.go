@@ -60,6 +60,29 @@ func TestPoemResponseMarshalIDAsString(t *testing.T) {
 	}
 }
 
+func TestPoemAnnotationResponseMarshalIDAsString(t *testing.T) {
+	resp := PoemAnnotationResponse{
+		ID:     706545104525070300,
+		PoemID: 706545104525070301,
+	}
+
+	data, err := json.Marshal(resp)
+
+	if err != nil {
+		t.Fatalf("Marshal error = %v, want nil", err)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(data, &body); err != nil {
+		t.Fatalf("Unmarshal marshaled response error = %v, want nil", err)
+	}
+	if body["id"] != "706545104525070300" {
+		t.Fatalf("id = %#v, want string ID", body["id"])
+	}
+	if body["poemId"] != "706545104525070301" {
+		t.Fatalf("poemId = %#v, want string ID", body["poemId"])
+	}
+}
+
 func TestPoemCreateRequestMarshalIDAsNumber(t *testing.T) {
 	req := PoemCreateRequest{
 		Title:     "title",

@@ -1,6 +1,8 @@
 import { api } from './api';
 import type { Poem, Dynasty, Poet, PoemSearchParams } from '@/types';
 
+export type PoemID = string | number;
+
 export interface PoemListResponse {
   list: Poem[];
   total: number;
@@ -26,7 +28,7 @@ export const poemService = {
     return api.get<PoemListResponse>('/poems', params as Record<string, unknown>);
   },
 
-  getPoemById(id: number): Promise<Poem> {
+  getPoemById(id: PoemID): Promise<Poem> {
     return api.get<Poem>(`/poems/${id}`);
   },
 
@@ -34,7 +36,7 @@ export const poemService = {
     return api.get<Poem[]>('/poems/random', { limit });
   },
 
-  likePoem(id: number): Promise<void> {
+  likePoem(id: PoemID): Promise<void> {
     return api.post<void>(`/poems/${id}/like`);
   },
 

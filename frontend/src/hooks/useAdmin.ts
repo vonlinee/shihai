@@ -1,9 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   adminService,
   type UserListParams,
   type PoemCreateRequest,
   type PoemUpdateRequest,
+  type PoemAnnotationUpsertRequest,
   type WorkCollectionListParams,
   type WorkCollectionCreateRequest,
   type WorkCollectionUpdateRequest,
@@ -18,6 +19,19 @@ import {
 import { toast } from 'sonner';
 
 type AdminID = string | number;
+
+function syncSavedPoemQueryCache(
+  queryClient: QueryClient,
+  poem: { id?: AdminID } | null | undefined,
+  fallbackId?: AdminID,
+) {
+  if (!poem) return;
+
+  const ids = Array.from(new Set([poem.id, fallbackId].filter((value): value is AdminID => value !== undefined && value !== null)));
+  ids.forEach((id) => {
+    queryClient.setQueryData(['poem', String(id)], poem);
+  });
+}
 
 export function useAdminUsers(params?: UserListParams) {
   return useQuery({
@@ -61,9 +75,15 @@ export function useAdminCreatePoem() {
 
   return useMutation({
     mutationFn: (data: PoemCreateRequest) => adminService.createPoem(data),
-    onSuccess: () => {
+    onSuccess: (poem) => {
       toast.success('诗词添加成功');
       queryClient.invalidateQueries({ queryKey: ['poems'] });
+      queryClient.invalidateQueries({ queryKey: ['poem'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'poemAnnotations'] });
+      syncSavedPoemQueryCache(queryClient, poem);
+      if (poem?.id) {
+        queryClient.setQueryData(['admin', 'poemAnnotations', String(poem.id)], poem.annotations ?? []);
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || '添加失败');
@@ -77,9 +97,13 @@ export function useAdminUpdatePoem() {
   return useMutation({
     mutationFn: ({ id, data }: { id: AdminID; data: PoemUpdateRequest }) =>
       adminService.updatePoem(id, data),
-    onSuccess: () => {
+    onSuccess: (poem, variables) => {
       toast.success('诗词更新成功');
       queryClient.invalidateQueries({ queryKey: ['poems'] });
+      queryClient.invalidateQueries({ queryKey: ['poem'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'poemAnnotations', variables.id] });
+      syncSavedPoemQueryCache(queryClient, poem, variables.id);
+      queryClient.setQueryData(['admin', 'poemAnnotations', String(variables.id)], poem.annotations ?? []);
     },
     onError: (error: Error) => {
       toast.error(error.message || '更新失败');
@@ -129,6 +153,64 @@ export function useAdminBatchDeletePoems() {
     },
     onError: (error: Error) => {
       toast.error(error.message || '批量删除失败');
+    },
+  });
+}
+
+export function useAdminPoemAnnotations(poemId: AdminID | null) {
+  return useQuery({
+    queryKey: ['admin', 'poemAnnotations', poemId],
+    queryFn: () => adminService.getPoemAnnotations(poemId!),
+    enabled: !!poemId,
+  });
+}
+
+export function useAdminCreatePoemAnnotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ poemId, data }: { poemId: AdminID; data: PoemAnnotationUpsertRequest }) =>
+      adminService.createPoemAnnotation(poemId, data),
+    onSuccess: (_, variables) => {
+      toast.success('标注已添加');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'poemAnnotations', variables.poemId] });
+      queryClient.invalidateQueries({ queryKey: ['poem'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '添加标注失败');
+    },
+  });
+}
+
+export function useAdminUpdatePoemAnnotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (variables: { id: AdminID; poemId: AdminID; data: PoemAnnotationUpsertRequest }) =>
+      adminService.updatePoemAnnotation(variables.id, variables.data),
+    onSuccess: (_, variables) => {
+      toast.success('标注已更新');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'poemAnnotations', variables.poemId] });
+      queryClient.invalidateQueries({ queryKey: ['poem'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '更新标注失败');
+    },
+  });
+}
+
+export function useAdminDeletePoemAnnotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (variables: { id: AdminID; poemId: AdminID }) => adminService.deletePoemAnnotation(variables.id),
+    onSuccess: (_, variables) => {
+      toast.success('标注已删除');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'poemAnnotations', variables.poemId] });
+      queryClient.invalidateQueries({ queryKey: ['poem'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '删除标注失败');
     },
   });
 }

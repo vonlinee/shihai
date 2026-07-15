@@ -8,11 +8,11 @@ import { toast } from 'sonner'
 import { usePoem, useLikePoem } from '@/hooks/usePoems'
 import { useComments, useCreateComment, useVoteComment } from '@/hooks/useComments'
 import { useAuthStore } from '@/stores/authStore'
-import { PoemContent } from '@/components/poetry/PoemContent'
+import { PoemAnnotationSection } from '@/components/poetry/annotation/PoemAnnotationSection'
 
 export function PoemDetailPage() {
   const { id } = useParams()
-  const poemId = Number(id)
+  const poemId = id
   const { isAuthenticated } = useAuthStore()
   const [commentText, setCommentText] = useState('')
   const [commentPage] = useState(1)
@@ -25,6 +25,7 @@ export function PoemDetailPage() {
 
   const handleSubmitComment = () => {
     if (!commentText.trim()) return
+    if (!poemId) return
     if (!isAuthenticated) {
       toast.error('请先登录后再发表评论')
       return
@@ -67,8 +68,8 @@ export function PoemDetailPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Poem Content */}
-            <div className="text-center py-8">
-              <PoemContent content={poem.content} className="text-xl leading-loose space-y-2" />
+            <div className="py-8">
+              <PoemAnnotationSection content={poem.content} annotations={poem.annotations ?? []} />
             </div>
 
             {/* Actions */}
@@ -76,7 +77,7 @@ export function PoemDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => likeMutation.mutate(poemId)}
+                onClick={() => poemId && likeMutation.mutate(poemId)}
                 disabled={likeMutation.isPending}
               >
                 <Heart className="h-4 w-4 mr-2" />

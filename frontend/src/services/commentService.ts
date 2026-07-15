@@ -1,6 +1,8 @@
 import { api } from './api';
 import type { Comment } from '@/types';
 
+type CommentPoemID = string | number;
+
 export interface CommentListResponse {
   list: Comment[];
   total: number;
@@ -9,7 +11,7 @@ export interface CommentListResponse {
 }
 
 export interface CreateCommentRequest {
-  poemId: number;
+  poemId: CommentPoemID;
   content: string;
   parentId?: number;
   visitorId?: string;
@@ -23,7 +25,7 @@ export interface VoteCommentRequest {
 
 export const commentService = {
   getComments(
-    poemId: number,
+    poemId: CommentPoemID,
     page = 1,
     pageSize = 10,
   ): Promise<CommentListResponse> {

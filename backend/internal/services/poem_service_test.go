@@ -96,6 +96,45 @@ func TestGetPoemByIDReturnsContentArray(t *testing.T) {
 	assertStringSliceEqual(t, resp.Content, []string{"床前明月光，", "疑是地上霜。"})
 }
 
+func TestGetPoemByIDReturnsAllPersistedAnnotations(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		existingPoem: &models.Poem{
+			BaseModel: models.BaseModel{ID: 1},
+			Title:     "test",
+			Content:   []string{"abcdef"},
+		},
+	}
+	annotationRepo := &fakePoemAnnotationRepository{
+		annotations: []models.PoemAnnotation{
+			{
+				BaseModel:    models.BaseModel{ID: 11},
+				PoemID:       1,
+				TargetField:  models.PoemAnnotationTargetContent,
+				StartLine:    0,
+				StartOffset:  1,
+				EndLine:      0,
+				EndOffset:    3,
+				SelectedText: "bc",
+				Content:      "persisted annotation",
+			},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+	service.SetPoemAnnotationRepository(annotationRepo)
+
+	resp, err := service.GetPoemByID(1)
+
+	if err != nil {
+		t.Fatalf("GetPoemByID error = %v, want nil", err)
+	}
+	if len(resp.Annotations) != 1 {
+		t.Fatalf("len(resp.Annotations) = %d, want 1", len(resp.Annotations))
+	}
+	if resp.Annotations[0].SelectedText != "bc" {
+		t.Fatalf("annotation = %#v, want selected text bc", resp.Annotations[0])
+	}
+}
+
 func TestGetPoetListReturnsPaginatedPoets(t *testing.T) {
 	poetRepo := &fakePoetRepository{
 		listPoets: []models.Poet{
@@ -213,6 +252,123 @@ func TestUpdatePoetReturnsChangedDynasty(t *testing.T) {
 	}
 	if dynasty["name"] != "宋" {
 		t.Fatalf("dynasty.name = %#v, want 宋", dynasty["name"])
+	}
+}
+
+func TestUpdatePoemSyncsAnnotationsWhenProvided(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		existingPoem: &models.Poem{
+			BaseModel: models.BaseModel{ID: 1},
+			Title:     "静夜思",
+			Content:   []string{"床前明月光", "疑是地上霜"},
+		},
+	}
+	annotationRepo := &fakePoemAnnotationRepository{
+		annotations: []models.PoemAnnotation{
+			{
+				BaseModel:    models.BaseModel{ID: 11},
+				PoemID:       1,
+				TargetField:  models.PoemAnnotationTargetContent,
+				StartLine:    0,
+				StartOffset:  0,
+				EndLine:      0,
+				EndOffset:    1,
+				SelectedText: "床",
+				Content:      "旧标注",
+			},
+			{
+				BaseModel:    models.BaseModel{ID: 12},
+				PoemID:       1,
+				TargetField:  models.PoemAnnotationTargetContent,
+				StartLine:    1,
+				StartOffset:  0,
+				EndLine:      1,
+				EndOffset:    1,
+				SelectedText: "疑",
+				Content:      "应被删除",
+			},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+	service.SetPoemAnnotationRepository(annotationRepo)
+	annotations := []dto.PoemAnnotationUpsertRequest{
+		{
+			ID:           dto.RequestID(11),
+			TargetField:  models.PoemAnnotationTargetContent,
+			StartLine:    0,
+			StartOffset:  2,
+			EndLine:      0,
+			EndOffset:    4,
+			SelectedText: "明月",
+			Content:      "更新标注",
+		},
+		{
+			TargetField:  models.PoemAnnotationTargetContent,
+			StartLine:    1,
+			StartOffset:  2,
+			EndLine:      1,
+			EndOffset:    4,
+			SelectedText: "地上",
+			Content:      "新增标注",
+		},
+	}
+
+	resp, err := service.UpdatePoem(1, &dto.PoemUpdateRequest{
+		Content:     []string{"床前明月光", "疑是地上霜"},
+		Annotations: &annotations,
+	})
+
+	if err != nil {
+		t.Fatalf("UpdatePoem error = %v, want nil", err)
+	}
+	if annotationRepo.updated == nil || annotationRepo.updated.ID != 11 || annotationRepo.updated.SelectedText != "明月" {
+		t.Fatalf("updated annotation = %#v, want ID 11 明月", annotationRepo.updated)
+	}
+	if annotationRepo.created == nil || annotationRepo.created.SelectedText != "地上" {
+		t.Fatalf("created annotation = %#v, want 地上", annotationRepo.created)
+	}
+	if annotationRepo.deletedID != 12 {
+		t.Fatalf("deleted annotation ID = %d, want 12", annotationRepo.deletedID)
+	}
+	if len(resp.Annotations) != 2 {
+		t.Fatalf("len(resp.Annotations) = %d, want 2", len(resp.Annotations))
+	}
+	if resp.Annotations[0].SelectedText != "明月" || resp.Annotations[1].SelectedText != "地上" {
+		t.Fatalf("resp annotations = %#v, want updated annotations in text order", resp.Annotations)
+	}
+}
+
+func TestCreatePoemSyncsAnnotationsWhenProvided(t *testing.T) {
+	poemRepo := &fakePoemRepository{}
+	annotationRepo := &fakePoemAnnotationRepository{}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+	service.SetPoemAnnotationRepository(annotationRepo)
+	annotations := []dto.PoemAnnotationUpsertRequest{
+		{
+			TargetField:  models.PoemAnnotationTargetContent,
+			StartLine:    0,
+			StartOffset:  0,
+			EndLine:      0,
+			EndOffset:    2,
+			SelectedText: "床前",
+			Content:      "新建标注",
+		},
+	}
+
+	resp, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:       "静夜思",
+		Content:     []string{"床前明月光"},
+		Annotations: &annotations,
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	if annotationRepo.created == nil || annotationRepo.created.SelectedText != "床前" {
+		t.Fatalf("created annotation = %#v, want 床前", annotationRepo.created)
+	}
+	if len(resp.Annotations) != 1 || resp.Annotations[0].SelectedText != "床前" {
+		t.Fatalf("resp annotations = %#v, want created annotation", resp.Annotations)
 	}
 }
 

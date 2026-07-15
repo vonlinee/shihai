@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,11 +7,13 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User, StickyNote } from 'lucide-react'
 import { usePoems, useDynasties, usePoets, usePoetList, useGenres } from '@/hooks/usePoems'
 import {
   useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
   useAdminBatchDeletePoems,
+  useAdminPoemAnnotations,
   useAdminCreateDynasty, useAdminUpdateDynasty, useAdminDeleteDynasty,
   useAdminBatchDeleteDynasties,
   useAdminCreatePoet, useAdminUpdatePoet, useAdminDeletePoet,
@@ -19,8 +21,14 @@ import {
 } from '@/hooks/useAdmin'
 import { useNavigate } from 'react-router-dom'
 import { splitPoemContentInput } from '@/utils/poemContent'
+import {
+  PoemAnnotationManager,
+  toAnnotationDrafts,
+  type PoemAnnotationDraft,
+} from './poems/annotation/PoemAnnotationManager'
+import { PoemContentAnnotationEditor } from './poems/annotation/PoemContentAnnotationEditor'
 import type { Poem } from '@/types'
-import type { PoemCreateRequest, PoemUpdateRequest } from '@/services/adminService'
+import type { PoemAnnotationUpsertRequest, PoemCreateRequest, PoemUpdateRequest } from '@/services/adminService'
 
 type TabKey = 'poems' | 'dynasties' | 'poets'
 type PoemFormData = {
@@ -36,6 +44,7 @@ type PoemFormData = {
   annotation: string
 }
 type PoemTextField = 'translation' | 'appreciation' | 'annotation'
+type PoemFormTabKey = PoemTextField | 'poemAnnotations'
 
 const tabs: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
   { key: 'poems', label: '诗词', icon: BookOpen },
@@ -56,6 +65,11 @@ const poemTextFields: { key: PoemTextField; label: string; placeholder: string }
   { key: 'translation', label: '译文', placeholder: '白话文翻译' },
   { key: 'appreciation', label: '赏析', placeholder: '诗词赏析' },
   { key: 'annotation', label: '注释', placeholder: '字词注释' },
+]
+
+const poemFormTabs: { key: PoemFormTabKey; label: string; placeholder?: string }[] = [
+  ...poemTextFields,
+  { key: 'poemAnnotations', label: '诗词标注' },
 ]
 
 function createEmptyPoemFormData(): PoemFormData {
@@ -86,6 +100,85 @@ function toggleAllVisibleIds(selectedIds: string[], visibleIds: string[]): strin
     return selectedIds.filter((id) => !visibleIds.includes(id))
   }
   return Array.from(new Set([...selectedIds, ...visibleIds]))
+}
+
+function toPoemAnnotationPayloads(annotations: PoemAnnotationDraft[]): PoemAnnotationUpsertRequest[] {
+  return annotations.map((annotation) => ({
+    id: annotation.id,
+    targetField: annotation.targetField,
+    startLine: annotation.startLine,
+    startOffset: annotation.startOffset,
+    endLine: annotation.endLine,
+    endOffset: annotation.endOffset,
+    selectedText: annotation.selectedText,
+    title: annotation.title,
+    content: annotation.content,
+    type: annotation.type,
+    displayOrder: annotation.displayOrder,
+  }))
+}
+
+function formatPoemAnnotationLocation(annotation: PoemAnnotationDraft): string {
+  const startLine = annotation.startLine + 1
+  const endLine = annotation.endLine + 1
+  const startColumn = annotation.startOffset + 1
+  const endColumn = Math.max(1, annotation.endOffset)
+
+  if (annotation.startLine === annotation.endLine) {
+    return `第 ${startLine} 行 · ${startColumn}-${endColumn} 列`
+  }
+
+  return `第 ${startLine}-${endLine} 行 · ${annotation.endLine - annotation.startLine + 1} 行`
+}
+
+function PoemAnnotationDraftList({
+  annotations,
+  onDelete,
+}: {
+  annotations: PoemAnnotationDraft[]
+  onDelete: (index: number) => void
+}) {
+  if (annotations.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+        暂无诗词标注，选中正文中的文本后可添加
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {annotations.map((annotation, index) => (
+        <div
+          key={annotation.id ?? `${annotation.startLine}-${annotation.startOffset}-${index}`}
+          className="rounded-md border p-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-medium">
+                  {index + 1}. {annotation.title || annotation.selectedText}
+                </span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                  {formatPoemAnnotationLocation(annotation)}
+                </span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => onDelete(index)}
+            >
+              <Trash2 className="h-4 w-4 text-cinnabar" />
+            </Button>
+          </div>
+          <p className="mt-2 text-sm leading-6">{annotation.content || '暂无标注内容'}</p>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -129,10 +222,15 @@ function PoemsTab() {
   const [pageSize, setPageSize] = useState(10)
   const [showPoemDialog, setShowPoemDialog] = useState(false)
   const [editingPoemId, setEditingPoemId] = useState<string | null>(null)
+  const [annotatingPoem, setAnnotatingPoem] = useState<Poem | null>(null)
   const [formData, setFormData] = useState<PoemFormData>(() => createEmptyPoemFormData())
+  const [annotationDrafts, setAnnotationDrafts] = useState<PoemAnnotationDraft[]>([])
+  const [annotationDraftSourceId, setAnnotationDraftSourceId] = useState<string | null>(null)
   const [selectedPoemIds, setSelectedPoemIds] = useState<string[]>([])
 
   const { data: poemData, isLoading } = usePoems({ keyword: searchQuery || undefined, page, pageSize })
+  const editingAnnotationPoemId = showPoemDialog && editingPoemId ? editingPoemId : null
+  const { data: editingAnnotations, isLoading: isEditingAnnotationsLoading } = useAdminPoemAnnotations(editingAnnotationPoemId)
   const { data: dynasties } = useDynasties()
   const { data: poets } = usePoets()
   const { data: genres } = useGenres()
@@ -150,6 +248,14 @@ function PoemsTab() {
   const total = poemData?.total ?? 0
   const visiblePoemIds = poems.map((poem) => toEntityId(poem.id))
   const allVisiblePoemsSelected = visiblePoemIds.length > 0 && visiblePoemIds.every((id) => selectedPoemIds.includes(id))
+
+  useEffect(() => {
+    if (!showPoemDialog || !editingPoemId || !editingAnnotations || annotationDraftSourceId === editingPoemId) {
+      return
+    }
+    setAnnotationDrafts(toAnnotationDrafts(editingAnnotations))
+    setAnnotationDraftSourceId(editingPoemId)
+  }, [annotationDraftSourceId, editingAnnotations, editingPoemId, showPoemDialog])
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirm({
@@ -183,6 +289,8 @@ function PoemsTab() {
   const openCreatePoemDialog = () => {
     setEditingPoemId(null)
     setFormData(createEmptyPoemFormData())
+    setAnnotationDrafts([])
+    setAnnotationDraftSourceId(null)
     setShowPoemDialog(true)
   }
 
@@ -200,12 +308,16 @@ function PoemsTab() {
       appreciation: poem.appreciation || '',
       annotation: poem.annotation || '',
     })
+    setAnnotationDrafts(toAnnotationDrafts(poem.annotations ?? []))
+    setAnnotationDraftSourceId(null)
     setShowPoemDialog(true)
   }
 
   const resetPoemDialog = () => {
     setEditingPoemId(null)
     setFormData(createEmptyPoemFormData())
+    setAnnotationDrafts([])
+    setAnnotationDraftSourceId(null)
     setShowPoemDialog(false)
   }
 
@@ -218,6 +330,8 @@ function PoemsTab() {
       appreciation: formData.appreciation,
       annotation: formData.annotation,
     }
+    const annotations = toPoemAnnotationPayloads(annotationDrafts)
+    if (annotations.length > 0) payload.annotations = annotations
     if (formData.dynastyName) payload.dynastyName = formData.dynastyName
     if (formData.authorName) payload.authorName = formData.authorName
     return payload
@@ -231,6 +345,7 @@ function PoemsTab() {
       translation: formData.translation,
       appreciation: formData.appreciation,
       annotation: formData.annotation,
+      annotations: toPoemAnnotationPayloads(annotationDrafts),
     }
     const dynastyId = toPoemUpdateId(formData.dynastyId)
     const authorId = toPoemUpdateId(formData.authorId)
@@ -309,13 +424,14 @@ function PoemsTab() {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate(`/poems/${row.original.id}`)}><Eye className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => setAnnotatingPoem(row.original)}><StickyNote className="h-4 w-4" /></Button>
             <Button variant="ghost" size="sm" onClick={() => openEditPoemDialog(row.original)}><Edit2 className="h-4 w-4" /></Button>
             <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
           </div>
         ),
         enableColumnFilter: false,
         enableSorting: false,
-        meta: { draggable: false, fixed: 'right', width: 150 },
+        meta: { draggable: false, fixed: 'right', width: 190 },
       },
     ],
     [allVisiblePoemsSelected, handleDelete, navigate, openEditPoemDialog, selectedPoemIds, visiblePoemIds],
@@ -381,7 +497,7 @@ function PoemsTab() {
       {/* Poem Dialog */}
       {showPoemDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-background rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <h2 className="text-xl font-bold font-serif">{editingPoemId ? '编辑诗词' : '添加诗词'}</h2>
               <button onClick={closePoemDialog} className="p-1 hover:bg-muted rounded"><X className="h-5 w-5" /></button>
@@ -409,19 +525,47 @@ function PoemsTab() {
                     placeholder={editingPoemId ? '选择朝代' : '选择或输入朝代'} allowCustom={!editingPoemId} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">内容 *</label>
-                <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} placeholder="诗词内容" required rows={4}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-              </div>
-              {poemTextFields.map((field) => (
-                <div key={field.key} className="space-y-2">
-                  <label className="text-sm font-medium">{field.label}</label>
-                  <textarea value={formData[field.key]} onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                    placeholder={field.placeholder} rows={3}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-                </div>
-              ))}
+              <PoemContentAnnotationEditor
+                contentValue={formData.content}
+                annotations={annotationDrafts}
+                onContentChange={(content) => setFormData({ ...formData, content })}
+                onAnnotationsChange={setAnnotationDrafts}
+                isLoadingAnnotations={Boolean(editingPoemId && isEditingAnnotationsLoading && annotationDraftSourceId !== editingPoemId)}
+              />
+              <Tabs defaultValue="translation" className="space-y-3">
+                <TabsList className="grid w-full grid-cols-4">
+                  {poemFormTabs.map((field) => (
+                    <TabsTrigger key={field.key} value={field.key}>
+                      {field.label}
+                      {field.key === 'poemAnnotations' && annotationDrafts.length > 0 ? `(${annotationDrafts.length})` : ''}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {poemTextFields.map((field) => (
+                  <TabsContent key={field.key} value={field.key} className="space-y-2">
+                    <label className="text-sm font-medium">{field.label}</label>
+                    <textarea
+                      value={formData[field.key]}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      placeholder={field.placeholder}
+                      rows={6}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </TabsContent>
+                ))}
+                <TabsContent value="poemAnnotations" className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">诗词标注</label>
+                    <span className="text-xs text-muted-foreground">共 {annotationDrafts.length} 条</span>
+                  </div>
+                  <PoemAnnotationDraftList
+                    annotations={annotationDrafts}
+                    onDelete={(index) => {
+                      setAnnotationDrafts((drafts) => drafts.filter((_, draftIndex) => draftIndex !== index))
+                    }}
+                  />
+                </TabsContent>
+              </Tabs>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" className="bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={closePoemDialog}>取消</Button>
                 <Button type="submit" disabled={createPoemMutation.isPending || updatePoemMutation.isPending}>
@@ -432,6 +576,11 @@ function PoemsTab() {
           </div>
         </div>
       )}
+      <PoemAnnotationManager
+        poem={annotatingPoem}
+        open={Boolean(annotatingPoem)}
+        onClose={() => setAnnotatingPoem(null)}
+      />
       <ConfirmDialog />
     </>
   )

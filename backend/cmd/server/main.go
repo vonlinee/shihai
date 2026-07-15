@@ -97,6 +97,7 @@ func initApp(db *gorm.DB) *App {
 	// Repository layer
 	userRepo := repository.NewUserRepository(db)
 	poemRepo := repository.NewPoemRepository(db)
+	poemAnnotationRepo := repository.NewPoemAnnotationRepository(db)
 	dynastyRepo := repository.NewDynastyRepository(db)
 	authorRepo := repository.NewAuthorRepository(db)
 	poetRepo := repository.NewPoetRepository(db)
@@ -111,6 +112,8 @@ func initApp(db *gorm.DB) *App {
 	// Service layer
 	userService := services.NewUserService(userRepo, roleRepo, userRoleRepo)
 	poemService := services.NewPoemService(poemRepo, dynastyRepo, authorRepo, poetRepo)
+	poemAnnotationService := services.NewPoemAnnotationService(poemAnnotationRepo, poemRepo)
+	poemService.SetPoemAnnotationRepository(poemAnnotationRepo)
 	commentService := services.NewCommentService(commentRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
 	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)
@@ -118,7 +121,7 @@ func initApp(db *gorm.DB) *App {
 
 	// Handler layer
 	userHandler := handlers.NewUserHandler(userService)
-	poemHandler := handlers.NewPoemHandler(poemService)
+	poemHandler := handlers.NewPoemHandler(poemService, poemAnnotationService)
 	commentHandler := handlers.NewCommentHandler(commentService)
 	announcementHandler := handlers.NewAnnouncementHandler(announcementService)
 	workCollectionHandler := handlers.NewWorkCollectionHandler(workCollectionService)
@@ -279,6 +282,10 @@ func setupRoutes(r *gin.Engine, app *App) {
 			admin.PUT("/poems/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoem)
 			admin.DELETE("/poems", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.BatchDeletePoems)
 			admin.DELETE("/poems/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeletePoem)
+			admin.GET("/poems/:id/annotations", app.rbacMiddleware.RequirePermission(models.PermPoemRead), app.poemHandler.GetPoemAnnotations)
+			admin.POST("/poems/:id/annotations", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.CreatePoemAnnotation)
+			admin.PUT("/poem-annotations/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoemAnnotation)
+			admin.DELETE("/poem-annotations/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.DeletePoemAnnotation)
 
 			// Dynasties & Poets（复用 poem:* 权限，不独立划分权限点）
 			admin.POST("/dynasties", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreateDynasty)

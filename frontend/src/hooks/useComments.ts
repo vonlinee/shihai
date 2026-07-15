@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commentService, type CreateCommentRequest, type VoteCommentRequest } from '@/services/commentService';
 import { toast } from 'sonner';
 
-export function useComments(poemId: number, page = 1, pageSize = 10) {
+export function useComments(poemId: string | number | undefined, page = 1, pageSize = 10) {
   return useQuery({
     queryKey: ['comments', poemId, page, pageSize],
-    queryFn: () => commentService.getComments(poemId, page, pageSize),
+    queryFn: () => commentService.getComments(poemId!, page, pageSize),
     enabled: !!poemId,
   });
 }

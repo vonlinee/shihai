@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem } from '@/types';
+import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation } from '@/types';
 
 type AdminID = string | number;
 
@@ -39,6 +39,7 @@ export interface PoemCreateRequest {
   translation?: string;
   appreciation?: string;
   annotation?: string;
+  annotations?: PoemAnnotationUpsertRequest[];
   audioUrl?: string;
   coverImage?: string;
 }
@@ -52,8 +53,23 @@ export interface PoemUpdateRequest {
   translation?: string;
   appreciation?: string;
   annotation?: string;
+  annotations?: PoemAnnotationUpsertRequest[];
   audioUrl?: string;
   coverImage?: string;
+}
+
+export interface PoemAnnotationUpsertRequest {
+  id?: string;
+  targetField?: 'content';
+  startLine: number;
+  startOffset: number;
+  endLine: number;
+  endOffset: number;
+  selectedText: string;
+  title?: string;
+  content: string;
+  type?: 'note';
+  displayOrder?: number;
 }
 
 // ─── Work Collection Admin ───────────────────────────────────────────────────
@@ -177,6 +193,22 @@ export const adminService = {
 
   batchDeletePoems(ids: AdminID[]): Promise<void> {
     return api.delete<void>('/admin/poems', { ids });
+  },
+
+  getPoemAnnotations(poemId: AdminID): Promise<PoemAnnotation[]> {
+    return api.get<PoemAnnotation[]>(`/admin/poems/${poemId}/annotations`);
+  },
+
+  createPoemAnnotation(poemId: AdminID, data: PoemAnnotationUpsertRequest): Promise<PoemAnnotation> {
+    return api.post<PoemAnnotation>(`/admin/poems/${poemId}/annotations`, data);
+  },
+
+  updatePoemAnnotation(id: AdminID, data: PoemAnnotationUpsertRequest): Promise<PoemAnnotation> {
+    return api.put<PoemAnnotation>(`/admin/poem-annotations/${id}`, data);
+  },
+
+  deletePoemAnnotation(id: AdminID): Promise<void> {
+    return api.delete<void>(`/admin/poem-annotations/${id}`);
   },
 
   // Work Collections

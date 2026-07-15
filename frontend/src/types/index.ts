@@ -49,6 +49,24 @@ export interface Author {
   avatar?: string;
 }
 
+export interface PoemAnnotation {
+  id: string;
+  poemId: string;
+  displayNo: number;
+  targetField: 'content';
+  startLine: number;
+  startOffset: number;
+  endLine: number;
+  endOffset: number;
+  selectedText: string;
+  title?: string;
+  content: string;
+  type: 'note' | string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Poet types
 export interface Poet {
   id: number;
@@ -76,6 +94,7 @@ export interface Poem {
   translation?: string;
   appreciation?: string;
   annotation?: string;
+  annotations?: PoemAnnotation[];
   audioUrl?: string;
   coverImage?: string;
   views: number;

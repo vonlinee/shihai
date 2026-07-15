@@ -11,11 +11,16 @@ import (
 )
 
 type PoemHandler struct {
-	poemService *services.PoemService
+	poemService           *services.PoemService
+	poemAnnotationService *services.PoemAnnotationService
 }
 
-func NewPoemHandler(poemService *services.PoemService) *PoemHandler {
-	return &PoemHandler{poemService: poemService}
+func NewPoemHandler(poemService *services.PoemService, annotationService ...*services.PoemAnnotationService) *PoemHandler {
+	handler := &PoemHandler{poemService: poemService}
+	if len(annotationService) > 0 {
+		handler.poemAnnotationService = annotationService[0]
+	}
+	return handler
 }
 
 // GetPoemList 获取诗词列表
@@ -352,4 +357,91 @@ func (h *PoemHandler) BatchDeletePoets(c *gin.Context) {
 	}
 
 	utils.SuccessWithMessage(c, "poets deleted successfully", nil)
+}
+
+func (h *PoemHandler) GetPoemAnnotations(c *gin.Context) {
+	if h.poemAnnotationService == nil {
+		utils.InternalServerError(c, "poem annotation service not configured")
+		return
+	}
+	poemID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid poem id")
+		return
+	}
+
+	annotations, err := h.poemAnnotationService.ListAnnotations(poemID)
+	if err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+	utils.Success(c, annotations)
+}
+
+func (h *PoemHandler) CreatePoemAnnotation(c *gin.Context) {
+	if h.poemAnnotationService == nil {
+		utils.InternalServerError(c, "poem annotation service not configured")
+		return
+	}
+	poemID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid poem id")
+		return
+	}
+
+	var req dto.PoemAnnotationCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	annotation, err := h.poemAnnotationService.CreateAnnotation(poemID, &req)
+	if err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	utils.Success(c, annotation)
+}
+
+func (h *PoemHandler) UpdatePoemAnnotation(c *gin.Context) {
+	if h.poemAnnotationService == nil {
+		utils.InternalServerError(c, "poem annotation service not configured")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid annotation id")
+		return
+	}
+
+	var req dto.PoemAnnotationUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	annotation, err := h.poemAnnotationService.UpdateAnnotation(id, &req)
+	if err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	utils.Success(c, annotation)
+}
+
+func (h *PoemHandler) DeletePoemAnnotation(c *gin.Context) {
+	if h.poemAnnotationService == nil {
+		utils.InternalServerError(c, "poem annotation service not configured")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid annotation id")
+		return
+	}
+
+	if err := h.poemAnnotationService.DeleteAnnotation(id); err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	utils.SuccessWithMessage(c, "poem annotation deleted successfully", nil)
 }

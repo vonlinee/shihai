@@ -17,31 +17,33 @@ type PoemListRequest struct {
 }
 
 type PoemCreateRequest struct {
-	Title        string    `json:"title" binding:"required,max=200"`
-	Content      []string  `json:"content" binding:"required"`
-	AuthorID     RequestID `json:"authorId"`
-	AuthorName   string    `json:"authorName"`
-	DynastyID    RequestID `json:"dynastyId"`
-	DynastyName  string    `json:"dynastyName"`
-	Genre        string    `json:"genre" binding:"max=50"`
-	Translation  string    `json:"translation"`
-	Appreciation string    `json:"appreciation"`
-	Annotation   string    `json:"annotation"`
-	AudioURL     string    `json:"audioUrl" binding:"max=500"`
-	CoverImage   string    `json:"coverImage" binding:"max=500"`
+	Title        string                         `json:"title" binding:"required,max=200"`
+	Content      []string                       `json:"content" binding:"required"`
+	AuthorID     RequestID                      `json:"authorId"`
+	AuthorName   string                         `json:"authorName"`
+	DynastyID    RequestID                      `json:"dynastyId"`
+	DynastyName  string                         `json:"dynastyName"`
+	Genre        string                         `json:"genre" binding:"max=50"`
+	Translation  string                         `json:"translation"`
+	Appreciation string                         `json:"appreciation"`
+	Annotation   string                         `json:"annotation"`
+	Annotations  *[]PoemAnnotationUpsertRequest `json:"annotations"`
+	AudioURL     string                         `json:"audioUrl" binding:"max=500"`
+	CoverImage   string                         `json:"coverImage" binding:"max=500"`
 }
 
 type PoemUpdateRequest struct {
-	Title        string    `json:"title" binding:"max=200"`
-	Content      []string  `json:"content"`
-	AuthorID     RequestID `json:"authorId"`
-	DynastyID    RequestID `json:"dynastyId"`
-	Genre        string    `json:"genre" binding:"max=50"`
-	Translation  string    `json:"translation"`
-	Appreciation string    `json:"appreciation"`
-	Annotation   string    `json:"annotation"`
-	AudioURL     string    `json:"audioUrl" binding:"max=500"`
-	CoverImage   string    `json:"coverImage" binding:"max=500"`
+	Title        string                         `json:"title" binding:"max=200"`
+	Content      []string                       `json:"content"`
+	AuthorID     RequestID                      `json:"authorId"`
+	DynastyID    RequestID                      `json:"dynastyId"`
+	Genre        string                         `json:"genre" binding:"max=50"`
+	Translation  string                         `json:"translation"`
+	Appreciation string                         `json:"appreciation"`
+	Annotation   string                         `json:"annotation"`
+	Annotations  *[]PoemAnnotationUpsertRequest `json:"annotations"`
+	AudioURL     string                         `json:"audioUrl" binding:"max=500"`
+	CoverImage   string                         `json:"coverImage" binding:"max=500"`
 }
 
 type BatchDeleteRequest struct {
@@ -116,25 +118,26 @@ func parseJSONID(data []byte) (uint64, error) {
 }
 
 type PoemResponse struct {
-	ID           uint64          `json:"id,string"`
-	Title        string          `json:"title"`
-	Content      []string        `json:"content"`
-	AuthorID     uint64          `json:"authorId,string"`
-	Author       AuthorResponse  `json:"author,omitempty"`
-	DynastyID    uint64          `json:"dynastyId,string"`
-	Dynasty      DynastyResponse `json:"dynasty,omitempty"`
-	Genre        string          `json:"genre"`
-	Translation  string          `json:"translation"`
-	Appreciation string          `json:"appreciation"`
-	Annotation   string          `json:"annotation"`
-	AudioURL     string          `json:"audioUrl"`
-	CoverImage   string          `json:"coverImage"`
-	Views        int             `json:"views"`
-	Likes        int             `json:"likes"`
-	Dislikes     int             `json:"dislikes"`
-	Favorites    int             `json:"favorites"`
-	CreatedAt    time.Time       `json:"createdAt"`
-	UpdatedAt    time.Time       `json:"updatedAt"`
+	ID           uint64                   `json:"id,string"`
+	Title        string                   `json:"title"`
+	Content      []string                 `json:"content"`
+	AuthorID     uint64                   `json:"authorId,string"`
+	Author       AuthorResponse           `json:"author,omitempty"`
+	DynastyID    uint64                   `json:"dynastyId,string"`
+	Dynasty      DynastyResponse          `json:"dynasty,omitempty"`
+	Genre        string                   `json:"genre"`
+	Translation  string                   `json:"translation"`
+	Appreciation string                   `json:"appreciation"`
+	Annotation   string                   `json:"annotation"`
+	Annotations  []PoemAnnotationResponse `json:"annotations,omitempty"`
+	AudioURL     string                   `json:"audioUrl"`
+	CoverImage   string                   `json:"coverImage"`
+	Views        int                      `json:"views"`
+	Likes        int                      `json:"likes"`
+	Dislikes     int                      `json:"dislikes"`
+	Favorites    int                      `json:"favorites"`
+	CreatedAt    time.Time                `json:"createdAt"`
+	UpdatedAt    time.Time                `json:"updatedAt"`
 }
 
 type AuthorResponse struct {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { poemService, type PoetListParams } from '@/services/poemService';
+import { poemService, type PoemID, type PoetListParams } from '@/services/poemService';
 import type { PoemSearchParams } from '@/types';
 import { toast } from 'sonner';
 
@@ -10,10 +10,10 @@ export function usePoems(params?: PoemSearchParams) {
   });
 }
 
-export function usePoem(id: number) {
+export function usePoem(id: PoemID | undefined) {
   return useQuery({
     queryKey: ['poem', id],
-    queryFn: () => poemService.getPoemById(id),
+    queryFn: () => poemService.getPoemById(id!),
     enabled: !!id,
   });
 }
@@ -29,7 +29,7 @@ export function useLikePoem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => poemService.likePoem(id),
+    mutationFn: (id: PoemID) => poemService.likePoem(id),
     onSuccess: () => {
       toast.success('点赞成功');
       queryClient.invalidateQueries({ queryKey: ['poems'] });
