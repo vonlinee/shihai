@@ -64,7 +64,7 @@ export function PoemAnnotationSection({
       {annotations.length > 0 && (
         <div className="border-t pt-6">
           <h3 className="font-serif font-semibold">标注</h3>
-          <ol className="mt-4 space-y-3">
+          <ol className="mt-4 overflow-hidden rounded-md border bg-muted/30">
             {annotations.map((annotation) => (
               <li
                 key={annotation.id}
@@ -72,20 +72,20 @@ export function PoemAnnotationSection({
                   itemRefs.current[annotation.id] = node;
                 }}
                 className={cn(
-                  'rounded-md border bg-muted/30 p-4 transition-colors',
-                  activeAnnotationId === annotation.id && 'border-primary bg-primary/5',
+                  'border-b p-4 transition-colors last:border-b-0',
+                  activeAnnotationId === annotation.id && 'bg-primary/5',
                 )}
               >
-                <div className="mb-2 flex items-start gap-2">
+                <div className="flex items-start gap-2">
                   <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
                     {annotation.displayNo}
                   </span>
-                  <div>
-                    <div className="font-medium">{annotation.title || annotation.selectedText}</div>
-                    <div className="mt-1 text-sm text-muted-foreground">{annotation.selectedText}</div>
-                  </div>
+                  <p className="min-w-0 whitespace-pre-wrap text-sm leading-6 text-foreground/80">
+                    <span className="font-medium text-foreground">{annotation.selectedText}</span>
+                    <span>：</span>
+                    <span>{annotation.content}</span>
+                  </p>
                 </div>
-                <p className="text-sm leading-6 text-foreground/80">{annotation.content}</p>
               </li>
             ))}
           </ol>
