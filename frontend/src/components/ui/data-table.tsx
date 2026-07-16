@@ -487,6 +487,9 @@ export function DataTable<TData>({
                 const canSort = header.column.getCanSort()
                 const sortDirection = header.column.getIsSorted()
                 const headerAlign = meta?.headerAlign ?? meta?.align
+                const renderedHeader = header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())
                 const width = toCssSize(enableColumnResizing ? header.getSize() : meta?.width ?? header.getSize())
                 const minWidth = toCssSize(meta?.minWidth)
 
@@ -528,27 +531,22 @@ export function DataTable<TData>({
                   >
                     <div className={cn('flex items-center gap-2', headerAlign === 'right' && 'justify-end', headerAlign === 'center' && 'justify-center')}>
                       {canDrag && <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                      <button
-                        type="button"
-                        disabled={!canSort}
-                        onClick={header.column.getToggleSortingHandler()}
-                        className={cn(
-                          'inline-flex min-w-0 items-center gap-1 rounded-sm text-left font-semibold',
-                          canSort && 'hover:text-primary',
-                          !canSort && 'cursor-default',
-                        )}
-                      >
-                        <span className="truncate">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                        {canSort && (
-                          sortDirection === 'asc'
+                      {canSort ? (
+                        <button
+                          type="button"
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="inline-flex min-w-0 items-center gap-1 rounded-sm text-left font-semibold hover:text-primary"
+                        >
+                          <span className="truncate">{renderedHeader}</span>
+                          {sortDirection === 'asc'
                             ? <ChevronUp className="h-3.5 w-3.5 shrink-0" />
                             : sortDirection === 'desc'
                               ? <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-                              : <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        )}
-                      </button>
+                              : <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                        </button>
+                      ) : (
+                        <div className="min-w-0 truncate font-semibold">{renderedHeader}</div>
+                      )}
                       {meta?.tooltip && (
                         <Tooltip>
                           <TooltipTrigger asChild>
