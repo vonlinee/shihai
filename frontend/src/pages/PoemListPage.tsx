@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, Filter, ChevronRight } from 'lucide-react'
+import { Search, Filter, ChevronDown, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/Pagination'
-import { usePoems, useDynasties } from '@/hooks/usePoems'
+import { usePoems, useDynasties, useGenres } from '@/hooks/usePoems'
 
 export function PoemListPage() {
   const navigate = useNavigate()
@@ -12,21 +12,26 @@ export function PoemListPage() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('keyword') || '')
   const [selectedDynasty, setSelectedDynasty] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('')
+  const [isDynastyExpanded, setIsDynastyExpanded] = useState(true)
+  const [isGenreExpanded, setIsGenreExpanded] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   const { data: poemData, isLoading } = usePoems({
     keyword: searchQuery || undefined,
-    dynastyId: selectedDynasty ? Number(selectedDynasty) : undefined,
+    dynasty: selectedDynasty || undefined,
     genre: selectedGenre || undefined,
     page,
     pageSize,
   })
 
   const { data: dynasties } = useDynasties()
+  const { data: genres } = useGenres()
 
   const poems = poemData?.list ?? []
   const total = poemData?.total ?? 0
+  const dynastyOptions = dynasties ?? []
+  const genreOptions = genres ?? []
 
   return (
     <div className="container py-8">
@@ -55,8 +60,19 @@ export function PoemListPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium mb-2">朝代</h4>
-                <div className="space-y-1">
+                <button
+                  type="button"
+                  className="mb-2 flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm font-medium hover:bg-muted"
+                  onClick={() => setIsDynastyExpanded((current) => !current)}
+                >
+                  <span>朝代</span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {isDynastyExpanded ? '收起' : '展开'}
+                    {isDynastyExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                  </span>
+                </button>
+                {isDynastyExpanded && (
+                  <div className="space-y-1">
                   <button
                     className={`block w-full text-left px-2 py-1 text-sm rounded ${
                       selectedDynasty === '' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -65,39 +81,60 @@ export function PoemListPage() {
                   >
                     全部
                   </button>
-                  {(dynasties ?? []).map((dynasty) => (
+                  {dynastyOptions.map((dynasty) => (
                     <button
                       key={dynasty.id}
                       className={`block w-full text-left px-2 py-1 text-sm rounded ${
-                        selectedDynasty === String(dynasty.id) ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        selectedDynasty === dynasty.name ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                       }`}
-                      onClick={() => { setSelectedDynasty(String(dynasty.id)); setPage(1) }}
+                      onClick={() => { setSelectedDynasty(dynasty.name); setPage(1) }}
                     >
                       {dynasty.name}
                     </button>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
               <div>
-                <h4 className="text-sm font-medium mb-2">体裁</h4>
-                <div className="space-y-1">
-                  {['全部', '五言绝句', '七言绝句', '五言律诗', '七言律诗', '词'].map((genre) => (
+                <button
+                  type="button"
+                  className="mb-2 flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm font-medium hover:bg-muted"
+                  onClick={() => setIsGenreExpanded((current) => !current)}
+                >
+                  <span>体裁</span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {isGenreExpanded ? '收起' : '展开'}
+                    {isGenreExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                  </span>
+                </button>
+                {isGenreExpanded && (
+                  <div className="space-y-1">
+                  <button
+                    className={`block w-full text-left px-2 py-1 text-sm rounded ${
+                      selectedGenre === '' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                    onClick={() => { setSelectedGenre(''); setPage(1) }}
+                  >
+                    全部
+                  </button>
+                  {genreOptions.map((genre) => (
                     <button
                       key={genre}
                       className={`block w-full text-left px-2 py-1 text-sm rounded ${
-                        (genre === '全部' && selectedGenre === '') || selectedGenre === genre
+                        selectedGenre === genre
                           ? 'text-foreground bg-muted'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                       }`}
                       onClick={() => {
-                        setSelectedGenre(genre === '全部' ? '' : genre)
+                        setSelectedGenre(genre)
                         setPage(1)
                       }}
                     >
                       {genre}
                     </button>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

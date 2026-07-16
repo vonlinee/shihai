@@ -294,6 +294,7 @@ export interface PaginatedResponse<T> {
 // Search params
 export interface PoemSearchParams {
   keyword?: string;
+  dynasty?: string;
   dynastyId?: number;
   authorId?: number;
   genre?: string;
