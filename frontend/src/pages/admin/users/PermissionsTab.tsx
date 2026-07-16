@@ -45,7 +45,7 @@ export function PermissionsTab() {
   const deleteMutation = useDeletePermission()
   const { confirm, ConfirmDialog } = useConfirmDialog()
 
-  const permissions: PermissionRow[] = permissionsData?.list ?? []
+  const permissions: PermissionRow[] = useMemo(() => permissionsData?.list ?? [], [permissionsData?.list])
 
   // 模块下拉框选项（基于全量权限去重）
   const modules = useMemo(() => Array.from(new Set(permissions.map((p) => p.module))), [permissions])

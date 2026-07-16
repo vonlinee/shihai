@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -8,7 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User, StickyNote } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
 import { usePoems, useDynasties, usePoetList, useGenres } from '@/hooks/usePoems'
 import {
   useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
@@ -302,7 +303,7 @@ function PoemsTab() {
     setAnnotationDraftSourceId(editingPoemId)
   }, [annotationDraftSourceId, editingAnnotations, editingPoemId, showPoemDialog])
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const confirmed = await confirm({
       title: '删除诗词',
       description: '确定要删除该诗词吗？此操作不可撤销。',
@@ -313,7 +314,7 @@ function PoemsTab() {
     deletePoemMutation.mutate(id, {
       onSuccess: () => setSelectedPoemIds((ids) => ids.filter((selectedId) => selectedId !== id)),
     })
-  }
+  }, [confirm, deletePoemMutation])
 
   const handleBatchDelete = async () => {
     if (selectedPoemIds.length === 0) return
@@ -341,7 +342,7 @@ function PoemsTab() {
     setShowPoemDialog(true)
   }
 
-  const openEditPoemDialog = (poem: Poem) => {
+  const openEditPoemDialog = useCallback((poem: Poem) => {
     setEditingPoemId(toEntityId(poem.id))
     setFormData({
       title: poem.title,
@@ -360,7 +361,7 @@ function PoemsTab() {
     setPoetSearchKeyword('')
     setDebouncedPoetSearchKeyword('')
     setShowPoemDialog(true)
-  }
+  }, [])
 
   const resetPoemDialog = () => {
     setEditingPoemId(null)
@@ -487,7 +488,6 @@ function PoemsTab() {
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => navigate(`/poems/${row.original.id}`)}><Eye className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => setAnnotatingPoem(row.original)}><StickyNote className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => openEditPoemDialog(row.original)}><Edit2 className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
           </div>
@@ -696,15 +696,15 @@ function DynastiesTab() {
   const allVisibleDynastiesSelected = visibleDynastyIds.length > 0 && visibleDynastyIds.every((id) => selectedDynastyIds.includes(id))
 
   const openCreate = () => { setEditingId(null); setFormData({ name: '', period: '', description: '' }); setShowDialog(true) }
-  const openEdit = (d: { id: string | number; name: string; period?: string; description?: string }) => {
+  const openEdit = useCallback((d: { id: string | number; name: string; period?: string; description?: string }) => {
     setEditingId(toEntityId(d.id)); setFormData({ name: d.name, period: d.period || '', description: d.description || '' }); setShowDialog(true)
-  }
+  }, [])
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (editingId) updateMutation.mutate({ id: editingId, data: formData }, { onSuccess: () => setShowDialog(false) })
     else createMutation.mutate(formData, { onSuccess: () => setShowDialog(false) })
   }
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const confirmed = await confirm({
       title: '删除朝代',
       description: '确定要删除该朝代吗？此操作不可撤销。',
@@ -715,7 +715,7 @@ function DynastiesTab() {
     deleteMutation.mutate(id, {
       onSuccess: () => setSelectedDynastyIds((ids) => ids.filter((selectedId) => selectedId !== id)),
     })
-  }
+  }, [confirm, deleteMutation])
 
   const handleBatchDelete = async () => {
     if (selectedDynastyIds.length === 0) return
@@ -885,16 +885,16 @@ function PoetsTab() {
   const allVisiblePoetsSelected = visiblePoetIds.length > 0 && visiblePoetIds.every((id) => selectedPoetIds.includes(id))
 
   const openCreate = () => { setEditingId(null); setFormData({ name: '', dynastyId: undefined, biography: '', avatar: '', birthYear: '', deathYear: '' }); setShowDialog(true) }
-  const openEdit = (p: { id: string | number; name: string; dynastyId?: string | number; biography?: string; avatar?: string; birthYear?: number; deathYear?: number }) => {
+  const openEdit = useCallback((p: { id: string | number; name: string; dynastyId?: string | number; biography?: string; avatar?: string; birthYear?: number; deathYear?: number }) => {
     setEditingId(toEntityId(p.id)); setFormData({ name: p.name, dynastyId: p.dynastyId ? toEntityId(p.dynastyId) : undefined, biography: p.biography || '', avatar: p.avatar || '', birthYear: p.birthYear?.toString() || '', deathYear: p.deathYear?.toString() || '' }); setShowDialog(true)
-  }
+  }, [])
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const payload = { name: formData.name, dynastyId: formData.dynastyId, biography: formData.biography, avatar: formData.avatar, birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined, deathYear: formData.deathYear ? parseInt(formData.deathYear) : undefined }
     if (editingId) updateMutation.mutate({ id: editingId, data: payload }, { onSuccess: () => setShowDialog(false) })
     else createMutation.mutate(payload, { onSuccess: () => setShowDialog(false) })
   }
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const confirmed = await confirm({
       title: '删除诗人',
       description: '确定要删除该诗人吗？此操作不可撤销。',
@@ -905,7 +905,7 @@ function PoetsTab() {
     deleteMutation.mutate(id, {
       onSuccess: () => setSelectedPoetIds((ids) => ids.filter((selectedId) => selectedId !== id)),
     })
-  }
+  }, [confirm, deleteMutation])
 
   const handleBatchDelete = async () => {
     if (selectedPoetIds.length === 0) return
