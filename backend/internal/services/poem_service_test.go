@@ -148,7 +148,7 @@ func TestGetPoetListReturnsPaginatedPoets(t *testing.T) {
 	}
 	service := NewPoemService(&fakePoemRepository{}, &fakeDynastyRepository{}, &fakeAuthorRepository{}, poetRepo)
 
-	poets, total, err := service.GetPoetList("Li", 2, 3)
+	poets, total, err := service.GetPoetList("Li", 9, 2, 3)
 
 	if err != nil {
 		t.Fatalf("GetPoetList error = %v, want nil", err)
@@ -158,6 +158,9 @@ func TestGetPoetListReturnsPaginatedPoets(t *testing.T) {
 	}
 	if poetRepo.listKeyword != "Li" {
 		t.Fatalf("keyword = %q, want Li", poetRepo.listKeyword)
+	}
+	if poetRepo.listDynastyID != 9 {
+		t.Fatalf("dynastyID = %d, want 9", poetRepo.listDynastyID)
 	}
 	if poetRepo.listPage != 2 {
 		t.Fatalf("page = %d, want 2", poetRepo.listPage)
@@ -515,6 +518,7 @@ type fakePoetRepository struct {
 	existingPoet     *models.Poet
 	updatedPoet      *models.Poet
 	listKeyword      string
+	listDynastyID    uint64
 	listPage         int
 	listPageSize     int
 	listPoets        []models.Poet
@@ -541,8 +545,9 @@ func (r *fakePoetRepository) GetByAuthorID(authorID uint64) (*models.Poet, error
 	return nil, errors.New("not found")
 }
 
-func (r *fakePoetRepository) List(keyword string, page, pageSize int) ([]models.Poet, int64, error) {
+func (r *fakePoetRepository) List(keyword string, dynastyID uint64, page, pageSize int) ([]models.Poet, int64, error) {
 	r.listKeyword = keyword
+	r.listDynastyID = dynastyID
 	r.listPage = page
 	r.listPageSize = pageSize
 	return r.listPoets, r.listTotal, nil

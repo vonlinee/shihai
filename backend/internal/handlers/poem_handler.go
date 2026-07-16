@@ -177,8 +177,18 @@ func (h *PoemHandler) GetDynastyList(c *gin.Context) {
 // GetPoetList 获取诗人列表
 func (h *PoemHandler) GetPoetList(c *gin.Context) {
 	keyword := c.Query("keyword")
+	dynastyIDParam := c.Query("dynastyId")
 	pageParam := c.Query("page")
 	pageSizeParam := c.Query("pageSize")
+	var dynastyID uint64
+	if dynastyIDParam != "" {
+		parsedDynastyID, err := strconv.ParseUint(dynastyIDParam, 10, 64)
+		if err != nil {
+			utils.BadRequest(c, "invalid dynasty id")
+			return
+		}
+		dynastyID = parsedDynastyID
+	}
 	page, _ := strconv.Atoi(pageParam)
 	pageSize, _ := strconv.Atoi(pageSizeParam)
 	isPaginated := pageParam != "" || pageSizeParam != ""
@@ -191,7 +201,7 @@ func (h *PoemHandler) GetPoetList(c *gin.Context) {
 		}
 	}
 
-	poets, total, err := h.poemService.GetPoetList(keyword, page, pageSize)
+	poets, total, err := h.poemService.GetPoetList(keyword, dynastyID, page, pageSize)
 	if err != nil {
 		utils.InternalServerError(c, err.Error())
 		return

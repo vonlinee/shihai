@@ -12,6 +12,7 @@ export interface PoemListResponse {
 
 export interface PoetListParams {
   keyword?: string;
+  dynastyId?: string | number;
   page?: number;
   pageSize?: number;
 }

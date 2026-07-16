@@ -39,13 +39,16 @@ func (r *PoetRepository) GetByAuthorID(authorID uint64) (*models.Poet, error) {
 	return &poet, nil
 }
 
-// List returns poet extensions, optionally filtered by author name.
-func (r *PoetRepository) List(keyword string, page, pageSize int) ([]models.Poet, int64, error) {
+// List returns poet extensions, optionally filtered by author name and dynasty.
+func (r *PoetRepository) List(keyword string, dynastyID uint64, page, pageSize int) ([]models.Poet, int64, error) {
 	var poets []models.Poet
 	var total int64
 	query := r.db.Model(&models.Poet{}).Preload("Author").Preload("Dynasty").Order("poet.id ASC")
 	if keyword != "" {
 		query = query.Joins("JOIN author ON poet.author_id = author.id").Where("author.name LIKE ?", "%"+keyword+"%")
+	}
+	if dynastyID > 0 {
+		query = query.Where("poet.dynasty_id = ?", dynastyID)
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err

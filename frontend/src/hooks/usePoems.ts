@@ -57,10 +57,11 @@ export function usePoets(keyword?: string) {
   });
 }
 
-export function usePoetList(params: PoetListParams) {
+export function usePoetList(params: PoetListParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['poets', 'list', params],
     queryFn: () => poemService.getPoetList(params),
+    enabled: options?.enabled ?? true,
     staleTime: 1000 * 60 * 5,
   });
 }

@@ -9,7 +9,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User, StickyNote } from 'lucide-react'
-import { usePoems, useDynasties, usePoets, usePoetList, useGenres } from '@/hooks/usePoems'
+import { usePoems, useDynasties, usePoetList, useGenres } from '@/hooks/usePoems'
 import {
   useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
   useAdminBatchDeletePoems,
@@ -71,6 +71,8 @@ const poemFormTabs: { key: PoemFormTabKey; label: string; placeholder?: string }
   ...poemTextFields,
   { key: 'poemAnnotations', label: '诗词标注' },
 ]
+
+const POET_SELECT_PAGE_SIZE = 50
 
 function createEmptyPoemFormData(): PoemFormData {
   return { ...emptyPoemFormData }
@@ -227,17 +229,42 @@ function PoemsTab() {
   const [annotationDrafts, setAnnotationDrafts] = useState<PoemAnnotationDraft[]>([])
   const [annotationDraftSourceId, setAnnotationDraftSourceId] = useState<string | null>(null)
   const [selectedPoemIds, setSelectedPoemIds] = useState<string[]>([])
+  const [poetSearchKeyword, setPoetSearchKeyword] = useState('')
+  const [debouncedPoetSearchKeyword, setDebouncedPoetSearchKeyword] = useState('')
 
   const { data: poemData, isLoading } = usePoems({ keyword: searchQuery || undefined, page, pageSize })
   const editingAnnotationPoemId = showPoemDialog && editingPoemId ? editingPoemId : null
   const { data: editingAnnotations, isLoading: isEditingAnnotationsLoading } = useAdminPoemAnnotations(editingAnnotationPoemId)
   const { data: dynasties } = useDynasties()
-  const { data: poets } = usePoets()
+  const { data: poetData, isFetching: isPoetsFetching } = usePoetList({
+    keyword: debouncedPoetSearchKeyword || undefined,
+    dynastyId: formData.dynastyId,
+    page: 1,
+    pageSize: POET_SELECT_PAGE_SIZE,
+  }, { enabled: showPoemDialog && Boolean(formData.dynastyId) })
   const { data: genres } = useGenres()
 
-  const dynastyOptions: ComboboxOption[] = (dynasties ?? []).map((d) => ({ value: String(d.id), label: d.name, description: d.period }))
-  const poetOptions: ComboboxOption[] = (poets ?? []).map((p) => ({ value: String(p.id), label: p.name, description: p.dynasty?.name }))
-  const genreOptions: ComboboxOption[] = (genres ?? []).map((g) => ({ value: g, label: String(g) }))
+  const dynastyOptions: ComboboxOption[] = useMemo(
+    () => (dynasties ?? []).map((d) => ({ value: String(d.id), label: d.name, description: d.period })),
+    [dynasties]
+  )
+  const authorDynastyOptions: ComboboxOption[] = useMemo(
+    () => (dynasties ?? []).map((d) => ({ value: String(d.id), label: d.name })),
+    [dynasties]
+  )
+  const poetOptions: ComboboxOption[] = useMemo(() => {
+    const options = (poetData?.list ?? [])
+      .filter((p) => !formData.dynastyId || String(p.dynastyId) === String(formData.dynastyId))
+      .map((p) => ({ value: String(p.authorId), label: p.name, description: p.dynasty?.name }))
+    if (formData.authorId && formData.authorName && !options.some((option) => String(option.value) === String(formData.authorId))) {
+      return [{ value: formData.authorId, label: formData.authorName, description: formData.dynastyName }, ...options]
+    }
+    return options
+  }, [formData.authorId, formData.authorName, formData.dynastyId, formData.dynastyName, poetData?.list])
+  const genreOptions: ComboboxOption[] = useMemo(
+    () => (genres ?? []).map((g) => ({ value: g, label: String(g) })),
+    [genres]
+  )
 
   const deletePoemMutation = useAdminDeletePoem()
   const batchDeletePoemsMutation = useAdminBatchDeletePoems()
@@ -248,6 +275,13 @@ function PoemsTab() {
   const total = poemData?.total ?? 0
   const visiblePoemIds = poems.map((poem) => toEntityId(poem.id))
   const allVisiblePoemsSelected = visiblePoemIds.length > 0 && visiblePoemIds.every((id) => selectedPoemIds.includes(id))
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedPoetSearchKeyword(poetSearchKeyword.trim())
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [poetSearchKeyword])
 
   useEffect(() => {
     if (!showPoemDialog || !editingPoemId || !editingAnnotations || annotationDraftSourceId === editingPoemId) {
@@ -291,6 +325,8 @@ function PoemsTab() {
     setFormData(createEmptyPoemFormData())
     setAnnotationDrafts([])
     setAnnotationDraftSourceId(null)
+    setPoetSearchKeyword('')
+    setDebouncedPoetSearchKeyword('')
     setShowPoemDialog(true)
   }
 
@@ -310,6 +346,8 @@ function PoemsTab() {
     })
     setAnnotationDrafts(toAnnotationDrafts(poem.annotations ?? []))
     setAnnotationDraftSourceId(null)
+    setPoetSearchKeyword('')
+    setDebouncedPoetSearchKeyword('')
     setShowPoemDialog(true)
   }
 
@@ -318,6 +356,8 @@ function PoemsTab() {
     setFormData(createEmptyPoemFormData())
     setAnnotationDrafts([])
     setAnnotationDraftSourceId(null)
+    setPoetSearchKeyword('')
+    setDebouncedPoetSearchKeyword('')
     setShowPoemDialog(false)
   }
 
@@ -516,12 +556,41 @@ function PoemsTab() {
                   <label className="text-sm font-medium">作者</label>
                   <Combobox options={poetOptions} value={formData.authorId}
                     onChange={(val, option) => { if (option) setFormData({ ...formData, authorId: String(val), authorName: option.label }); else setFormData({ ...formData, authorId: undefined, authorName: String(val || '') }) }}
-                    placeholder={editingPoemId ? '选择作者' : '选择或输入作者'} allowCustom={!editingPoemId} />
+                    placeholder={editingPoemId ? '选择作者' : '选择或输入作者'} allowCustom={!editingPoemId}
+                    isLoading={isPoetsFetching} virtualListHeight={240}
+                    groupOptions={authorDynastyOptions} groupValue={formData.dynastyId}
+                    groupPlaceholder="先选择朝代"
+                    onGroupChange={(val, option) => {
+                      setFormData({
+                        ...formData,
+                        dynastyId: String(val),
+                        dynastyName: option.label,
+                        authorId: undefined,
+                        authorName: '',
+                      })
+                      setPoetSearchKeyword('')
+                      setDebouncedPoetSearchKeyword('')
+                    }}
+                    onSearchChange={setPoetSearchKeyword} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">朝代</label>
                   <Combobox options={dynastyOptions} value={formData.dynastyId}
-                    onChange={(val, option) => { if (option) setFormData({ ...formData, dynastyId: String(val), dynastyName: option.label }); else setFormData({ ...formData, dynastyId: undefined, dynastyName: String(val || '') }) }}
+                    onChange={(val, option) => {
+                      if (option) {
+                        const nextDynastyId = String(val)
+                        setFormData({
+                          ...formData,
+                          dynastyId: nextDynastyId,
+                          dynastyName: option.label,
+                          ...(nextDynastyId !== formData.dynastyId ? { authorId: undefined, authorName: '' } : {}),
+                        })
+                      } else {
+                        setFormData({ ...formData, dynastyId: undefined, dynastyName: String(val || ''), authorId: undefined, authorName: '' })
+                      }
+                      setPoetSearchKeyword('')
+                      setDebouncedPoetSearchKeyword('')
+                    }}
                     placeholder={editingPoemId ? '选择朝代' : '选择或输入朝代'} allowCustom={!editingPoemId} />
                 </div>
               </div>
