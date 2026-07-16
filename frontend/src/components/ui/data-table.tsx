@@ -40,6 +40,13 @@ interface DataTableFilterOption {
   value: string
 }
 
+interface DataTableDateRangeFilter {
+  from?: string
+  to?: string
+}
+
+type DataTableFilterVariant = 'text' | 'select' | 'multiSelect' | 'dateRange'
+
 declare module '@tanstack/react-table' {
   interface ColumnMeta<TData extends RowData, TValue> {
     align?: 'left' | 'center' | 'right'
@@ -49,7 +56,7 @@ declare module '@tanstack/react-table' {
     emptyText?: ReactNode
     filterOptions?: DataTableFilterOption[]
     filterPlaceholder?: string
-    filterVariant?: 'text' | 'select' | 'multiSelect'
+    filterVariant?: DataTableFilterVariant
     fixed?: 'left' | 'right'
     headerAlign?: 'left' | 'center' | 'right'
     headerClassName?: string
@@ -105,6 +112,46 @@ function getTextAlignClass(align: 'left' | 'center' | 'right' | undefined) {
   return 'text-left'
 }
 
+function normalizeDateRangeFilterValue(value: unknown): DataTableDateRangeFilter {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const range = value as DataTableDateRangeFilter
+  return {
+    from: typeof range.from === 'string' ? range.from : undefined,
+    to: typeof range.to === 'string' ? range.to : undefined,
+  }
+}
+
+function isDateRangeFilterActive(value: DataTableDateRangeFilter) {
+  return Boolean(value.from?.trim() || value.to?.trim())
+}
+
+function parseDateTime(value: unknown): number | undefined {
+  if (value instanceof Date) {
+    const timestamp = value.getTime()
+    return Number.isNaN(timestamp) ? undefined : timestamp
+  }
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (typeof value !== 'string' || !value.trim()) return undefined
+
+  const timestamp = new Date(value).getTime()
+  return Number.isNaN(timestamp) ? undefined : timestamp
+}
+
+function dateRangeFilterFn(row: { getValue: (columnId: string) => unknown }, columnId: string, filterValue: unknown) {
+  const range = normalizeDateRangeFilterValue(filterValue)
+  if (!isDateRangeFilterActive(range)) return true
+
+  const cellTimestamp = parseDateTime(row.getValue(columnId))
+  if (cellTimestamp === undefined) return false
+
+  const fromTimestamp = parseDateTime(range.from)
+  const toTimestamp = parseDateTime(range.to)
+
+  if (fromTimestamp !== undefined && cellTimestamp < fromTimestamp) return false
+  if (toTimestamp !== undefined && cellTimestamp > toTimestamp) return false
+  return true
+}
+
 function getColumnId<TData>(column: DataTableColumn<TData, unknown>, index: number): string {
   if (column.id) return column.id
   if ('accessorKey' in column && typeof column.accessorKey === 'string') return column.accessorKey
@@ -153,7 +200,9 @@ function normalizeColumns<TData>(columns: DataTableColumn<TData, unknown>[]) {
             if (!Array.isArray(filterValue) || filterValue.length === 0) return true
             return filterValue.includes(String(row.getValue(columnId) ?? ''))
           }
-          : undefined
+          : filterVariant === 'dateRange'
+            ? dateRangeFilterFn
+            : undefined
     )
 
     return {
@@ -219,16 +268,27 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
   const rawFilterValue = column.getFilterValue()
   const textFilterValue = (rawFilterValue as string | undefined) ?? ''
   const selectedValues = Array.isArray(rawFilterValue) ? rawFilterValue.map(String) : []
-  const filterOptions = getColumnFilterOptions(column)
+  const dateRangeValue = normalizeDateRangeFilterValue(rawFilterValue)
+  const filterOptions = filterVariant === 'dateRange' ? [] : getColumnFilterOptions(column)
   const hasFilter = filterVariant === 'multiSelect'
     ? selectedValues.length > 0
-    : textFilterValue.trim().length > 0
+    : filterVariant === 'dateRange'
+      ? isDateRangeFilterActive(dateRangeValue)
+      : textFilterValue.trim().length > 0
 
   const toggleMultiSelectFilter = (value: string) => {
     const nextValue = selectedValues.includes(value)
       ? selectedValues.filter((item) => item !== value)
       : [...selectedValues, value]
     column.setFilterValue(nextValue.length > 0 ? nextValue : undefined)
+  }
+
+  const updateDateRangeFilter = (key: keyof DataTableDateRangeFilter, value: string) => {
+    const nextValue = {
+      ...dateRangeValue,
+      [key]: value || undefined,
+    }
+    column.setFilterValue(isDateRangeFilterActive(nextValue) ? nextValue : undefined)
   }
 
   return (
@@ -250,8 +310,49 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-56 p-2"
+        className={cn('p-2', filterVariant === 'dateRange' ? 'w-[32rem] max-w-[calc(100vw-2rem)]' : 'w-56')}
       >
+        {filterVariant === 'dateRange' ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
+                {placeholder ?? '选择时间范围'}
+              </div>
+              {hasFilter && (
+                <Button
+                  type="button"
+                  aria-label="清除筛选"
+                  onClick={() => column.setFilterValue(undefined)}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <Input
+                aria-label="开始时间"
+                type="datetime-local"
+                step={1}
+                value={dateRangeValue.from ?? ''}
+                onChange={(event) => updateDateRangeFilter('from', event.target.value)}
+                className="h-9 min-w-0 flex-1 border-0 bg-transparent text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <span className="shrink-0 px-2 text-sm text-muted-foreground">→</span>
+              <Input
+                aria-label="结束时间"
+                type="datetime-local"
+                step={1}
+                value={dateRangeValue.to ?? ''}
+                onChange={(event) => updateDateRangeFilter('to', event.target.value)}
+                className="h-9 min-w-0 flex-1 border-0 bg-transparent text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
+          </div>
+        ) : (
+          <>
           <div className="flex items-center gap-2">
             {filterVariant === 'text' && (
               <Input
@@ -305,6 +406,8 @@ function ColumnFilterMenu<TData>({ column, placeholder }: ColumnFilterMenuProps<
               })}
             </div>
           )}
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

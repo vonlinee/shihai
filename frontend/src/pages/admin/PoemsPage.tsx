@@ -474,13 +474,13 @@ function PoemsTab() {
         accessorKey: 'createdAt',
         header: '创建时间',
         cell: ({ row }) => <span className="text-muted-foreground">{formatTableDateTime(row.original.createdAt)}</span>,
-        meta: { width: 150 },
+        meta: { filterPlaceholder: '筛选创建时间', filterVariant: 'dateRange', width: 150 },
       },
       {
         accessorKey: 'updatedAt',
         header: '最后更新时间',
         cell: ({ row }) => <span className="text-muted-foreground">{formatTableDateTime(row.original.updatedAt)}</span>,
-        meta: { width: 150 },
+        meta: { filterPlaceholder: '筛选最后更新时间', filterVariant: 'dateRange', width: 150 },
       },
       {
         id: 'actions',
