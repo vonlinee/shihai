@@ -23,8 +23,8 @@ export function AdminLayout() {
   const currentTitle = adminNavItems.find((item) => location.pathname === item.path)?.label ?? '管理后台'
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-64 bg-muted/50 border-r">
+    <div className="min-h-screen flex overflow-hidden">
+      <aside className="w-64 shrink-0 bg-muted/50 border-r">
         <div className="p-6">
           <Link to="/" className="flex items-center gap-2 font-serif text-xl font-bold text-ink">
             <span className="text-cinnabar">诗</span>海管理
@@ -48,13 +48,13 @@ export function AdminLayout() {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col bg-background min-h-0">
+      <div className="min-w-0 flex-1 flex flex-col bg-background min-h-0">
         <header className="sticky top-0 z-50 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-6 shrink-0">
           <h1 className="text-lg font-serif font-bold text-ink">{currentTitle}</h1>
           <UserMenu />
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="min-w-0 flex-1 overflow-auto">
           <Outlet />
         </main>
       </div>

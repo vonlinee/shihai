@@ -51,6 +51,7 @@ declare module '@tanstack/react-table' {
     filterPlaceholder?: string
     filterVariant?: 'text' | 'select' | 'multiSelect'
     fixed?: 'left' | 'right'
+    headerAlign?: 'left' | 'center' | 'right'
     headerClassName?: string
     hidden?: boolean
     loading?: boolean
@@ -112,6 +113,26 @@ function getColumnId<TData>(column: DataTableColumn<TData, unknown>, index: numb
 
 function getInitialColumnOrder<TData>(columns: DataTableColumn<TData, unknown>[]) {
   return columns.map((column, index) => getColumnId(column, index))
+}
+
+function orderFixedColumns<TData>(
+  columns: DataTableColumn<TData, unknown>[],
+  columnOrder: ColumnOrderState,
+) {
+  const knownColumnIds = columns.map((column, index) => getColumnId(column, index))
+  const normalizedOrder = [
+    ...columnOrder.filter((columnId) => knownColumnIds.includes(columnId)),
+    ...knownColumnIds.filter((columnId) => !columnOrder.includes(columnId)),
+  ]
+  const columnById = new Map(columns.map((column, index) => [getColumnId(column, index), column]))
+  const leftFixedColumnIds = normalizedOrder.filter((columnId) => columnById.get(columnId)?.meta?.fixed === 'left')
+  const rightFixedColumnIds = normalizedOrder.filter((columnId) => columnById.get(columnId)?.meta?.fixed === 'right')
+  const normalColumnIds = normalizedOrder.filter((columnId) => {
+    const fixed = columnById.get(columnId)?.meta?.fixed
+    return fixed !== 'left' && fixed !== 'right'
+  })
+
+  return [...leftFixedColumnIds, ...normalColumnIds, ...rightFixedColumnIds]
 }
 
 function getInitialColumnVisibility<TData>(columns: DataTableColumn<TData, unknown>[]) {
@@ -326,6 +347,10 @@ export function DataTable<TData>({
   const tableWrapperRef = useRef<HTMLDivElement>(null)
 
   const activeColumnOrder = columnOrder ?? internalColumnOrder
+  const pinnedColumnOrder = useMemo(
+    () => orderFixedColumns(tableColumns, activeColumnOrder),
+    [activeColumnOrder, tableColumns],
+  )
   const activeColumnFilters = columnFilters ?? internalColumnFilters
   const activeColumnSizing = columnSizing ?? internalColumnSizing
   const activeColumnVisibility = columnVisibility ?? internalColumnVisibility
@@ -358,7 +383,7 @@ export function DataTable<TData>({
     onSortingChange: onSortingChange ?? setInternalSorting,
     state: {
       columnFilters: activeColumnFilters,
-      columnOrder: activeColumnOrder,
+      columnOrder: pinnedColumnOrder,
       columnSizing: activeColumnSizing,
       columnVisibility: activeColumnVisibility,
       sorting: activeSorting,
@@ -371,6 +396,7 @@ export function DataTable<TData>({
     id: column.id,
     width: column.getSize(),
   }))
+  const tableMinWidth = leafColumns.reduce((total, column) => total + column.getSize(), 0)
   const moveColumn = (fromColumnId: string, toColumnId: string) => {
     if (fromColumnId === toColumnId) return
 
@@ -437,7 +463,7 @@ export function DataTable<TData>({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div ref={tableWrapperRef} className={cn('relative w-full', className)}>
+      <div ref={tableWrapperRef} className={cn('relative w-full min-w-0 max-w-full overflow-hidden', className)}>
       {resizeGuideX !== null && (
         <div
           aria-hidden="true"
@@ -445,7 +471,11 @@ export function DataTable<TData>({
           style={{ left: `${resizeGuideX}px` }}
         />
       )}
-      <Table className={cn('min-w-full table-fixed', tableClassName)}>
+      <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden">
+        <Table
+          className={cn('table-fixed', tableClassName)}
+          style={{ minWidth: `${tableMinWidth}px`, width: `${tableMinWidth}px` }}
+        >
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -456,6 +486,7 @@ export function DataTable<TData>({
                 const canResize = enableColumnResizing && header.column.getCanResize()
                 const canSort = header.column.getCanSort()
                 const sortDirection = header.column.getIsSorted()
+                const headerAlign = meta?.headerAlign ?? meta?.align
                 const width = toCssSize(enableColumnResizing ? header.getSize() : meta?.width ?? header.getSize())
                 const minWidth = toCssSize(meta?.minWidth)
 
@@ -487,15 +518,15 @@ export function DataTable<TData>({
                     }}
                     className={cn(
                       'relative select-none',
-                      getTextAlignClass(meta?.align),
-                      meta?.fixed && 'sticky z-20 shadow-sm',
-                      meta?.fixed === 'left' && 'left-0',
-                      meta?.fixed === 'right' && 'right-0',
+                      getTextAlignClass(headerAlign),
+                      meta?.fixed && 'sticky z-20 bg-muted',
+                      meta?.fixed === 'left' && 'left-0 shadow-sm',
+                      meta?.fixed === 'right' && 'right-0 shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]',
                       draggingColumnId === header.column.id && 'opacity-60',
                       meta?.headerClassName,
                     )}
                   >
-                    <div className={cn('flex items-center gap-2', meta?.align === 'right' && 'justify-end', meta?.align === 'center' && 'justify-center')}>
+                    <div className={cn('flex items-center gap-2', headerAlign === 'right' && 'justify-end', headerAlign === 'center' && 'justify-center')}>
                       {canDrag && <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                       <button
                         type="button"
@@ -594,9 +625,9 @@ export function DataTable<TData>({
                       }}
                       className={cn(
                         getTextAlignClass(meta?.align),
-                        meta?.fixed && 'sticky z-10 bg-background shadow-sm',
-                        meta?.fixed === 'left' && 'left-0',
-                        meta?.fixed === 'right' && 'right-0',
+                        meta?.fixed && 'sticky z-10 bg-background',
+                        meta?.fixed === 'left' && 'left-0 shadow-sm',
+                        meta?.fixed === 'right' && 'right-0 shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]',
                         meta?.className,
                       )}
                     >
@@ -631,7 +662,8 @@ export function DataTable<TData>({
             </TableRow>
           )}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
       </div>
     </TooltipProvider>
   )

@@ -90,6 +90,17 @@ function toEntityId(id: string | number): string {
   return String(id)
 }
 
+function formatTableDateTime(value: string | undefined): string {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  const pad = (numberValue: number) => String(numberValue).padStart(2, '0')
+  return [
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
+  ].join(' ')
+}
+
 function toggleSelectedId(selectedIds: string[], id: string): string[] {
   return selectedIds.includes(id)
     ? selectedIds.filter((selectedId) => selectedId !== id)
@@ -426,7 +437,7 @@ function PoemsTab() {
         ),
         enableColumnFilter: false,
         enableSorting: false,
-        meta: { draggable: false, fixed: 'left', width: 56 },
+        meta: { align: 'center', draggable: false, fixed: 'left', headerAlign: 'center', minWidth: 40, resizable: false, width: 40 },
       },
       {
         accessorKey: 'title',
@@ -459,19 +470,31 @@ function PoemsTab() {
         meta: { align: 'center', width: 120 },
       },
       {
+        accessorKey: 'createdAt',
+        header: '创建时间',
+        cell: ({ row }) => <span className="text-muted-foreground">{formatTableDateTime(row.original.createdAt)}</span>,
+        meta: { width: 150 },
+      },
+      {
+        accessorKey: 'updatedAt',
+        header: '最后更新时间',
+        cell: ({ row }) => <span className="text-muted-foreground">{formatTableDateTime(row.original.updatedAt)}</span>,
+        meta: { width: 150 },
+      },
+      {
         id: 'actions',
         header: '操作',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/poems/${row.original.id}`)}><Eye className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setAnnotatingPoem(row.original)}><StickyNote className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => openEditPoemDialog(row.original)}><Edit2 className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
+          <div className="flex items-center justify-end gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => navigate(`/poems/${row.original.id}`)}><Eye className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => setAnnotatingPoem(row.original)}><StickyNote className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => openEditPoemDialog(row.original)}><Edit2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
           </div>
         ),
         enableColumnFilter: false,
         enableSorting: false,
-        meta: { draggable: false, fixed: 'right', width: 190 },
+        meta: { align: 'right', draggable: false, fixed: 'right', headerAlign: 'center', width: 132 },
       },
     ],
     [allVisiblePoemsSelected, handleDelete, navigate, openEditPoemDialog, selectedPoemIds, visiblePoemIds],
