@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/Pagination'
 import { usePoems, useDynasties } from '@/hooks/usePoems'
-import { PoemContent } from '@/components/poetry/PoemContent'
 
 export function PoemListPage() {
   const navigate = useNavigate()
@@ -116,34 +115,30 @@ export function PoemListPage() {
           ) : poems.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">暂无诗词数据</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {poems.map((poem) => (
                 <Card 
                   key={poem.id} 
                   className="cursor-pointer hover:shadow-lg transition-shadow ink-border"
                   onClick={() => navigate(`/poems/${poem.id}`)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="font-serif text-xl">{poem.title}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          [{poem.dynasty?.name}] {poem.author?.name}
-                        </p>
+                  <CardHeader className="p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+                          <CardTitle className="truncate font-serif text-lg">{poem.title}</CardTitle>
+                          <p className="shrink-0 text-sm text-muted-foreground">
+                            [{poem.dynasty?.name}] {poem.author?.name}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{poem.views} 阅读</span>
+                          <span>{poem.likes} 点赞</span>
+                        </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <PoemContent content={poem.content} className="text-foreground/80 mb-4" />
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{poem.genre}</span>
-                      <span>·</span>
-                      <span>{poem.views} 阅读</span>
-                      <span>·</span>
-                      <span>{poem.likes} 点赞</span>
-                    </div>
-                  </CardContent>
                 </Card>
               ))}
             </div>
