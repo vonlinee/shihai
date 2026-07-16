@@ -42,10 +42,9 @@ func (r *PoemRepository) ExistsByID(id uint64) (bool, error) {
 
 func (r *PoemRepository) DistinctGenres() ([]string, error) {
 	var genres []string
-	err := r.db.Model(&models.Poem{}).
-		Where("genre != '' AND genre IS NOT NULL").
-		Distinct("genre").
-		Pluck("genre", &genres).Error
+	err := r.db.Model(&models.PoemType{}).
+		Order("id ASC").
+		Pluck("name", &genres).Error
 	return genres, err
 }
 
