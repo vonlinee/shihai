@@ -503,9 +503,9 @@ function PoemsTab() {
               <button onClick={closePoemDialog} className="p-1 hover:bg-muted rounded"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handlePoemSubmit} className="space-y-4 p-6 pt-4 overflow-y-auto">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">标题 *</label>
-                <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="诗词标题" required />
+              <div className="flex items-center gap-3">
+                <label htmlFor="poem-title" className="shrink-0 text-sm font-medium">标题 *</label>
+                <Input id="poem-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="诗词标题" required />
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
