@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -308,6 +309,20 @@ function PoemsTab() {
     setAnnotationDrafts(toAnnotationDrafts(editingAnnotations))
     setAnnotationDraftSourceId(editingPoemId)
   }, [annotationDraftSourceId, editingAnnotations, editingPoemId, showPoemDialog])
+
+  useEffect(() => {
+    if (!showPoemDialog) return
+
+    const previousBodyOverflow = document.body.style.overflow
+    const previousDocumentOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousDocumentOverflow
+    }
+  }, [showPoemDialog])
 
   const handleDelete = useCallback(async (id: string) => {
     const confirmed = await confirm({
@@ -643,8 +658,8 @@ function PoemsTab() {
       </Card>
 
       {/* Poem Dialog */}
-      {showPoemDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      {showPoemDialog && createPortal(
+        <div className="fixed left-0 top-0 z-[100] flex h-screen w-screen items-center justify-center bg-black/50">
           <div className="bg-background rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <h2 className="text-xl font-bold font-serif">{editingPoemId ? '编辑诗词' : '添加诗词'}</h2>
@@ -772,7 +787,8 @@ function PoemsTab() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
       <PoemAnnotationManager
         poem={annotatingPoem}
