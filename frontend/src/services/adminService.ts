@@ -72,6 +72,31 @@ export interface PoemAnnotationUpsertRequest {
   displayOrder?: number;
 }
 
+export type TextConversionMode =
+  | 's2t'
+  | 't2s'
+  | 's2tw'
+  | 'tw2s'
+  | 's2hk'
+  | 'hk2s'
+  | 't2tw'
+  | 'tw2t'
+  | 't2hk'
+  | 'hk2t'
+  | 't2jp'
+  | 'jp2t'
+  | 'tw2sp';
+
+export interface TextConversionRequest {
+  mode: TextConversionMode;
+  texts: string[];
+}
+
+export interface TextConversionResponse {
+  mode: TextConversionMode;
+  texts: string[];
+}
+
 // ─── Work Collection Admin ───────────────────────────────────────────────────
 
 export interface WorkCollectionListResponse {
@@ -209,6 +234,10 @@ export const adminService = {
 
   deletePoemAnnotation(id: AdminID): Promise<void> {
     return api.delete<void>(`/admin/poem-annotations/${id}`);
+  },
+
+  convertTexts(data: TextConversionRequest): Promise<TextConversionResponse> {
+    return api.post<TextConversionResponse>('/admin/text-conversion', data);
   },
 
   // Work Collections

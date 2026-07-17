@@ -9,10 +9,12 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ChineseVariantToggle } from '@/components/poetry/ChineseVariantToggle'
 import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
 import { usePoems, useDynasties, usePoetList, useGenres } from '@/hooks/usePoems'
 import {
   useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
+  useAdminConvertTexts,
   useAdminBatchDeletePoems,
   useAdminPoemAnnotations,
   useAdminCreateDynasty, useAdminUpdateDynasty, useAdminDeleteDynasty,
@@ -29,7 +31,7 @@ import {
 } from './poems/annotation/PoemAnnotationManager'
 import { PoemContentAnnotationEditor } from './poems/annotation/PoemContentAnnotationEditor'
 import type { Poem } from '@/types'
-import type { PoemAnnotationUpsertRequest, PoemCreateRequest, PoemUpdateRequest } from '@/services/adminService'
+import type { PoemAnnotationUpsertRequest, PoemCreateRequest, PoemUpdateRequest, TextConversionMode } from '@/services/adminService'
 
 type TabKey = 'poems' | 'dynasties' | 'poets'
 type PoemFormData = {
@@ -45,6 +47,8 @@ type PoemFormData = {
   annotation: string
 }
 type PoemTextField = 'translation' | 'appreciation' | 'annotation'
+type ConvertiblePoemTextField = 'title' | PoemTextField
+type PoemConversionTarget = ConvertiblePoemTextField | 'content' | 'poemAnnotations'
 type PoemFormTabKey = PoemTextField | 'poemAnnotations'
 
 const tabs: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
@@ -240,6 +244,7 @@ function PoemsTab() {
   const [formData, setFormData] = useState<PoemFormData>(() => createEmptyPoemFormData())
   const [annotationDrafts, setAnnotationDrafts] = useState<PoemAnnotationDraft[]>([])
   const [annotationDraftSourceId, setAnnotationDraftSourceId] = useState<string | null>(null)
+  const [convertingTarget, setConvertingTarget] = useState<PoemConversionTarget | null>(null)
   const [selectedPoemIds, setSelectedPoemIds] = useState<string[]>([])
   const [poetSearchKeyword, setPoetSearchKeyword] = useState('')
   const [debouncedPoetSearchKeyword, setDebouncedPoetSearchKeyword] = useState('')
@@ -282,6 +287,7 @@ function PoemsTab() {
   const batchDeletePoemsMutation = useAdminBatchDeletePoems()
   const createPoemMutation = useAdminCreatePoem()
   const updatePoemMutation = useAdminUpdatePoem()
+  const convertTextsMutation = useAdminConvertTexts()
   const { confirm, ConfirmDialog } = useConfirmDialog()
   const poems = poemData?.list ?? []
   const total = poemData?.total ?? 0
@@ -416,6 +422,85 @@ function PoemsTab() {
       return
     }
     createPoemMutation.mutate(buildCreatePayload(), { onSuccess: resetPoemDialog })
+  }
+
+  const handleConvertPoemContent = (mode: TextConversionMode) => {
+    if (convertTextsMutation.isPending) return
+    const contentLines = formData.content.split(/\r?\n/)
+    setConvertingTarget('content')
+    convertTextsMutation.mutate(
+      { mode, texts: contentLines },
+      {
+        onSuccess: (response) => {
+          if (response.texts.length !== contentLines.length) {
+            return
+          }
+          setFormData((current) => ({ ...current, content: response.texts.join('\n') }))
+        },
+        onSettled: () => setConvertingTarget(null),
+      },
+    )
+  }
+
+  const handleConvertPoemTextField = (field: ConvertiblePoemTextField, mode: TextConversionMode) => {
+    if (convertTextsMutation.isPending) return
+    const sourceText = formData[field]
+    setConvertingTarget(field)
+    convertTextsMutation.mutate(
+      { mode, texts: [sourceText] },
+      {
+        onSuccess: (response) => {
+          const [convertedText] = response.texts
+          if (convertedText === undefined) {
+            return
+          }
+          setFormData((current) => ({ ...current, [field]: convertedText }))
+        },
+        onSettled: () => setConvertingTarget(null),
+      },
+    )
+  }
+
+  const handleConvertPoemAnnotations = (mode: TextConversionMode) => {
+    if (convertTextsMutation.isPending) return
+    const textEntries = annotationDrafts.flatMap((annotation, index) => {
+      const entries: { index: number; key: 'selectedText' | 'title' | 'content'; text: string }[] = [
+        { index, key: 'selectedText', text: annotation.selectedText },
+        { index, key: 'content', text: annotation.content },
+      ]
+      if (annotation.title !== undefined) {
+        entries.push({ index, key: 'title', text: annotation.title })
+      }
+      return entries
+    })
+
+    if (textEntries.length === 0) {
+      return
+    }
+
+    setConvertingTarget('poemAnnotations')
+    convertTextsMutation.mutate(
+      { mode, texts: textEntries.map((entry) => entry.text) },
+      {
+        onSuccess: (response) => {
+          if (response.texts.length !== textEntries.length) {
+            return
+          }
+          setAnnotationDrafts((drafts) => {
+            const nextDrafts = drafts.map((draft) => ({ ...draft }))
+            textEntries.forEach((entry, index) => {
+              const draft = nextDrafts[entry.index]
+              if (!draft) {
+                return
+              }
+              draft[entry.key] = response.texts[index]
+            })
+            return nextDrafts
+          })
+        },
+        onSettled: () => setConvertingTarget(null),
+      },
+    )
   }
 
   const poemColumns = useMemo<DataTableColumn<Poem>[]>(
@@ -569,6 +654,11 @@ function PoemsTab() {
               <div className="flex items-center gap-3">
                 <label htmlFor="poem-title" className="shrink-0 text-sm font-medium">标题 *</label>
                 <Input id="poem-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="诗词标题" required />
+                <ChineseVariantToggle
+                  disabled={!formData.title.trim()}
+                  isLoading={convertingTarget === 'title'}
+                  onChange={(_, mode) => handleConvertPoemTextField('title', mode)}
+                />
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -623,6 +713,8 @@ function PoemsTab() {
                 onContentChange={(content) => setFormData({ ...formData, content })}
                 onAnnotationsChange={setAnnotationDrafts}
                 isLoadingAnnotations={Boolean(editingPoemId && isEditingAnnotationsLoading && annotationDraftSourceId !== editingPoemId)}
+                isConvertingContent={convertingTarget === 'content'}
+                onConvertContent={handleConvertPoemContent}
               />
               <Tabs defaultValue="translation" className="space-y-3">
                 <TabsList className="grid w-full grid-cols-4">
@@ -635,7 +727,14 @@ function PoemsTab() {
                 </TabsList>
                 {poemTextFields.map((field) => (
                   <TabsContent key={field.key} value={field.key} className="space-y-2">
-                    <label className="text-sm font-medium">{field.label}</label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-sm font-medium">{field.label}</label>
+                      <ChineseVariantToggle
+                        disabled={!formData[field.key].trim()}
+                        isLoading={convertingTarget === field.key}
+                        onChange={(_, mode) => handleConvertPoemTextField(field.key, mode)}
+                      />
+                    </div>
                     <textarea
                       value={formData[field.key]}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
@@ -647,7 +746,14 @@ function PoemsTab() {
                 ))}
                 <TabsContent value="poemAnnotations" className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">诗词标注</label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium">诗词标注</label>
+                      <ChineseVariantToggle
+                        disabled={annotationDrafts.length === 0}
+                        isLoading={convertingTarget === 'poemAnnotations'}
+                        onChange={(_, mode) => handleConvertPoemAnnotations(mode)}
+                      />
+                    </div>
                     <span className="text-xs text-muted-foreground">共 {annotationDrafts.length} 条</span>
                   </div>
                   <PoemAnnotationDraftList

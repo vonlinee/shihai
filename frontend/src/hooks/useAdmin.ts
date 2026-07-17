@@ -5,6 +5,7 @@ import {
   type PoemCreateRequest,
   type PoemUpdateRequest,
   type PoemAnnotationUpsertRequest,
+  type TextConversionRequest,
   type WorkCollectionListParams,
   type WorkCollectionCreateRequest,
   type WorkCollectionUpdateRequest,
@@ -122,6 +123,15 @@ export function useAdminDeletePoem() {
     },
     onError: (error: Error) => {
       toast.error(error.message || '删除失败');
+    },
+  });
+}
+
+export function useAdminConvertTexts() {
+  return useMutation({
+    mutationFn: (data: TextConversionRequest) => adminService.convertTexts(data),
+    onError: (error: Error) => {
+      toast.error(error.message || '文本转换失败');
     },
   });
 }

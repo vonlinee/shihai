@@ -24,6 +24,7 @@ type App struct {
 	commentHandler        *handlers.CommentHandler
 	announcementHandler   *handlers.AnnouncementHandler
 	workCollectionHandler *handlers.WorkCollectionHandler
+	textConversionHandler *handlers.TextConversionHandler
 	rbacHandler           *handlers.RBACHandler
 	rbacMiddleware        *middleware.RBACMiddleware
 }
@@ -117,6 +118,7 @@ func initApp(db *gorm.DB) *App {
 	commentService := services.NewCommentService(commentRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
 	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)
+	textConversionService := services.NewTextConversionService()
 	rbacService := services.NewRBACService(roleRepo, rolePermissionRepo, userRoleRepo, permRepo)
 
 	// Handler layer
@@ -125,6 +127,7 @@ func initApp(db *gorm.DB) *App {
 	commentHandler := handlers.NewCommentHandler(commentService)
 	announcementHandler := handlers.NewAnnouncementHandler(announcementService)
 	workCollectionHandler := handlers.NewWorkCollectionHandler(workCollectionService)
+	textConversionHandler := handlers.NewTextConversionHandler(textConversionService)
 	rbacHandler := handlers.NewRBACHandler(rbacService)
 
 	// Middleware
@@ -137,6 +140,7 @@ func initApp(db *gorm.DB) *App {
 		commentHandler:        commentHandler,
 		announcementHandler:   announcementHandler,
 		workCollectionHandler: workCollectionHandler,
+		textConversionHandler: textConversionHandler,
 		rbacHandler:           rbacHandler,
 		rbacMiddleware:        rbacMiddleware,
 	}
@@ -286,6 +290,7 @@ func setupRoutes(r *gin.Engine, app *App) {
 			admin.POST("/poems/:id/annotations", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.CreatePoemAnnotation)
 			admin.PUT("/poem-annotations/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoemAnnotation)
 			admin.DELETE("/poem-annotations/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.DeletePoemAnnotation)
+			admin.POST("/text-conversion", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.textConversionHandler.ConvertTexts)
 
 			// Dynasties & Poets（复用 poem:* 权限，不独立划分权限点）
 			admin.POST("/dynasties", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreateDynasty)

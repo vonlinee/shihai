@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { ChineseVariantToggle, type ChineseVariantConversionMode } from '@/components/poetry/ChineseVariantToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -18,6 +19,8 @@ interface PoemContentAnnotationEditorProps {
   onContentChange: (content: string) => void;
   onAnnotationsChange: (annotations: PoemAnnotationDraft[]) => void;
   isLoadingAnnotations?: boolean;
+  isConvertingContent?: boolean;
+  onConvertContent?: (mode: ChineseVariantConversionMode) => void;
 }
 
 interface AnnotationFormState {
@@ -45,6 +48,8 @@ export function PoemContentAnnotationEditor({
   annotations,
   onContentChange,
   onAnnotationsChange,
+  isConvertingContent = false,
+  onConvertContent,
 }: PoemContentAnnotationEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [selectionRange, setSelectionRange] = useState<AnnotationRange | null>(null);
@@ -189,7 +194,16 @@ export function PoemContentAnnotationEditor({
   return (
     <div className="space-y-4 rounded-md border p-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">内容 *</label>
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-medium">内容 *</label>
+          {onConvertContent && (
+            <ChineseVariantToggle
+              disabled={!contentValue.trim()}
+              isLoading={isConvertingContent}
+              onChange={(_, mode) => onConvertContent(mode)}
+            />
+          )}
+        </div>
         <div>
           <textarea
             ref={textareaRef}
