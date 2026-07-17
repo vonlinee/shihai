@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/utils/cn';
 import { normalizePoemContent } from '@/utils/poemContent';
 import type { PoemAnnotation } from '@/types';
@@ -24,6 +25,7 @@ export function PoemAnnotationSection({
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
   const contentLines = normalizePoemContent(content);
+  const markerToggleLabel = showInlineMarkers ? '隐藏正文标注序号' : '显示正文标注序号';
 
   const handleMarkerClick = (annotation: PoemAnnotation) => {
     setActiveAnnotationId(annotation.id);
@@ -40,16 +42,28 @@ export function PoemAnnotationSection({
     <section className={cn('space-y-6', className)}>
       <div className="space-y-4 text-center">
         {annotations.length > 0 && (
-          <div className="flex justify-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowInlineMarkers((current) => !current)}
-            >
-              {showInlineMarkers ? <ChevronDown className="mr-1 h-4 w-4" /> : <ChevronRight className="mr-1 h-4 w-4" />}
-              {showInlineMarkers ? '隐藏正文标注序号' : '显示正文标注序号'}
-            </Button>
+          <div className="flex justify-end">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={markerToggleLabel}
+                    aria-pressed={showInlineMarkers}
+                    onClick={() => setShowInlineMarkers((current) => !current)}
+                  >
+                    {showInlineMarkers ? (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="end">{markerToggleLabel}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
         <div className={cn('poetry-text space-y-2 text-xl leading-loose', contentClassName)}>
