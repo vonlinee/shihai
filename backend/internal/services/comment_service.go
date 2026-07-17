@@ -4,20 +4,48 @@ import (
 	"errors"
 	"shihai/internal/dto"
 	"shihai/internal/models"
-	"shihai/internal/repository"
 )
 
-type CommentService struct {
-	commentRepo *repository.CommentRepository
+type commentStore interface {
+	Create(comment *models.Comment) error
+	GetByID(id uint64) (*models.Comment, error)
+	ListByPoem(poemID uint64, page, pageSize int) ([]models.Comment, int64, error)
+	ListAll(page, pageSize int) ([]models.Comment, int64, error)
+	Update(comment *models.Comment) error
+	Delete(id uint64) error
+	IncrementLikes(id uint64) error
+	IncrementDislikes(id uint64) error
+	IncrementReplyCount(id uint64) error
+	GetVote(commentID uint64, userID *uint64, visitorID string) (*models.CommentVote, error)
+	CreateVote(vote *models.CommentVote) error
+	UpdateVote(vote *models.CommentVote) error
 }
 
-func NewCommentService(commentRepo *repository.CommentRepository) *CommentService {
+type CommentService struct {
+	commentRepo commentStore
+}
+
+func NewCommentService(commentRepo commentStore) *CommentService {
 	return &CommentService{commentRepo: commentRepo}
 }
 
 // GetCommentsByPoem 获取诗词的评论列表
 func (s *CommentService) GetCommentsByPoem(poemID uint64, page, pageSize int) ([]dto.CommentResponse, int64, error) {
 	comments, total, err := s.commentRepo.ListByPoem(poemID, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dto.CommentResponse
+	for _, comment := range comments {
+		responses = append(responses, *s.toCommentResponse(&comment))
+	}
+
+	return responses, total, nil
+}
+
+func (s *CommentService) GetAllComments(page, pageSize int) ([]dto.CommentResponse, int64, error) {
+	comments, total, err := s.commentRepo.ListAll(page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}

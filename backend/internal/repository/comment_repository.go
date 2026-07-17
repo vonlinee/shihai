@@ -55,6 +55,32 @@ func (r *CommentRepository) ListByPoem(poemID uint64, page, pageSize int) ([]mod
 	return comments, total, nil
 }
 
+func (r *CommentRepository) ListAll(page, pageSize int) ([]models.Comment, int64, error) {
+	var comments []models.Comment
+	var total int64
+
+	baseQuery := func() *gorm.DB {
+		return r.db.Model(&models.Comment{}).
+			Preload("User").
+			Preload("Replies.User")
+	}
+
+	err := baseQuery().Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = baseQuery().Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&comments).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return comments, total, nil
+}
+
 // Update 更新评论
 func (r *CommentRepository) Update(comment *models.Comment) error {
 	return r.db.Save(comment).Error

@@ -3,18 +3,25 @@ package handlers
 import (
 	"net/http"
 	"shihai/internal/dto"
-	"shihai/internal/services"
 	"shihai/pkg/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-type CommentHandler struct {
-	commentService *services.CommentService
+type commentService interface {
+	GetCommentsByPoem(poemID uint64, page, pageSize int) ([]dto.CommentResponse, int64, error)
+	GetAllComments(page, pageSize int) ([]dto.CommentResponse, int64, error)
+	CreateComment(userID *uint64, req *dto.CommentCreateRequest) (*dto.CommentResponse, error)
+	DeleteComment(id uint64, userID uint64) error
+	VoteComment(userID *uint64, visitorID string, req *dto.CommentVoteRequest) error
 }
 
-func NewCommentHandler(commentService *services.CommentService) *CommentHandler {
+type CommentHandler struct {
+	commentService commentService
+}
+
+func NewCommentHandler(commentService commentService) *CommentHandler {
 	return &CommentHandler{commentService: commentService}
 }
 
@@ -30,6 +37,19 @@ func (h *CommentHandler) GetComments(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
 	comments, total, err := h.commentService.GetCommentsByPoem(poemID, page, pageSize)
+	if err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.PageSuccess(c, comments, total, page, pageSize)
+}
+
+func (h *CommentHandler) GetAllComments(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	comments, total, err := h.commentService.GetAllComments(page, pageSize)
 	if err != nil {
 		utils.InternalServerError(c, err.Error())
 		return

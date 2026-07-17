@@ -318,7 +318,7 @@ func setupRoutes(r *gin.Engine, app *App) {
 			admin.DELETE("/announcements/:id", app.rbacMiddleware.RequirePermission(models.PermAnnouncementDelete), app.announcementHandler.DeleteAnnouncement)
 
 			// Comments Admin
-			admin.GET("/comments/all", app.rbacMiddleware.RequirePermission(models.PermCommentList), app.commentHandler.GetComments)
+			admin.GET("/comments/all", app.rbacMiddleware.RequirePermission(models.PermCommentList), app.commentHandler.GetAllComments)
 		}
 	}
 }
