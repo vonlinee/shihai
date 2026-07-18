@@ -1,29 +1,53 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Start Backend Server (Linux)
-# Usage: Run from project root directory
+# Starts the deployed Shihai backend on Linux.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -Eeuo pipefail
+
 DEPLOY_PATH="/opt/shihai"
-BACKEND_PATH="$DEPLOY_PATH/shihai-server"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+usage() {
+    cat <<'EOF'
+Usage: start-backend.sh [options]
 
-if [ ! -f "$BACKEND_PATH" ]; then
-    echo -e "${RED}Error: Backend executable not found at $BACKEND_PATH${NC}"
-    echo -e "${YELLOW}Please run ./scripts/linux/deploy-linux.sh first${NC}"
+Options:
+  --deploy-path PATH  Deployment directory (default: /opt/shihai)
+  -h, --help          Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --deploy-path)
+            if [[ -z "${2:-}" ]]; then
+                printf 'Missing value for --deploy-path.\n' >&2
+                exit 1
+            fi
+            DEPLOY_PATH="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            printf 'Unknown option: %s\n' "$1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
+
+BACKEND_EXECUTABLE="$DEPLOY_PATH/shihai-server"
+if [[ ! -x "$BACKEND_EXECUTABLE" ]]; then
+    printf 'Backend executable not found or not executable: %s\n' "$BACKEND_EXECUTABLE" >&2
+    printf 'Run deploy-linux.sh first.\n' >&2
     exit 1
 fi
 
-echo -e "${CYAN}Starting Shihai Backend Server...${NC}"
-echo -e "${YELLOW}Server will run on http://localhost:8080${NC}"
-echo -e "${GRAY}Press Ctrl+C to stop${NC}"
-echo ""
+printf 'Starting Shihai backend...\n'
+printf 'Backend URL: http://localhost:8080\n'
+printf 'Press Ctrl+C to stop.\n\n'
 
 cd "$DEPLOY_PATH"
-./shihai-server
+exec "$BACKEND_EXECUTABLE"

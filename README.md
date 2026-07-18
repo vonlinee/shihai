@@ -148,22 +148,43 @@ See [Windows scripts documentation](scripts/windows/README.md) for all modes and
 ### Linux:
 ```bash
 # Make scripts executable first
-chmod +x scripts/linux/*.sh
+chmod +x scripts/linux/*.sh scripts/linux/tests/*.sh
+
+# Default: rebuild and start the backend with the embedded frontend
+./scripts/linux/start-all.sh
+
+# Development mode: manage frontend and backend in the current terminal
+./scripts/linux/start-all.sh --mode development
+
+# Standalone deployment mode
+./scripts/linux/start-all.sh --frontend-mode standalone --frontend-port 4173
+
+# Reuse existing deployment artifacts
+./scripts/linux/start-all.sh --no-redeploy
+
+# Start in background, inspect status, and stop
+./scripts/linux/start-all.sh --detach
+./scripts/linux/start-all.sh --status
+./scripts/linux/start-all.sh --stop
 
 # Build and deploy everything
-sudo ./scripts/linux/deploy-linux.sh
+./scripts/linux/deploy-linux.sh
+
+# Build and deploy with the frontend embedded in the Go executable
+./scripts/linux/deploy-linux.sh --frontend-mode embedded
 
 # Or build only (skip deployment)
-sudo ./scripts/linux/deploy-linux.sh --build-only
+./scripts/linux/deploy-linux.sh --build-only
 
 # Skip frontend or backend
-sudo ./scripts/linux/deploy-linux.sh --skip-frontend
-sudo ./scripts/linux/deploy-linux.sh --skip-backend
+./scripts/linux/deploy-linux.sh --skip-frontend
+./scripts/linux/deploy-linux.sh --skip-backend
 
-# Start services
-sudo ./scripts/linux/start-all.sh        # Start both
-sudo ./scripts/linux/start-backend.sh    # Start backend only
-sudo ./scripts/linux/start-frontend.sh   # Start frontend only
+# Start deployed services individually
+./scripts/linux/start-backend.sh
+./scripts/linux/start-frontend.sh --port 4173
 ```
+
+See [Linux scripts documentation](scripts/linux/README.md) for all modes and parameters.
 
 
