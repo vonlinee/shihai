@@ -12,6 +12,7 @@ backend/
 │   └── server/                 # Contains the application entry point (main.go)
 │
 ├── internal/                   # Private application and library code
+│   ├── apidocs/                # Swagger metadata, endpoint annotations, and route registration
 │   ├── config/                 # Application configuration schemas and database initialization
 │   ├── dto/                    # Data Transfer Objects (Data structures for API input/output validation)
 │   ├── handlers/               # HTTP Handlers (Controllers) parsing requests and returning responses
@@ -75,5 +76,7 @@ For protected endpoints, click `Authorize` in Swagger UI and enter `Bearer <toke
 Regenerate the documentation from `backend/` after changing API annotations:
 
 ```bash
-go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/server/main.go -o docs/swagger --parseInternal
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g internal/apidocs/doc.go -o docs/swagger --parseInternal
 ```
+
+Swagger metadata and annotations are maintained in `internal/apidocs/`; `docs/swagger/` contains generated files only.

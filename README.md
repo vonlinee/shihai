@@ -118,6 +118,17 @@ GOOS=darwin GOARCH=arm64 go build -o shihai-server-mac-arm ./cmd/server
 ## Database:
 Execute database/migrations/001_init.sql in PostgreSQL
 
+## Swagger API Documentation:
+
+Swagger metadata and endpoint annotations are maintained in `backend/internal/apidocs/`. Generate the Swagger package from the `backend/` directory:
+
+```bash
+cd backend
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g internal/apidocs/doc.go -o docs/swagger --parseInternal
+```
+
+The generated files are written to `backend/docs/swagger/` and should not be edited manually.
+
 ## Quick Deploy Scripts:
 
 ### Windows:

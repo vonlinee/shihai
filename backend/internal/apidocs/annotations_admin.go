@@ -1,4 +1,4 @@
-package main
+package apidocs
 
 import (
 	"shihai/internal/dto"

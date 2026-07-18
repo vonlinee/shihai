@@ -12,6 +12,7 @@ backend/
 │   └── server/                 # 包含启动服务器的主要入口点 (main.go)
 │
 ├── internal/                   # 私有应用程序代码与核心库（不暴露给外部使用）
+│   ├── apidocs/                # Swagger 元数据、接口注解和文档路由注册
 │   ├── config/                 # 系统环境配置加载和数据库初始化
 │   ├── dto/                    # 数据传输对象 (DTO，用于API输入输出数据的结构体和校验逻辑)
 │   ├── handlers/               # HTTP 请求处理器 (Controller 层，负责接收请求与返回响应)
@@ -76,5 +77,7 @@ backend/
 修改接口注解后，在 `backend/` 目录重新生成文档：
 
 ```bash
-go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/server/main.go -o docs/swagger --parseInternal
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g internal/apidocs/doc.go -o docs/swagger --parseInternal
 ```
+
+人工维护的 Swagger 元数据和注解位于 `internal/apidocs/`，`docs/swagger/` 仅存放自动生成文件。

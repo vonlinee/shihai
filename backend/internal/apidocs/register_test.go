@@ -1,4 +1,4 @@
-package main
+package apidocs
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 func TestRegisterSwaggerRoutesServesDocument(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	registerSwaggerRoutes(router)
+	RegisterRoutes(router)
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/swagger/doc.json", nil)
@@ -42,7 +42,7 @@ func TestRegisterSwaggerRoutesServesDocument(t *testing.T) {
 func TestRegisterSwaggerRoutesServesUI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	registerSwaggerRoutes(router)
+	RegisterRoutes(router)
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)

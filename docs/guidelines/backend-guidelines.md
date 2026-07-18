@@ -11,6 +11,7 @@
 ```text
 backend/
 ├── cmd/server/          # 启动、依赖组装和路由注册
+├── internal/apidocs/    # Swagger 元数据、接口注解和文档路由注册
 ├── internal/config/     # 配置加载、数据库连接和 AutoMigrate
 ├── internal/database/   # 数据库初始化辅助能力
 ├── internal/dto/        # 请求和响应 DTO
@@ -111,13 +112,14 @@ Repository 不决定用户是否有权限，也不拼装面向前端的展示文
 
 ### 4.2 Swagger 文档
 
-- 新增、修改或删除 HTTP 接口时，必须同步调整 `cmd/server/swagger_annotations_*.go` 中对应的 Swagger 注解。
+- 新增、修改或删除 HTTP 接口时，必须同步调整 `internal/apidocs/annotations_*.go` 中对应的 Swagger 注解。
 - 注解必须与实际接口的请求方法、路径、认证要求、参数、请求体、响应结构和主要状态码保持一致。
-- 修改注解后，必须在 `backend/` 目录重新生成 `docs/swagger/`，并运行 `go test ./cmd/server` 验证 Swagger UI 和文档接口。
+- 修改接口路由、请求或响应 DTO、认证要求及 Swagger 注解后，必须在 `backend/` 目录重新生成 `docs/swagger/`，并将生成结果纳入同一次变更。
+- 重新生成后必须运行 `go test ./internal/apidocs`，验证 Swagger UI 和文档接口；后端功能修改仍需按测试章节运行相关测试。
 - `docs/swagger/` 是由注解生成的文件，不得直接手工修改；使用以下命令重新生成：
 
 ```bash
-go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/server/main.go -o docs/swagger --parseInternal
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g internal/apidocs/doc.go -o docs/swagger --parseInternal
 ```
 
 ### 4.3 统一响应

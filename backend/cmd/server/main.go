@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"shihai/internal/apidocs"
 	"shihai/internal/config"
 	"shihai/internal/database"
 	"shihai/internal/handlers"
@@ -33,17 +34,6 @@ type App struct {
 	rbacMiddleware        *middleware.RBACMiddleware
 }
 
-// @title 识海 API
-// @version 1.0
-// @description 识海诗词平台后端 API 文档。
-// @BasePath /
-// @schemes http https
-// @accept json
-// @produce json
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description 输入 Bearer {token}
 func main() {
 	// Parse command-line flags
 	configFile := flag.String("config", "", "path to JSON config file (default: config.json)")
@@ -104,7 +94,7 @@ func main() {
 
 	// Setup routes
 	setupRoutes(r, app)
-	registerSwaggerRoutes(r)
+	apidocs.RegisterRoutes(r)
 	if err := webui.RegisterRoutes(r); err != nil {
 		log.Fatal("Failed to register frontend routes:", err)
 	}
