@@ -51,6 +51,21 @@ Project-level backend and Go development guidelines have been moved to `docs/gui
 
 3. **Start Application**
    ```bash
-   go run cmd/server/main.go
+   go run ./cmd/server
    ```
    *Note: GORM auto migrations are executed upon starting to ensure your database perfectly replicates the definitions inside `internal/models/`*.
+
+## Swagger API Documentation
+
+After starting the service, open:
+
+- Swagger UI: `http://localhost:8080/swagger/index.html`
+- Swagger JSON: `http://localhost:8080/swagger/doc.json`
+
+For protected endpoints, click `Authorize` in Swagger UI and enter `Bearer <token>`.
+
+Regenerate the documentation from `backend/` after changing API annotations:
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/server/main.go -o docs/swagger --parseInternal
+```

@@ -1,0 +1,2616 @@
+basePath: /
+consumes:
+- application/json
+definitions:
+  dto.AdminCreateUserRequest:
+    properties:
+      name:
+        description: 显示名称，可选
+        maxLength: 50
+        type: string
+      password:
+        description: 密码，6-100字符
+        maxLength: 100
+        minLength: 6
+        type: string
+      roleIds:
+        description: 角色ID列表，为空则分配默认 user 角色
+        items:
+          type: integer
+        type: array
+      username:
+        description: 用户名，3-50字符
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.AssignPermissionRequest:
+    properties:
+      permissions:
+        description: 权限编码列表，如 ["user:create", "poem:read"]
+        items:
+          type: string
+        type: array
+    required:
+    - permissions
+    type: object
+  dto.AssignRoleRequest:
+    properties:
+      roleIds:
+        description: 角色ID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - roleIds
+    type: object
+  dto.BatchDeleteRequest:
+    properties:
+      ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  dto.ChangePasswordRequest:
+    properties:
+      newPassword:
+        description: 新密码，6-100字符
+        maxLength: 100
+        minLength: 6
+        type: string
+      oldPassword:
+        description: 当前密码
+        type: string
+    required:
+    - newPassword
+    - oldPassword
+    type: object
+  dto.CheckPermissionRequest:
+    properties:
+      permission:
+        description: 权限编码，如 "user:create"
+        type: string
+    required:
+    - permission
+    type: object
+  dto.CommentCreateRequest:
+    properties:
+      content:
+        description: 评论正文内容，必填
+        type: string
+      parentId:
+        description: 父评论ID，回复评论时传入，顶级评论不传
+        type: integer
+      poemId:
+        description: 评论所属诗词ID，必填
+        type: integer
+      visitorId:
+        description: 游客唯一标识，未登录用户使用
+        maxLength: 64
+        type: string
+      visitorName:
+        description: 游客显示名称
+        maxLength: 50
+        type: string
+    required:
+    - content
+    - poemId
+    type: object
+  dto.CommentVoteRequest:
+    properties:
+      commentId:
+        description: 被投票的评论ID
+        type: integer
+      type:
+        description: 投票类型：like 或 dislike
+        enum:
+        - like
+        - dislike
+        type: string
+    required:
+    - commentId
+    - type
+    type: object
+  dto.DynastyCreateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      period:
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  dto.DynastyUpdateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      period:
+        maxLength: 100
+        type: string
+    type: object
+  dto.LoginRequest:
+    properties:
+      password:
+        description: 密码
+        type: string
+      username:
+        description: 用户名
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.PermissionCreateRequest:
+    properties:
+      code:
+        description: 权限编码，必填，格式 "模块:操作"
+        maxLength: 100
+        type: string
+      description:
+        description: 权限描述
+        maxLength: 255
+        type: string
+      module:
+        description: 所属模块，必填，如 user、poem
+        maxLength: 50
+        type: string
+      name:
+        description: 权限名称，必填，中文显示名
+        maxLength: 100
+        type: string
+    required:
+    - code
+    - module
+    - name
+    type: object
+  dto.PermissionUpdateRequest:
+    properties:
+      description:
+        description: 权限描述
+        maxLength: 255
+        type: string
+      isActive:
+        description: 是否启用，指针类型以区分未提供和 false
+        type: boolean
+      module:
+        description: 所属模块
+        maxLength: 50
+        type: string
+      name:
+        description: 权限名称
+        maxLength: 100
+        type: string
+    type: object
+  dto.PoemAnnotationCreateRequest:
+    properties:
+      content:
+        type: string
+      displayOrder:
+        type: integer
+      endLine:
+        minimum: 0
+        type: integer
+      endOffset:
+        minimum: 0
+        type: integer
+      selectedText:
+        type: string
+      startLine:
+        minimum: 0
+        type: integer
+      startOffset:
+        minimum: 0
+        type: integer
+      targetField:
+        type: string
+      title:
+        maxLength: 100
+        type: string
+      type:
+        type: string
+    required:
+    - content
+    - selectedText
+    type: object
+  dto.PoemAnnotationUpdateRequest:
+    properties:
+      content:
+        type: string
+      displayOrder:
+        type: integer
+      endLine:
+        minimum: 0
+        type: integer
+      endOffset:
+        minimum: 0
+        type: integer
+      selectedText:
+        type: string
+      startLine:
+        minimum: 0
+        type: integer
+      startOffset:
+        minimum: 0
+        type: integer
+      targetField:
+        type: string
+      title:
+        maxLength: 100
+        type: string
+      type:
+        type: string
+    required:
+    - content
+    - selectedText
+    type: object
+  dto.PoemAnnotationUpsertRequest:
+    properties:
+      content:
+        type: string
+      displayOrder:
+        type: integer
+      endLine:
+        minimum: 0
+        type: integer
+      endOffset:
+        minimum: 0
+        type: integer
+      id:
+        type: integer
+      selectedText:
+        type: string
+      startLine:
+        minimum: 0
+        type: integer
+      startOffset:
+        minimum: 0
+        type: integer
+      targetField:
+        type: string
+      title:
+        maxLength: 100
+        type: string
+      type:
+        type: string
+    required:
+    - content
+    - selectedText
+    type: object
+  dto.PoemCreateRequest:
+    properties:
+      annotation:
+        type: string
+      annotations:
+        items:
+          $ref: '#/definitions/dto.PoemAnnotationUpsertRequest'
+        type: array
+      appreciation:
+        type: string
+      audioUrl:
+        maxLength: 500
+        type: string
+      authorId:
+        type: integer
+      authorName:
+        type: string
+      content:
+        items:
+          type: string
+        type: array
+      coverImage:
+        maxLength: 500
+        type: string
+      dynastyId:
+        type: integer
+      dynastyName:
+        type: string
+      genre:
+        maxLength: 50
+        type: string
+      title:
+        maxLength: 200
+        type: string
+      translation:
+        type: string
+    required:
+    - content
+    - title
+    type: object
+  dto.PoemUpdateRequest:
+    properties:
+      annotation:
+        type: string
+      annotations:
+        items:
+          $ref: '#/definitions/dto.PoemAnnotationUpsertRequest'
+        type: array
+      appreciation:
+        type: string
+      audioUrl:
+        maxLength: 500
+        type: string
+      authorId:
+        type: integer
+      content:
+        items:
+          type: string
+        type: array
+      coverImage:
+        maxLength: 500
+        type: string
+      dynastyId:
+        type: integer
+      genre:
+        maxLength: 50
+        type: string
+      title:
+        maxLength: 200
+        type: string
+      translation:
+        type: string
+    type: object
+  dto.PoetCreateRequest:
+    properties:
+      avatar:
+        maxLength: 255
+        type: string
+      biography:
+        type: string
+      birthYear:
+        type: integer
+      deathYear:
+        type: integer
+      dynastyId:
+        type: integer
+      name:
+        maxLength: 50
+        type: string
+    required:
+    - name
+    type: object
+  dto.PoetUpdateRequest:
+    properties:
+      avatar:
+        maxLength: 255
+        type: string
+      biography:
+        type: string
+      birthYear:
+        type: integer
+      deathYear:
+        type: integer
+      dynastyId:
+        type: integer
+      name:
+        maxLength: 50
+        type: string
+    type: object
+  dto.RegisterRequest:
+    properties:
+      name:
+        description: 显示名称，可选，最多50字符
+        maxLength: 50
+        type: string
+      password:
+        description: 密码，6-100字符
+        maxLength: 100
+        minLength: 6
+        type: string
+      username:
+        description: 用户名，3-50字符
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.RoleCreateRequest:
+    properties:
+      description:
+        description: 角色功能描述
+        maxLength: 255
+        type: string
+      name:
+        description: 角色名称，必填，如 admin、editor
+        maxLength: 50
+        type: string
+    required:
+    - name
+    type: object
+  dto.RoleUpdateRequest:
+    properties:
+      description:
+        description: 角色描述
+        maxLength: 255
+        type: string
+      isActive:
+        description: 是否启用，指针类型以区分未提供和 false
+        type: boolean
+      name:
+        description: 角色名称
+        maxLength: 50
+        type: string
+    type: object
+  dto.TextConversionRequest:
+    properties:
+      mode:
+        description: Mode 转换模式，例如 s2t、t2s。
+        type: string
+      texts:
+        description: Texts 待转换文本列表，响应会保持相同顺序。
+        items:
+          type: string
+        type: array
+    required:
+    - mode
+    - texts
+    type: object
+  dto.UpdateUserRequest:
+    properties:
+      age:
+        description: 年龄
+        type: integer
+      avatar:
+        description: 头像URL
+        maxLength: 255
+        type: string
+      gender:
+        description: 性别：male/female/other
+        maxLength: 10
+        type: string
+      name:
+        description: 显示名称
+        maxLength: 50
+        type: string
+      phone:
+        description: 手机号码
+        maxLength: 20
+        type: string
+    type: object
+  dto.WorkCollectionCreateRequest:
+    properties:
+      coverImage:
+        type: string
+      description:
+        type: string
+      isPublished:
+        type: boolean
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  dto.WorkCollectionItemCreateRequest:
+    properties:
+      sortOrder:
+        type: integer
+      workId:
+        type: integer
+      workType:
+        type: string
+    required:
+    - workId
+    - workType
+    type: object
+  dto.WorkCollectionItemUpdateRequest:
+    properties:
+      sortOrder:
+        type: integer
+    type: object
+  dto.WorkCollectionUpdateRequest:
+    properties:
+      coverImage:
+        type: string
+      description:
+        type: string
+      isPublished:
+        type: boolean
+      title:
+        type: string
+    type: object
+  utils.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 识海诗词平台后端 API 文档。
+  title: 识海 API
+  version: "1.0"
+paths:
+  /api/admin/announcements:
+    post:
+      parameters:
+      - description: 公告信息
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建公告
+      tags:
+      - 后台公告
+  /api/admin/announcements/{id}:
+    delete:
+      parameters:
+      - description: 公告 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除公告
+      tags:
+      - 后台公告
+    put:
+      parameters:
+      - description: 公告 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 公告信息
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新公告
+      tags:
+      - 后台公告
+  /api/admin/comments/all:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询全部评论
+      tags:
+      - 后台评论
+  /api/admin/dynasties:
+    delete:
+      parameters:
+      - description: 朝代 ID 列表
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchDeleteRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 批量删除朝代
+      tags:
+      - 后台基础数据
+    post:
+      parameters:
+      - description: 朝代信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DynastyCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建朝代
+      tags:
+      - 后台基础数据
+  /api/admin/dynasties/{id}:
+    delete:
+      parameters:
+      - description: 朝代 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除朝代
+      tags:
+      - 后台基础数据
+    put:
+      parameters:
+      - description: 朝代 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 朝代信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DynastyUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新朝代
+      tags:
+      - 后台基础数据
+  /api/admin/poem-annotations/{id}:
+    delete:
+      parameters:
+      - description: 标注 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除诗词标注
+      tags:
+      - 后台诗词标注
+    put:
+      parameters:
+      - description: 标注 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 标注信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PoemAnnotationUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新诗词标注
+      tags:
+      - 后台诗词标注
+  /api/admin/poems:
+    delete:
+      parameters:
+      - description: 诗词 ID 列表
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchDeleteRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 批量删除诗词
+      tags:
+      - 后台诗词
+    post:
+      parameters:
+      - description: 诗词信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PoemCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建诗词
+      tags:
+      - 后台诗词
+  /api/admin/poems/{id}:
+    delete:
+      parameters:
+      - description: 诗词 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除诗词
+      tags:
+      - 后台诗词
+    put:
+      parameters:
+      - description: 诗词 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 诗词信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PoemUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新诗词
+      tags:
+      - 后台诗词
+  /api/admin/poems/{id}/annotations:
+    get:
+      parameters:
+      - description: 诗词 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询诗词标注
+      tags:
+      - 后台诗词标注
+    post:
+      parameters:
+      - description: 诗词 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 标注信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PoemAnnotationCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建诗词标注
+      tags:
+      - 后台诗词标注
+  /api/admin/poets:
+    delete:
+      parameters:
+      - description: 诗人 ID 列表
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchDeleteRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 批量删除诗人
+      tags:
+      - 后台基础数据
+    post:
+      parameters:
+      - description: 诗人信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PoetCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建诗人
+      tags:
+      - 后台基础数据
+  /api/admin/poets/{id}:
+    delete:
+      parameters:
+      - description: 诗人 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除诗人
+      tags:
+      - 后台基础数据
+    put:
+      parameters:
+      - description: 诗人 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 诗人信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PoetUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新诗人
+      tags:
+      - 后台基础数据
+  /api/admin/text-conversion:
+    post:
+      parameters:
+      - description: 转换信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TextConversionRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 批量简繁转换
+      tags:
+      - 后台文本转换
+  /api/admin/users:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 角色
+        in: query
+        name: role
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询用户列表
+      tags:
+      - 后台用户
+    post:
+      parameters:
+      - description: 用户信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminCreateUserRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建用户
+      tags:
+      - 后台用户
+  /api/admin/users/{id}:
+    delete:
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除用户
+      tags:
+      - 后台用户
+    get:
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户详情
+      tags:
+      - 后台用户
+  /api/admin/work-collections:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 发布状态
+        in: query
+        name: published
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询作品集列表
+      tags:
+      - 后台作品集
+    post:
+      parameters:
+      - description: 作品集信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.WorkCollectionCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建作品集
+      tags:
+      - 后台作品集
+  /api/admin/work-collections/{id}:
+    delete:
+      parameters:
+      - description: 作品集 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除作品集
+      tags:
+      - 后台作品集
+    get:
+      parameters:
+      - description: 作品集 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取作品集详情
+      tags:
+      - 后台作品集
+    put:
+      parameters:
+      - description: 作品集 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 作品集信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.WorkCollectionUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新作品集
+      tags:
+      - 后台作品集
+  /api/admin/work-collections/{id}/items:
+    post:
+      parameters:
+      - description: 作品集 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 条目信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.WorkCollectionItemCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 添加作品集条目
+      tags:
+      - 后台作品集
+  /api/admin/work-collections/{id}/items/{itemId}:
+    delete:
+      parameters:
+      - description: 作品集 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 条目 ID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除作品集条目
+      tags:
+      - 后台作品集
+    put:
+      parameters:
+      - description: 作品集 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 条目 ID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: 条目信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.WorkCollectionItemUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新作品集条目
+      tags:
+      - 后台作品集
+  /api/announcements:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 仅置顶公告
+        in: query
+        name: pinned
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询公告列表
+      tags:
+      - 公告
+  /api/announcements/{id}:
+    get:
+      parameters:
+      - description: 公告 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 获取公告详情
+      tags:
+      - 公告
+  /api/auth/login:
+    post:
+      parameters:
+      - description: 登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 用户登录
+      tags:
+      - 认证
+  /api/auth/register:
+    post:
+      parameters:
+      - description: 注册信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 用户注册
+      tags:
+      - 认证
+  /api/comments:
+    get:
+      parameters:
+      - description: 诗词 ID
+        in: query
+        name: poemId
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询诗词评论
+      tags:
+      - 评论
+    post:
+      parameters:
+      - description: 评论信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CommentCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建评论
+      tags:
+      - 评论
+  /api/comments/{id}:
+    delete:
+      parameters:
+      - description: 评论 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除评论
+      tags:
+      - 评论
+  /api/comments/vote:
+    post:
+      parameters:
+      - description: 游客标识
+        in: header
+        name: X-Visitor-ID
+        type: string
+      - description: 投票信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CommentVoteRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 评论投票
+      tags:
+      - 评论
+  /api/dynasties:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询朝代列表
+      tags:
+      - 诗词基础数据
+  /api/genres:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询体裁列表
+      tags:
+      - 诗词基础数据
+  /api/poems:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 朝代
+        in: query
+        name: dynasty
+        type: string
+      - description: 作者
+        in: query
+        name: author
+        type: string
+      - description: 体裁
+        in: query
+        name: genre
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询诗词列表
+      tags:
+      - 诗词
+  /api/poems/{id}:
+    get:
+      parameters:
+      - description: 诗词 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 获取诗词详情
+      tags:
+      - 诗词
+  /api/poems/{id}/like:
+    post:
+      parameters:
+      - description: 诗词 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 点赞诗词
+      tags:
+      - 诗词
+  /api/poems/random:
+    get:
+      parameters:
+      - default: 5
+        description: 返回数量
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 随机获取诗词
+      tags:
+      - 诗词
+  /api/poets:
+    get:
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 朝代 ID
+        in: query
+        name: dynastyId
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询诗人列表
+      tags:
+      - 诗词基础数据
+  /api/rbac/check:
+    post:
+      parameters:
+      - description: 权限编码
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CheckPermissionRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 检查当前用户权限
+      tags:
+      - RBAC 用户授权
+  /api/rbac/my/permissions:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询当前用户权限
+      tags:
+      - RBAC 用户授权
+  /api/rbac/permissions:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 模块
+        in: query
+        name: module
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询权限列表
+      tags:
+      - RBAC 权限
+    post:
+      parameters:
+      - description: 权限信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PermissionCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建权限
+      tags:
+      - RBAC 权限
+  /api/rbac/permissions/{id}:
+    delete:
+      parameters:
+      - description: 权限 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除权限
+      tags:
+      - RBAC 权限
+    get:
+      parameters:
+      - description: 权限 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取权限详情
+      tags:
+      - RBAC 权限
+    put:
+      parameters:
+      - description: 权限 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 权限信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PermissionUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新权限
+      tags:
+      - RBAC 权限
+  /api/rbac/permissions/all:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询全部权限
+      tags:
+      - RBAC 权限
+  /api/rbac/roles:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询角色列表
+      tags:
+      - RBAC 角色
+    post:
+      parameters:
+      - description: 角色信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RoleCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建角色
+      tags:
+      - RBAC 角色
+  /api/rbac/roles/{id}:
+    delete:
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除角色
+      tags:
+      - RBAC 角色
+    get:
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色详情
+      tags:
+      - RBAC 角色
+    put:
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 角色信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RoleUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新角色
+      tags:
+      - RBAC 角色
+  /api/rbac/roles/{id}/permissions:
+    get:
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询角色权限
+      tags:
+      - RBAC 角色
+    put:
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 权限编码列表
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignPermissionRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配角色权限
+      tags:
+      - RBAC 角色
+  /api/rbac/users/{id}/permissions:
+    get:
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询用户权限
+      tags:
+      - RBAC 用户授权
+  /api/rbac/users/{id}/roles:
+    get:
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询用户角色
+      tags:
+      - RBAC 用户授权
+    put:
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 角色 ID 列表
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignRoleRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配用户角色
+      tags:
+      - RBAC 用户授权
+  /api/user/password:
+    put:
+      parameters:
+      - description: 密码信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改当前用户密码
+      tags:
+      - 用户
+  /api/user/profile:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户资料
+      tags:
+      - 用户
+    put:
+      parameters:
+      - description: 用户资料
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新当前用户资料
+      tags:
+      - 用户
+  /health:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 服务健康检查
+      tags:
+      - 系统
+produces:
+- application/json
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 输入 Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

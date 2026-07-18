@@ -27,7 +27,7 @@ backend/
 ```bash
 cd backend
 go mod download
-go run cmd/server/main.go
+go run ./cmd/server
 ```
 
 配置文件不是启动的强制条件。加载优先级和生产环境要求见“配置管理”章节。
@@ -109,7 +109,18 @@ Repository 不决定用户是否有权限，也不拼装面向前端的展示文
 - 行为无法自然表达为 CRUD 时可以使用明确的动作子路径，例如 `/comments/vote`、`/text-conversion`。
 - 当前没有 `/api/v1`。引入版本号必须作为跨端契约变更处理。
 
-### 4.2 统一响应
+### 4.2 Swagger 文档
+
+- 新增、修改或删除 HTTP 接口时，必须同步调整 `cmd/server/swagger_annotations_*.go` 中对应的 Swagger 注解。
+- 注解必须与实际接口的请求方法、路径、认证要求、参数、请求体、响应结构和主要状态码保持一致。
+- 修改注解后，必须在 `backend/` 目录重新生成 `docs/swagger/`，并运行 `go test ./cmd/server` 验证 Swagger UI 和文档接口。
+- `docs/swagger/` 是由注解生成的文件，不得直接手工修改；使用以下命令重新生成：
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/server/main.go -o docs/swagger --parseInternal
+```
+
+### 4.3 统一响应
 
 普通业务接口使用：
 
@@ -138,13 +149,13 @@ Repository 不决定用户是否有权限，也不拼装面向前端的展示文
 
 Handler 优先使用 `pkg/utils` 的响应函数。若需要新增响应形式，应先统一扩展响应工具和前端类型，避免各 Handler 自行定义包络。
 
-### 4.3 分页
+### 4.4 分页
 
 - 查询参数使用 `page` 和 `pageSize`，页码从 1 开始。
 - DTO 应设置合理默认值和最大值；Repository 不能接受无限制的全表列表请求。
 - 排序字段必须使用白名单映射，禁止把客户端字符串直接拼入 SQL。
 
-### 4.4 Snowflake ID
+### 4.5 Snowflake ID
 
 - Model 中的业务 ID 使用 `uint64`。
 - 对外响应 DTO 将 Snowflake ID 序列化为字符串。

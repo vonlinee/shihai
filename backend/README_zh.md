@@ -52,6 +52,21 @@ backend/
 3. **启动应用程序**
    
    ```bash
-   go run cmd/server/main.go
+   go run ./cmd/server
    ```
    *注意：项目启动时，GORM的 auto migration 工具会自动执行以同步最新的数据表结构至 `internal/models/` 里面的定义状态*。
+
+## Swagger API 文档
+
+服务启动后可访问：
+
+- Swagger UI：`http://localhost:8080/swagger/index.html`
+- Swagger JSON：`http://localhost:8080/swagger/doc.json`
+
+调用受保护接口时，点击 Swagger UI 的 `Authorize`，输入 `Bearer <token>`。
+
+修改接口注解后，在 `backend/` 目录重新生成文档：
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/server/main.go -o docs/swagger --parseInternal
+```
