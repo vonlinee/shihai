@@ -1,7 +1,9 @@
 # Starts the deployed Shihai backend.
 
 param(
-    [string]$DeployPath = "C:\shihai-deploy"
+    [string]$DeployPath = "C:\shihai-deploy",
+    [ValidateRange(1, 65535)]
+    [int]$Port = 8080
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,9 +14,9 @@ if (-not (Test-Path $BackendExecutable)) {
 }
 
 Write-Host "Starting Shihai backend..." -ForegroundColor Cyan
-Write-Host "Backend URL: http://localhost:8080" -ForegroundColor Yellow
+Write-Host "Backend URL: http://localhost:$Port" -ForegroundColor Yellow
 Write-Host "Press Ctrl+C to stop." -ForegroundColor Gray
 Write-Host ""
 
 Set-Location -Path $DeployPath
-& $BackendExecutable
+& $BackendExecutable -port $Port

@@ -20,6 +20,7 @@ assert_contains() {
 
 default_output="$(bash "$START_SCRIPT" --dry-run)"
 assert_contains "$default_output" "Mode: deployment"
+assert_contains "$default_output" "Backend port: 8080"
 assert_contains "$default_output" "Frontend mode: embedded"
 assert_contains "$default_output" "Redeploy: true"
 assert_contains "$default_output" "Process count: 1"
@@ -27,8 +28,8 @@ assert_contains "$default_output" "Process count: 1"
 development_output="$(bash "$START_SCRIPT" --mode development --dry-run)"
 assert_contains "$development_output" "Mode: development"
 assert_contains "$development_output" "Process count: 2"
-assert_contains "$development_output" "npm run dev"
-assert_contains "$development_output" "go run ./cmd/server"
+assert_contains "$development_output" "VITE_BACKEND_URL=http://localhost:8080 npm run dev"
+assert_contains "$development_output" "go run ./cmd/server -port 8080"
 
 standalone_output="$(bash "$START_SCRIPT" --mode deployment --frontend-mode standalone --dry-run)"
 assert_contains "$standalone_output" "Frontend mode: standalone"
@@ -36,6 +37,19 @@ assert_contains "$standalone_output" "Process count: 2"
 
 reuse_output="$(bash "$START_SCRIPT" --no-redeploy --dry-run)"
 assert_contains "$reuse_output" "Redeploy: false"
+
+custom_port_output="$(bash "$START_SCRIPT" --mode development --backend-port 9090 --dry-run)"
+assert_contains "$custom_port_output" "Backend port: 9090"
+assert_contains "$custom_port_output" "VITE_BACKEND_URL=http://localhost:9090 npm run dev"
+assert_contains "$custom_port_output" "go run ./cmd/server -port 9090"
+
+standalone_port_output="$(bash "$START_SCRIPT" --frontend-mode standalone --backend-port 9090 --dry-run)"
+assert_contains "$standalone_port_output" "Standalone API base URL: http://localhost:9090/api"
+assert_contains "$standalone_port_output" "--port 9090"
+
+custom_api_output="$(bash "$START_SCRIPT" --frontend-mode standalone --backend-port 9090 \
+    --standalone-api-base-url https://api.example.com/api --dry-run)"
+assert_contains "$custom_api_output" "Standalone API base URL: https://api.example.com/api"
 
 detach_output="$(bash "$START_SCRIPT" --detach --dry-run)"
 assert_contains "$detach_output" "Detach: true"

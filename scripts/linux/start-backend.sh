@@ -5,6 +5,7 @@
 set -Eeuo pipefail
 
 DEPLOY_PATH="/opt/shihai"
+PORT=8080
 
 usage() {
     cat <<'EOF'
@@ -12,6 +13,7 @@ Usage: start-backend.sh [options]
 
 Options:
   --deploy-path PATH  Deployment directory (default: /opt/shihai)
+  --port PORT         Backend HTTP port (default: 8080)
   -h, --help          Show this help
 EOF
 }
@@ -26,6 +28,14 @@ while [[ $# -gt 0 ]]; do
             DEPLOY_PATH="$2"
             shift 2
             ;;
+        --port)
+            if [[ -z "${2:-}" ]]; then
+                printf 'Missing value for --port.\n' >&2
+                exit 1
+            fi
+            PORT="$2"
+            shift 2
+            ;;
         -h|--help)
             usage
             exit 0
@@ -38,6 +48,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ ! "$PORT" =~ ^[0-9]+$ ]] || ((PORT < 1 || PORT > 65535)); then
+    printf 'Backend port must be an integer between 1 and 65535.\n' >&2
+    exit 1
+fi
+
 BACKEND_EXECUTABLE="$DEPLOY_PATH/shihai-server"
 if [[ ! -x "$BACKEND_EXECUTABLE" ]]; then
     printf 'Backend executable not found or not executable: %s\n' "$BACKEND_EXECUTABLE" >&2
@@ -46,8 +61,8 @@ if [[ ! -x "$BACKEND_EXECUTABLE" ]]; then
 fi
 
 printf 'Starting Shihai backend...\n'
-printf 'Backend URL: http://localhost:8080\n'
+printf 'Backend URL: http://localhost:%s\n' "$PORT"
 printf 'Press Ctrl+C to stop.\n\n'
 
 cd "$DEPLOY_PATH"
-exec "$BACKEND_EXECUTABLE"
+exec "$BACKEND_EXECUTABLE" -port "$PORT"

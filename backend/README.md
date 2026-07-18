@@ -53,6 +53,12 @@ Project-level backend and Go development guidelines have been moved to `docs/gui
    ```bash
    go run ./cmd/server
    ```
+   Override the listening port from the command line when needed:
+   ```bash
+   go run ./cmd/server -port 9090
+   ```
+   Port precedence is `-port`, `SERVER_PORT`, the config file, then the built-in default `8080`.
+
    *Note: GORM auto migrations are executed upon starting to ensure your database perfectly replicates the definitions inside `internal/models/`*.
 
 ## Swagger API Documentation
@@ -61,6 +67,8 @@ After starting the service, open:
 
 - Swagger UI: `http://localhost:8080/swagger/index.html`
 - Swagger JSON: `http://localhost:8080/swagger/doc.json`
+
+When using `-port`, replace `8080` in these URLs with the configured port.
 
 For protected endpoints, click `Authorize` in Swagger UI and enter `Bearer <token>`.
 

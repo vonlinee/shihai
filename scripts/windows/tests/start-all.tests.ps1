@@ -29,6 +29,7 @@ try {
     Remove-Item Env:WT_SESSION -ErrorAction SilentlyContinue
     $DefaultOutput = & $StartScript -DryRun 6>&1
     Assert-Contains $DefaultOutput "Mode: Deployment"
+    Assert-Contains $DefaultOutput "Backend port: 8080"
     Assert-Contains $DefaultOutput "Frontend mode: Embedded"
     Assert-Contains $DefaultOutput "Terminal window: New (new)"
     Assert-Contains $DefaultOutput "Tab count: 1"
@@ -48,8 +49,8 @@ try {
 $DevelopmentOutput = & $StartScript -Mode Development -DryRun 6>&1
 Assert-Contains $DevelopmentOutput "Mode: Development"
 Assert-Contains $DevelopmentOutput "Tab count: 2"
-Assert-Contains $DevelopmentOutput "npm run dev"
-Assert-Contains $DevelopmentOutput "go run ./cmd/server"
+Assert-Contains $DevelopmentOutput "VITE_BACKEND_URL='http://localhost:8080'"
+Assert-Contains $DevelopmentOutput "go run ./cmd/server -port 8080"
 
 $StandaloneOutput = & $StartScript -Mode Deployment -FrontendMode Standalone -DryRun 6>&1
 Assert-Contains $StandaloneOutput "Frontend mode: Standalone"
@@ -70,6 +71,18 @@ Assert-Contains $CustomTitleOutput "Tab: Poem API"
 
 $EmbeddedTitleOutput = & $StartScript -Mode Deployment -FrontendMode Embedded -BackendTabTitle "Poem App" -DryRun 6>&1
 Assert-Contains $EmbeddedTitleOutput "Tab: Poem App"
+
+$CustomPortOutput = & $StartScript -Mode Development -BackendPort 9090 -DryRun 6>&1
+Assert-Contains $CustomPortOutput "Backend port: 9090"
+Assert-Contains $CustomPortOutput "VITE_BACKEND_URL='http://localhost:9090'"
+Assert-Contains $CustomPortOutput "go run ./cmd/server -port 9090"
+
+$StandalonePortOutput = & $StartScript -FrontendMode Standalone -BackendPort 9090 -DryRun 6>&1
+Assert-Contains $StandalonePortOutput "Standalone API base URL: http://localhost:9090/api"
+Assert-Contains $StandalonePortOutput "-Port 9090"
+
+$CustomApiOutput = & $StartScript -FrontendMode Standalone -BackendPort 9090 -StandaloneApiBaseUrl "https://api.example.com/api" -DryRun 6>&1
+Assert-Contains $CustomApiOutput "Standalone API base URL: https://api.example.com/api"
 
 $TemporaryDeployPath = Join-Path $ProjectRoot "tmp\start-frontend-test"
 try {

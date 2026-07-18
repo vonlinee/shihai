@@ -9,7 +9,18 @@ npm install
 npm run dev
 ```
 
-开发服务器默认运行在 `http://localhost:3000`，`/api` 请求会代理到 `http://localhost:8080`。
+开发服务器默认运行在 `http://localhost:3000`，`/api` 请求会代理到 `http://localhost:8080`。后端使用其他端口时，通过 `VITE_BACKEND_URL` 调整代理目标：
+
+```bash
+VITE_BACKEND_URL=http://localhost:9090 npm run dev
+```
+
+Windows PowerShell 使用：
+
+```powershell
+$env:VITE_BACKEND_URL = "http://localhost:9090"
+npm run dev
+```
 
 ## 常用命令
 

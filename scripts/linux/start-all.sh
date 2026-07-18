@@ -19,7 +19,8 @@ MODE="deployment"
 FRONTEND_MODE="embedded"
 REDEPLOY=true
 DEPLOY_PATH="/opt/shihai"
-STANDALONE_API_BASE_URL="http://localhost:8080/api"
+STANDALONE_API_BASE_URL=""
+BACKEND_PORT=8080
 FRONTEND_PORT=80
 DRY_RUN=false
 DETACH=false
@@ -39,6 +40,7 @@ Options:
   --no-redeploy                        Reuse existing deployment artifacts
   --deploy-path PATH                   Deployment directory (default: /opt/shihai)
   --standalone-api-base-url URL        API URL compiled into the standalone frontend
+  --backend-port PORT                  Backend HTTP port (default: 8080)
   --frontend-port PORT                 Standalone frontend port (default: 80)
   --detach                             Start services in the background
   --stop                               Stop the managed background instance
@@ -138,6 +140,11 @@ while [[ $# -gt 0 ]]; do
             STANDALONE_API_BASE_URL="$2"
             shift 2
             ;;
+        --backend-port)
+            require_value "$1" "${2:-}"
+            BACKEND_PORT="$2"
+            shift 2
+            ;;
         --frontend-port)
             require_value "$1" "${2:-}"
             FRONTEND_PORT="$2"
@@ -188,6 +195,13 @@ fi
 if [[ ! "$FRONTEND_PORT" =~ ^[0-9]+$ ]] || ((FRONTEND_PORT < 1 || FRONTEND_PORT > 65535)); then
     printf 'Frontend port must be an integer between 1 and 65535.\n' >&2
     exit 1
+fi
+if [[ ! "$BACKEND_PORT" =~ ^[0-9]+$ ]] || ((BACKEND_PORT < 1 || BACKEND_PORT > 65535)); then
+    printf 'Backend port must be an integer between 1 and 65535.\n' >&2
+    exit 1
+fi
+if [[ -z "$STANDALONE_API_BASE_URL" ]]; then
+    STANDALONE_API_BASE_URL="http://localhost:$BACKEND_PORT/api"
 fi
 if ((ACTION_COUNT > 1)); then
     printf 'Use only one of --stop or --status.\n' >&2
@@ -245,6 +259,7 @@ if [[ "$ACTION" == "stop" ]]; then
 fi
 
 printf 'Mode: %s\n' "$MODE"
+printf 'Backend port: %s\n' "$BACKEND_PORT"
 printf 'Detach: %s\n' "$DETACH"
 if [[ "$DETACH" == true ]]; then
     printf 'PID file: %s\n' "$PID_FILE"
@@ -254,22 +269,27 @@ if [[ "$MODE" == "deployment" ]]; then
     printf 'Frontend mode: %s\n' "$FRONTEND_MODE"
     printf 'Redeploy: %s\n' "$REDEPLOY"
     printf 'Deploy path: %s\n' "$DEPLOY_PATH"
+    if [[ "$FRONTEND_MODE" == "standalone" ]]; then
+        printf 'Standalone API base URL: %s\n' "$STANDALONE_API_BASE_URL"
+    fi
 fi
 
 if [[ "$MODE" == "development" ]]; then
     printf 'Process count: 2\n'
-    printf 'Process: frontend\n  Directory: %s\n  Command: npm run dev\n' "$FRONTEND_PATH"
-    printf 'Process: backend\n  Directory: %s\n  Command: go run ./cmd/server\n' "$BACKEND_PATH"
+    printf 'Process: frontend\n  Directory: %s\n  Command: VITE_BACKEND_URL=http://localhost:%s npm run dev\n' \
+        "$FRONTEND_PATH" "$BACKEND_PORT"
+    printf 'Process: backend\n  Directory: %s\n  Command: go run ./cmd/server -port %s\n' \
+        "$BACKEND_PATH" "$BACKEND_PORT"
 elif [[ "$FRONTEND_MODE" == "embedded" ]]; then
     printf 'Process count: 1\n'
-    printf 'Process: backend-with-embedded-frontend\n  Directory: %s\n  Command: %s --deploy-path %s\n' \
-        "$DEPLOY_PATH" "$START_BACKEND_SCRIPT" "$DEPLOY_PATH"
+    printf 'Process: backend-with-embedded-frontend\n  Directory: %s\n  Command: %s --deploy-path %s --port %s\n' \
+        "$DEPLOY_PATH" "$START_BACKEND_SCRIPT" "$DEPLOY_PATH" "$BACKEND_PORT"
 else
     printf 'Process count: 2\n'
     printf 'Process: frontend\n  Directory: %s\n  Command: %s --deploy-path %s --port %s\n' \
         "$DEPLOY_PATH" "$START_FRONTEND_SCRIPT" "$DEPLOY_PATH" "$FRONTEND_PORT"
-    printf 'Process: backend\n  Directory: %s\n  Command: %s --deploy-path %s\n' \
-        "$DEPLOY_PATH" "$START_BACKEND_SCRIPT" "$DEPLOY_PATH"
+    printf 'Process: backend\n  Directory: %s\n  Command: %s --deploy-path %s --port %s\n' \
+        "$DEPLOY_PATH" "$START_BACKEND_SCRIPT" "$DEPLOY_PATH" "$BACKEND_PORT"
 fi
 
 if [[ "$DRY_RUN" == true ]]; then
@@ -348,22 +368,22 @@ fi
 if [[ "$MODE" == "development" ]]; then
     (
         cd "$FRONTEND_PATH"
-        exec npm run dev
+        exec env VITE_BACKEND_URL="http://localhost:$BACKEND_PORT" npm run dev
     ) &
     CHILD_PIDS+=("$!")
 
     (
         cd "$BACKEND_PATH"
-        exec go run ./cmd/server
+        exec go run ./cmd/server -port "$BACKEND_PORT"
     ) &
     CHILD_PIDS+=("$!")
 elif [[ "$FRONTEND_MODE" == "embedded" ]]; then
-    bash "$START_BACKEND_SCRIPT" --deploy-path "$DEPLOY_PATH" &
+    bash "$START_BACKEND_SCRIPT" --deploy-path "$DEPLOY_PATH" --port "$BACKEND_PORT" &
     CHILD_PIDS+=("$!")
 else
     bash "$START_FRONTEND_SCRIPT" --deploy-path "$DEPLOY_PATH" --port "$FRONTEND_PORT" &
     CHILD_PIDS+=("$!")
-    bash "$START_BACKEND_SCRIPT" --deploy-path "$DEPLOY_PATH" &
+    bash "$START_BACKEND_SCRIPT" --deploy-path "$DEPLOY_PATH" --port "$BACKEND_PORT" &
     CHILD_PIDS+=("$!")
 fi
 

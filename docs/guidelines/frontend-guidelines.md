@@ -34,7 +34,7 @@ npm run build
 npm run lint
 ```
 
-Vite 开发服务器默认使用 `3000` 端口，并将 `/api` 代理到 `http://localhost:8080`。功能修改至少运行 `npm run build`；涉及 ESLint 规则或大范围代码调整时同时运行 `npm run lint`。
+Vite 开发服务器默认使用 `3000` 端口，并将 `/api` 代理到 `VITE_BACKEND_URL`；未设置时使用 `http://localhost:8080`。功能修改至少运行 `npm run build`；涉及 ESLint 规则或大范围代码调整时同时运行 `npm run lint`。
 
 ## 2. TypeScript
 

@@ -50,6 +50,9 @@ Create a `.env` file in the frontend directory for different environments:
 # Development
 VITE_API_BASE_URL=http://localhost:8080/api
 
+# Optional development proxy target when the backend uses a custom port
+VITE_BACKEND_URL=http://localhost:8080
+
 # Production
 VITE_API_BASE_URL=https://your-domain.com/api
 ```
@@ -59,7 +62,10 @@ VITE_API_BASE_URL=https://your-domain.com/api
 ```bash
 cd backend
 go mod tidy
-go run cmd/server/main.go
+go run ./cmd/server
+
+# Override the backend port (takes precedence over SERVER_PORT and config.json)
+go run ./cmd/server -port 9090
 ```
 
 ### Build & Deploy:
@@ -68,37 +74,40 @@ go run cmd/server/main.go
 ```bash
 cd backend
 go mod tidy
-go build -o shihai-server.exe cmd/server/main.go
+go build -o shihai-server.exe ./cmd/server
 ```
 
 #### Build for Linux (AMD64):
 ```bash
 cd backend
-GOOS=linux GOARCH=amd64 go build -o shihai-server-linux cmd/server/main.go
+GOOS=linux GOARCH=amd64 go build -o shihai-server-linux ./cmd/server
 ```
 
 #### Build for Windows (AMD64):
 ```bash
 cd backend
-GOOS=windows GOARCH=amd64 go build -o shihai-server.exe cmd/server/main.go
+GOOS=windows GOARCH=amd64 go build -o shihai-server.exe ./cmd/server
 ```
 
 #### Build for macOS (AMD64):
 ```bash
 cd backend
-GOOS=darwin GOARCH=amd64 go build -o shihai-server-mac cmd/server/main.go
+GOOS=darwin GOARCH=amd64 go build -o shihai-server-mac ./cmd/server
 ```
 
 #### Build for macOS (ARM64/M1):
 ```bash
 cd backend
-GOOS=darwin GOARCH=arm64 go build -o shihai-server-mac-arm cmd/server/main.go
+GOOS=darwin GOARCH=arm64 go build -o shihai-server-mac-arm ./cmd/server
 ```
 
 #### Run the built binary:
 ```bash
 # Windows
 ./shihai-server.exe
+
+# Custom port
+./shihai-server.exe -port 9090
 
 # Linux/Mac
 ./shihai-server-linux
@@ -118,6 +127,9 @@ Execute database/migrations/001_init.sql in PostgreSQL
 
 # Development mode: open frontend and backend in two Windows Terminal tabs
 .\scripts\windows\start-all.ps1 -Mode Development
+
+# Use a custom backend port; the development proxy follows automatically
+.\scripts\windows\start-all.ps1 -Mode Development -BackendPort 9090
 
 # Standalone deployment mode: rebuild by default, then open two tabs
 .\scripts\windows\start-all.ps1 -Mode Deployment -FrontendMode Standalone
@@ -155,6 +167,9 @@ chmod +x scripts/linux/*.sh scripts/linux/tests/*.sh
 
 # Development mode: manage frontend and backend in the current terminal
 ./scripts/linux/start-all.sh --mode development
+
+# Use a custom backend port; the development proxy follows automatically
+./scripts/linux/start-all.sh --mode development --backend-port 9090
 
 # Standalone deployment mode
 ./scripts/linux/start-all.sh --frontend-mode standalone --frontend-port 4173

@@ -35,6 +35,12 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 前端开发服务器会把 `/api` 请求代理到后端的 `8080` 端口。
 
+使用其他后端端口时，脚本会同时调整后端命令和 Vite 开发代理：
+
+```powershell
+.\scripts\windows\start-all.ps1 -Mode Development -BackendPort 9090
+```
+
 ### 独立前端部署模式
 
 ```powershell
@@ -45,7 +51,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 - 前端 Tab 使用项目已有的 Vite Preview 提供 `frontend` 静态文件和 SPA 路由回退，默认地址为 `http://localhost`。
 - 后端 Tab 启动 `shihai-server.exe`，默认地址为 `http://localhost:8080`。
-- 前端构建时会把 API 地址设置为 `http://localhost:8080/api`，可通过 `-StandaloneApiBaseUrl` 调整。
+- 前端构建时默认根据 `-BackendPort` 设置 API 地址，例如端口 `9090` 对应 `http://localhost:9090/api`；可通过 `-StandaloneApiBaseUrl` 显式覆盖。
 
 部署目录结构：
 
@@ -85,6 +91,12 @@ C:\shihai-deploy\
 .\scripts\windows\start-all.ps1 -Mode Deployment -DeployPath "D:\shihai-deploy"
 ```
 
+所有模式都可以通过 `-BackendPort` 指定后端监听端口：
+
+```powershell
+.\scripts\windows\start-all.ps1 -BackendPort 9090
+```
+
 独立部署的后端 API 不在本机默认地址时，可以指定构建期 API 地址：
 
 ```powershell
@@ -122,7 +134,8 @@ C:\shihai-deploy\
 | `-FrontendMode` | `Standalone`、`Embedded` | `Embedded` | 选择部署模式下的前端产物形式 |
 | `-Redeploy` | `$true`、`$false` | `$true` | 部署启动前是否重新构建部署 |
 | `-DeployPath` | Windows 路径 | `C:\shihai-deploy` | 部署产物目录 |
-| `-StandaloneApiBaseUrl` | URL | `http://localhost:8080/api` | 独立前端构建使用的 API 地址 |
+| `-BackendPort` | `1` 至 `65535` | `8080` | 后端监听端口；开发代理和独立前端默认 API 地址随之调整 |
+| `-StandaloneApiBaseUrl` | URL | 根据 `-BackendPort` 生成 | 独立前端构建使用的 API 地址；显式设置时覆盖自动生成值 |
 | `-FrontendTabTitle` | 文本 | `Shihai Frontend` | 开发或独立部署模式的前端 Tab 标题 |
 | `-BackendTabTitle` | 文本 | 按模式确定 | 后端 Tab 标题；嵌入模式默认标注包含前端 |
 | `-DryRun` | 开关 | 关闭 | 仅预览启动计划 |
@@ -150,7 +163,7 @@ C:\shihai-deploy\
 ## 单独启动部署服务
 
 ```powershell
-.\scripts\windows\start-backend.ps1
+.\scripts\windows\start-backend.ps1 -Port 9090
 .\scripts\windows\start-frontend.ps1
 ```
 

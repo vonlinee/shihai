@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"strconv"
+
 	"shihai/internal/config"
 	"shihai/internal/database"
 	"shihai/internal/handlers"
@@ -44,10 +47,14 @@ type App struct {
 func main() {
 	// Parse command-line flags
 	configFile := flag.String("config", "", "path to JSON config file (default: config.json)")
+	port := flag.String("port", "", "server listen port (overrides SERVER_PORT and config file)")
 	flag.Parse()
 
 	// Load configuration
 	cfg := config.Load(*configFile)
+	if err := applyServerPortOverride(cfg, *port); err != nil {
+		log.Fatal(err)
+	}
 
 	// Set Gin mode
 	gin.SetMode(cfg.Server.Mode)
@@ -107,6 +114,20 @@ func main() {
 	if err := r.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
+}
+
+func applyServerPortOverride(cfg *config.Config, port string) error {
+	if port == "" {
+		return nil
+	}
+
+	parsedPort, err := strconv.Atoi(port)
+	if err != nil || parsedPort < 1 || parsedPort > 65535 {
+		return fmt.Errorf("invalid server port %q: must be an integer between 1 and 65535", port)
+	}
+
+	cfg.Server.Port = strconv.Itoa(parsedPort)
+	return nil
 }
 
 // initApp 初始化应用依赖

@@ -7,7 +7,9 @@ param(
     [string]$FrontendMode = "Embedded",
     [bool]$Redeploy = $true,
     [string]$DeployPath = "C:\shihai-deploy",
-    [string]$StandaloneApiBaseUrl = "http://localhost:8080/api",
+    [ValidateRange(1, 65535)]
+    [int]$BackendPort = 8080,
+    [string]$StandaloneApiBaseUrl,
     [ValidateNotNullOrEmpty()]
     [string]$FrontendTabTitle = "Shihai Frontend",
     [ValidateNotNullOrEmpty()]
@@ -28,6 +30,12 @@ $StartBackendScript = Join-Path $ScriptDir "start-backend.ps1"
 $IsWindowsTerminalSession = -not [string]::IsNullOrWhiteSpace($env:WT_SESSION)
 $TerminalWindowSelector = if ($IsWindowsTerminalSession) { "0" } else { "new" }
 $TerminalWindowLabel = if ($IsWindowsTerminalSession) { "Current" } else { "New" }
+$ResolvedStandaloneApiBaseUrl = if ([string]::IsNullOrWhiteSpace($StandaloneApiBaseUrl)) {
+    "http://localhost:$BackendPort/api"
+} else {
+    $StandaloneApiBaseUrl
+}
+$DevelopmentFrontendCommand = "`$env:VITE_BACKEND_URL='http://localhost:$BackendPort'; npm run dev"
 $ResolvedBackendTabTitle = if ($PSBoundParameters.ContainsKey("BackendTabTitle")) {
     $BackendTabTitle
 } elseif ($Mode -eq "Deployment" -and $FrontendMode -eq "Embedded") {
@@ -60,13 +68,14 @@ function Write-LaunchPlan {
     param([object[]]$Tabs)
 
     Write-Host "Mode: $Mode"
+    Write-Host "Backend port: $BackendPort"
     Write-Host "Terminal window: $TerminalWindowLabel ($TerminalWindowSelector)"
     if ($Mode -eq "Deployment") {
         Write-Host "Frontend mode: $FrontendMode"
         Write-Host "Redeploy: $Redeploy"
         Write-Host "Deploy path: $DeployPath"
         if ($FrontendMode -eq "Standalone") {
-            Write-Host "Standalone API base URL: $StandaloneApiBaseUrl"
+            Write-Host "Standalone API base URL: $ResolvedStandaloneApiBaseUrl"
         }
     }
     Write-Host "Tab count: $($Tabs.Count)"
@@ -140,17 +149,17 @@ function Assert-DeploymentArtifacts {
 if ($Mode -eq "Development") {
     $Tabs = @(
         (New-TabPlan -Title $FrontendTabTitle -WorkingDirectory $FrontendPath -Command @(
-            "powershell.exe", "-NoExit", "-Command", "npm run dev"
+            "powershell.exe", "-NoExit", "-Command", $DevelopmentFrontendCommand
         )),
         (New-TabPlan -Title $ResolvedBackendTabTitle -WorkingDirectory $BackendPath -Command @(
-            "powershell.exe", "-NoExit", "-Command", "go run ./cmd/server"
+            "powershell.exe", "-NoExit", "-Command", "go run ./cmd/server -port $BackendPort"
         ))
     )
 } elseif ($FrontendMode -eq "Embedded") {
     $Tabs = @(
         (New-TabPlan -Title $ResolvedBackendTabTitle -WorkingDirectory $DeployPath -Command @(
             "powershell.exe", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $StartBackendScript,
-            "-DeployPath", $DeployPath
+            "-DeployPath", $DeployPath, "-Port", $BackendPort
         ))
     )
 } else {
@@ -161,7 +170,7 @@ if ($Mode -eq "Development") {
         )),
         (New-TabPlan -Title $ResolvedBackendTabTitle -WorkingDirectory $DeployPath -Command @(
             "powershell.exe", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $StartBackendScript,
-            "-DeployPath", $DeployPath
+            "-DeployPath", $DeployPath, "-Port", $BackendPort
         ))
     )
 }
@@ -176,7 +185,7 @@ if ($Mode -eq "Development") {
     Assert-DevelopmentPrerequisites
 } else {
     if ($Redeploy) {
-        & $DeployScript -FrontendMode $FrontendMode -DeployPath $DeployPath -StandaloneApiBaseUrl $StandaloneApiBaseUrl
+        & $DeployScript -FrontendMode $FrontendMode -DeployPath $DeployPath -StandaloneApiBaseUrl $ResolvedStandaloneApiBaseUrl
     } else {
         Assert-DeploymentArtifacts
     }

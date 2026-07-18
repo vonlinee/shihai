@@ -54,6 +54,12 @@ backend/
    ```bash
    go run ./cmd/server
    ```
+   可使用命令行参数覆盖监听端口：
+   ```bash
+   go run ./cmd/server -port 9090
+   ```
+   端口优先级为：`-port`、`SERVER_PORT`、配置文件、内置默认值 `8080`。
+
    *注意：项目启动时，GORM的 auto migration 工具会自动执行以同步最新的数据表结构至 `internal/models/` 里面的定义状态*。
 
 ## Swagger API 文档
@@ -62,6 +68,8 @@ backend/
 
 - Swagger UI：`http://localhost:8080/swagger/index.html`
 - Swagger JSON：`http://localhost:8080/swagger/doc.json`
+
+使用 `-port` 修改端口时，将上述地址中的 `8080` 替换为实际端口。
 
 调用受保护接口时，点击 Swagger UI 的 `Authorize`，输入 `Bearer <token>`。
 

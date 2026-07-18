@@ -39,6 +39,12 @@ Linux 终端没有统一的 Tab 控制协议，因此脚本不会依赖 GNOME Te
 
 前端开发服务器会把 `/api` 请求代理到后端的 `8080` 端口。
 
+使用其他后端端口时，脚本会同时调整后端命令和 Vite 开发代理：
+
+```bash
+./scripts/linux/start-all.sh --mode development --backend-port 9090
+```
+
 ### 独立前端部署模式
 
 ```bash
@@ -49,7 +55,7 @@ Linux 终端没有统一的 Tab 控制协议，因此脚本不会依赖 GNOME Te
 
 - 前端使用项目已有的 Vite Preview 提供静态文件和 SPA 路由回退，默认端口为 `80`。
 - 后端启动 `/opt/shihai/shihai-server`，默认地址为 `http://localhost:8080`。
-- 前端构建时默认把 API 地址设置为 `http://localhost:8080/api`。
+- 前端构建时默认根据 `--backend-port` 设置 API 地址，例如端口 `9090` 对应 `http://localhost:9090/api`；可通过 `--standalone-api-base-url` 显式覆盖。
 
 Linux 普通用户通常不能监听 `80` 端口，可以改用高端口：
 
@@ -133,6 +139,9 @@ tail -f /opt/shihai/logs/start-all.log
 # 自定义部署目录
 ./scripts/linux/start-all.sh --deploy-path /srv/shihai
 
+# 自定义后端监听端口
+./scripts/linux/start-all.sh --backend-port 9090
+
 # 自定义独立前端的 API 地址
 ./scripts/linux/start-all.sh \
   --frontend-mode standalone \
@@ -157,7 +166,8 @@ tail -f /opt/shihai/logs/start-all.log
 | `--redeploy` | 开关 | 开启 | 强制部署启动前重新构建 |
 | `--no-redeploy` | 开关 | 关闭 | 使用已有部署产物 |
 | `--deploy-path` | Linux 绝对路径 | `/opt/shihai` | 部署产物目录 |
-| `--standalone-api-base-url` | URL | `http://localhost:8080/api` | 独立前端构建使用的 API 地址 |
+| `--backend-port` | `1` 至 `65535` | `8080` | 后端监听端口；开发代理和独立前端默认 API 地址随之调整 |
+| `--standalone-api-base-url` | URL | 根据 `--backend-port` 生成 | 独立前端构建使用的 API 地址；显式设置时覆盖自动生成值 |
 | `--frontend-port` | `1` 至 `65535` | `80` | 独立前端运行端口 |
 | `--detach` | 开关 | 关闭 | 完成必要部署后在后台启动服务 |
 | `--status` | 开关 | 关闭 | 查看后台实例状态 |
@@ -185,7 +195,7 @@ tail -f /opt/shihai/logs/start-all.log
 ## 单独启动部署服务
 
 ```bash
-./scripts/linux/start-backend.sh --deploy-path /opt/shihai
+./scripts/linux/start-backend.sh --deploy-path /opt/shihai --port 9090
 ./scripts/linux/start-frontend.sh --deploy-path /opt/shihai --port 4173
 ```
 
