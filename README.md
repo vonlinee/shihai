@@ -113,8 +113,23 @@ Execute database/migrations/001_init.sql in PostgreSQL
 
 ### Windows:
 ```powershell
+# Default: rebuild and start the backend with the embedded frontend
+.\scripts\windows\start-all.ps1
+
+# Development mode: open frontend and backend in two Windows Terminal tabs
+.\scripts\windows\start-all.ps1 -Mode Development
+
+# Standalone deployment mode: rebuild by default, then open two tabs
+.\scripts\windows\start-all.ps1 -Mode Deployment -FrontendMode Standalone
+
+# Reuse existing deployment artifacts
+.\scripts\windows\start-all.ps1 -Redeploy:$false
+
 # Build and deploy everything
 .\scripts\windows\deploy-windows.ps1
+
+# Build and deploy with the frontend embedded in the Go executable
+.\scripts\windows\deploy-windows.ps1 -FrontendMode Embedded
 
 # Or build only (skip deployment)
 .\scripts\windows\deploy-windows.ps1 -BuildOnly
@@ -123,11 +138,12 @@ Execute database/migrations/001_init.sql in PostgreSQL
 .\scripts\windows\deploy-windows.ps1 -SkipFrontend
 .\scripts\windows\deploy-windows.ps1 -SkipBackend
 
-# Start services
-.\scripts\windows\start-all.ps1        # Start both
+# Start deployed services individually
 .\scripts\windows\start-backend.ps1    # Start backend only
 .\scripts\windows\start-frontend.ps1   # Start frontend only
 ```
+
+See [Windows scripts documentation](scripts/windows/README.md) for all modes and parameters.
 
 ### Linux:
 ```bash

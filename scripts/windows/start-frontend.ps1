@@ -1,35 +1,49 @@
-# Start Frontend Server (Windows)
-# This script serves the frontend using Python's built-in HTTP server
-# Usage: Run from project root directory
+# Starts the standalone deployed Shihai frontend with Vite Preview.
+
+param(
+    [string]$DeployPath = "C:\shihai-deploy",
+    [ValidateRange(1, 65535)]
+    [int]$Port = 80,
+    [switch]$DryRun
+)
+
+$ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$DeployPath = "C:\shihai-deploy\frontend"
-$Port = "80"
+$ScriptsDir = Split-Path -Parent $ScriptDir
+$ProjectRoot = Split-Path -Parent $ScriptsDir
+$FrontendProjectPath = Join-Path $ProjectRoot "frontend"
+$FrontendPath = Join-Path $DeployPath "frontend"
+$FrontendIndex = Join-Path $FrontendPath "index.html"
+$ViteCommand = Join-Path $FrontendProjectPath "node_modules\.bin\vite.cmd"
+$ViteArguments = @(
+    "preview",
+    "--host", "0.0.0.0",
+    "--port", $Port,
+    "--strictPort",
+    "--outDir", $FrontendPath
+)
 
-if (-not (Test-Path $DeployPath)) {
-    Write-Error "Frontend files not found at $DeployPath"
-    Write-Host "Please run .\scripts\windows\deploy-windows.ps1 first"
-    exit 1
+if (-not (Test-Path $FrontendIndex)) {
+    throw "Frontend files not found at $FrontendPath. Run deploy-windows.ps1 in Standalone mode first."
+}
+if (-not (Test-Path $ViteCommand)) {
+    throw "Vite not found at $ViteCommand. Run npm install in the frontend directory first."
 }
 
-# Check if Python is installed
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-if (-not $pythonCmd) {
-    $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
+Write-Host "Starting Shihai standalone frontend..." -ForegroundColor Cyan
+Write-Host "Frontend URL: http://localhost:$Port" -ForegroundColor Yellow
+Write-Host "Command: $ViteCommand $($ViteArguments -join ' ')" -ForegroundColor Gray
+
+if ($DryRun) {
+    return
 }
 
-Write-Host "Starting Shihai Frontend Server..." -ForegroundColor Cyan
-Write-Host "Server will run on http://localhost:$Port" -ForegroundColor Yellow
-Write-Host "Press Ctrl+C to stop" -ForegroundColor Gray
+Write-Host "Press Ctrl+C to stop." -ForegroundColor Gray
 Write-Host ""
 
-Set-Location -Path $DeployPath
-
-if ($pythonCmd) {
-    # Use Python's built-in HTTP server
-    & $pythonCmd.Source -m http.server $Port
-} else {
-    # Fallback: Try to use Node.js http-server if available
-    Write-Host "Python not found, trying Node.js..." -ForegroundColor Yellow
-    npx http-server -p $Port
+Set-Location -Path $FrontendProjectPath
+& $ViteCommand @ViteArguments
+if ($LASTEXITCODE -ne 0) {
+    throw "Vite Preview stopped with exit code $LASTEXITCODE."
 }

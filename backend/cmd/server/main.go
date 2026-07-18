@@ -10,6 +10,7 @@ import (
 	"shihai/internal/models"
 	"shihai/internal/repository"
 	"shihai/internal/services"
+	"shihai/internal/webui"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -85,6 +86,9 @@ func main() {
 
 	// Setup routes
 	setupRoutes(r, app)
+	if err := webui.RegisterRoutes(r); err != nil {
+		log.Fatal("Failed to register frontend routes:", err)
+	}
 
 	// Start server
 	log.Printf("Server starting on port %s", cfg.Server.Port)

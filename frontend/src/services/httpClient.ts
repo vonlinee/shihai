@@ -191,12 +191,12 @@ export class FetchHttpClient implements HttpClient {
 
 export type HttpClientType = 'axios' | 'fetch';
 
-export function createHttpClient(type: HttpClientType = 'axios'): HttpClient {
+export function createHttpClient(type: HttpClientType = 'axios', baseURL = '/api'): HttpClient {
   switch (type) {
     case 'fetch':
-      return new FetchHttpClient();
+      return new FetchHttpClient(baseURL);
     case 'axios':
     default:
-      return new AxiosHttpClient();
+      return new AxiosHttpClient(baseURL);
   }
 }
