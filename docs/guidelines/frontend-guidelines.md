@@ -157,6 +157,9 @@ Props 必须有明确类型。公共组件的 Props 类型建议命名为 `{Comp
 ## 9. 类型契约
 
 - API 请求和响应类型必须与后端 DTO 对齐，JSON 字段使用 camelCase。
+- 新增或修改共享 API 请求和响应类型、跨模块共享的领域类型时，每个属性必须添加 JSDoc 字段注释。
+- 局部组件 Props、内部临时类型和测试类型只要求为含义不直观的属性添加注释；自动生成类型由生成源维护注释。
+- 涉及单位、格式、枚举取值、可选条件、ID 来源或敏感信息的属性必须详细说明，不能只重复属性名；修改属性语义时必须同步更新注释。
 - 写请求类型显式声明，不从完整实体类型通过大范围 `Omit` 机械派生。
 - 共享类型放在 `src/types/`；只服务单一 Service 或组件的类型放在对应文件附近。
 - 接口返回的可空字段必须在类型中表示为可选或 `null`，不能依赖运行时猜测。
@@ -164,10 +167,15 @@ Props 必须有明确类型。公共组件的 Props 类型建议命名为 `{Comp
 
 ```typescript
 interface CreatePoemRequest {
+  /** 诗词标题。 */
   title: string;
+  /** 按正文行拆分的诗句列表。 */
   content: string[];
+  /** 作者的 Snowflake ID，以字符串传输。 */
   authorId: string;
+  /** 朝代的 Snowflake ID，以字符串传输。 */
   dynastyId: string;
+  /** 译文；未提供时省略。 */
   translation?: string;
 }
 ```
