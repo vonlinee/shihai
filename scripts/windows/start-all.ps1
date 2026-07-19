@@ -25,6 +25,7 @@ $ProjectRoot = Split-Path -Parent $ScriptsDir
 $FrontendPath = Join-Path $ProjectRoot "frontend"
 $BackendPath = Join-Path $ProjectRoot "backend"
 $DeployScript = Join-Path $ScriptDir "deploy-windows.ps1"
+$StartDevelopmentFrontendScript = Join-Path $ScriptDir "start-development-frontend.ps1"
 $StartFrontendScript = Join-Path $ScriptDir "start-frontend.ps1"
 $StartBackendScript = Join-Path $ScriptDir "start-backend.ps1"
 $IsWindowsTerminalSession = -not [string]::IsNullOrWhiteSpace($env:WT_SESSION)
@@ -35,7 +36,6 @@ $ResolvedStandaloneApiBaseUrl = if ([string]::IsNullOrWhiteSpace($StandaloneApiB
 } else {
     $StandaloneApiBaseUrl
 }
-$DevelopmentFrontendCommand = "`$env:VITE_BACKEND_URL='http://localhost:$BackendPort'; npm run dev"
 $ResolvedBackendTabTitle = if ($PSBoundParameters.ContainsKey("BackendTabTitle")) {
     $BackendTabTitle
 } elseif ($Mode -eq "Deployment" -and $FrontendMode -eq "Embedded") {
@@ -149,7 +149,8 @@ function Assert-DeploymentArtifacts {
 if ($Mode -eq "Development") {
     $Tabs = @(
         (New-TabPlan -Title $FrontendTabTitle -WorkingDirectory $FrontendPath -Command @(
-            "powershell.exe", "-NoExit", "-Command", $DevelopmentFrontendCommand
+            "powershell.exe", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $StartDevelopmentFrontendScript,
+            "-BackendPort", $BackendPort
         )),
         (New-TabPlan -Title $ResolvedBackendTabTitle -WorkingDirectory $BackendPath -Command @(
             "powershell.exe", "-NoExit", "-Command", "go run ./cmd/server -port $BackendPort"

@@ -4,6 +4,7 @@ $TestDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $WindowsScriptsDir = Split-Path -Parent $TestDir
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $WindowsScriptsDir)
 $StartScript = Join-Path $WindowsScriptsDir "start-all.ps1"
+$StartDevelopmentFrontendScript = Join-Path $WindowsScriptsDir "start-development-frontend.ps1"
 $StartFrontendScript = Join-Path $WindowsScriptsDir "start-frontend.ps1"
 
 function Assert-Contains {
@@ -49,8 +50,9 @@ try {
 $DevelopmentOutput = & $StartScript -Mode Development -DryRun 6>&1
 Assert-Contains $DevelopmentOutput "Mode: Development"
 Assert-Contains $DevelopmentOutput "Tab count: 2"
-Assert-Contains $DevelopmentOutput "VITE_BACKEND_URL='http://localhost:8080'"
+Assert-Contains $DevelopmentOutput "-File $StartDevelopmentFrontendScript -BackendPort 8080"
 Assert-Contains $DevelopmentOutput "go run ./cmd/server -port 8080"
+Assert-Contains $DevelopmentOutput "Command: powershell.exe -NoExit -ExecutionPolicy Bypass -File $StartDevelopmentFrontendScript -BackendPort 8080"
 
 $StandaloneOutput = & $StartScript -Mode Deployment -FrontendMode Standalone -DryRun 6>&1
 Assert-Contains $StandaloneOutput "Frontend mode: Standalone"
@@ -74,7 +76,7 @@ Assert-Contains $EmbeddedTitleOutput "Tab: Poem App"
 
 $CustomPortOutput = & $StartScript -Mode Development -BackendPort 9090 -DryRun 6>&1
 Assert-Contains $CustomPortOutput "Backend port: 9090"
-Assert-Contains $CustomPortOutput "VITE_BACKEND_URL='http://localhost:9090'"
+Assert-Contains $CustomPortOutput "-File $StartDevelopmentFrontendScript -BackendPort 9090"
 Assert-Contains $CustomPortOutput "go run ./cmd/server -port 9090"
 
 $StandalonePortOutput = & $StartScript -FrontendMode Standalone -BackendPort 9090 -DryRun 6>&1
