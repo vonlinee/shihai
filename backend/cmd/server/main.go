@@ -27,6 +27,7 @@ type App struct {
 	userHandler           *handlers.UserHandler
 	poemHandler           *handlers.PoemHandler
 	commentHandler        *handlers.CommentHandler
+	correctionHandler     *handlers.CorrectionHandler
 	announcementHandler   *handlers.AnnouncementHandler
 	workCollectionHandler *handlers.WorkCollectionHandler
 	textConversionHandler *handlers.TextConversionHandler
@@ -130,6 +131,7 @@ func initApp(db *gorm.DB) *App {
 	authorRepo := repository.NewAuthorRepository(db)
 	poetRepo := repository.NewPoetRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
+	correctionRepo := repository.NewCorrectionRepository(db)
 	announcementRepo := repository.NewAnnouncementRepository(db)
 	workCollectionRepo := repository.NewWorkCollectionRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
@@ -143,6 +145,7 @@ func initApp(db *gorm.DB) *App {
 	poemAnnotationService := services.NewPoemAnnotationService(poemAnnotationRepo, poemRepo)
 	poemService.SetPoemAnnotationRepository(poemAnnotationRepo)
 	commentService := services.NewCommentService(commentRepo)
+	correctionService := services.NewCorrectionService(correctionRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
 	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)
 	textConversionService := services.NewTextConversionService()
@@ -152,6 +155,7 @@ func initApp(db *gorm.DB) *App {
 	userHandler := handlers.NewUserHandler(userService)
 	poemHandler := handlers.NewPoemHandler(poemService, poemAnnotationService)
 	commentHandler := handlers.NewCommentHandler(commentService)
+	correctionHandler := handlers.NewCorrectionHandler(correctionService)
 	announcementHandler := handlers.NewAnnouncementHandler(announcementService)
 	workCollectionHandler := handlers.NewWorkCollectionHandler(workCollectionService)
 	textConversionHandler := handlers.NewTextConversionHandler(textConversionService)
@@ -165,6 +169,7 @@ func initApp(db *gorm.DB) *App {
 		userHandler:           userHandler,
 		poemHandler:           poemHandler,
 		commentHandler:        commentHandler,
+		correctionHandler:     correctionHandler,
 		announcementHandler:   announcementHandler,
 		workCollectionHandler: workCollectionHandler,
 		textConversionHandler: textConversionHandler,
@@ -346,6 +351,9 @@ func setupRoutes(r *gin.Engine, app *App) {
 
 			// Comments Admin
 			admin.GET("/comments/all", app.rbacMiddleware.RequirePermission(models.PermCommentList), app.commentHandler.GetAllComments)
+
+			// Corrections Admin
+			admin.GET("/corrections", app.rbacMiddleware.RequirePermission(models.PermCorrectionList), app.correctionHandler.ListCorrections)
 		}
 	}
 }

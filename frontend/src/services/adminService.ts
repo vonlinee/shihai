@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation } from '@/types';
+import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest } from '@/types';
 
 type AdminID = string | number;
 
@@ -165,6 +165,19 @@ export interface DynastyUpdateRequest {
   description?: string;
 }
 
+export interface CorrectionListParams {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+}
+
+export interface CorrectionListResponse {
+  list: CorrectionRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // ─── Poet Admin ──────────────────────────────────────────────────────────────
 
 export interface PoetCreateRequest {
@@ -294,6 +307,11 @@ export const adminService = {
     pageSize: number;
   }> {
     return api.get('/admin/comments/all', { page, pageSize });
+  },
+
+  // Admin corrections
+  getCorrections(params?: CorrectionListParams): Promise<CorrectionListResponse> {
+    return api.get<CorrectionListResponse>('/admin/corrections', params as Record<string, unknown>);
   },
 
   // Dynasties

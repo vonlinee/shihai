@@ -221,21 +221,54 @@ export interface ForumReply {
 }
 
 // Correction types
+export interface CorrectionPoemSummary {
+  /** 诗词 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 诗词标题。 */
+  title: string;
+}
+
+export interface CorrectionUserSummary {
+  /** 用户 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 用户名。 */
+  username: string;
+  /** 用户显示名称。 */
+  name: string;
+  /** 用户头像地址。 */
+  avatar?: string;
+}
+
 export interface CorrectionRequest {
-  id: number;
-  poemId: number;
-  poem?: Poem;
-  userId: number;
-  user?: User;
+  /** 纠错申请 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 被纠错诗词的 Snowflake ID，以字符串传输。 */
+  poemId: string;
+  /** 被纠错诗词摘要。 */
+  poem?: CorrectionPoemSummary;
+  /** 提交用户的 Snowflake ID，以字符串传输。 */
+  userId: string;
+  /** 提交用户摘要。 */
+  user?: CorrectionUserSummary;
+  /** 纠错类型。 */
   type: 'content' | 'translation' | 'appreciation' | 'annotation';
+  /** 被纠错的原文内容。 */
   originalText: string;
+  /** 用户建议修改后的内容。 */
   suggestedText: string;
+  /** 用户提交的纠错理由。 */
   reason: string;
+  /** 纠错流程状态。 */
   status: 'pending' | 'voting' | 'approved' | 'rejected' | 'completed';
+  /** 投票总数。 */
   voteCount: number;
+  /** 支持票数。 */
   approveCount: number;
+  /** 反对票数。 */
   rejectCount: number;
+  /** 创建时间，ISO 日期字符串。 */
   createdAt: string;
+  /** 更新时间，ISO 日期字符串。 */
   updatedAt: string;
 }
 

@@ -663,6 +663,41 @@ paths:
       summary: 查询全部评论
       tags:
       - 后台评论
+  /api/admin/corrections:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询纠错列表
+      tags:
+      - 后台纠错
   /api/admin/dynasties:
     delete:
       parameters:

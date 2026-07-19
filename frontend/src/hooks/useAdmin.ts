@@ -16,6 +16,7 @@ import {
   type PoetCreateRequest,
   type PoetUpdateRequest,
   type AdminCreateUserRequest,
+  type CorrectionListParams,
 } from '@/services/adminService';
 import { toast } from 'sonner';
 
@@ -140,6 +141,13 @@ export function useAdminComments(page = 1, pageSize = 10) {
   return useQuery({
     queryKey: ['admin', 'comments', page, pageSize],
     queryFn: () => adminService.getComments(page, pageSize),
+  });
+}
+
+export function useAdminCorrections(params?: CorrectionListParams) {
+  return useQuery({
+    queryKey: ['admin', 'corrections', params],
+    queryFn: () => adminService.getCorrections(params),
   });
 }
 
