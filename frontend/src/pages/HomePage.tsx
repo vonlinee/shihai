@@ -37,17 +37,6 @@ export function HomePage() {
 
       {/* Hero Section */}
       <section className="relative py-2 lg:py-4 overflow-hidden">
-        <div className="container relative z-10">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <h1 className="text-3xl md:text-5xl font-serif font-bold text-ink">
-              品味<span className="text-cinnabar">诗词</span>之美
-            </h1>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              识海古诗词学习平台，汇聚千年文化精华，让您在诗词的海洋中自由遨游
-            </p>
-          </div>
-        </div>
-        {/* Decorative background */}
         <div className="absolute inset-0 -z-10 opacity-5 hidden md:block">
           <div className="absolute top-10 left-10 text-9xl font-serif text-ink">诗</div>
           <div className="absolute bottom-10 right-10 text-9xl font-serif text-ink">词</div>
