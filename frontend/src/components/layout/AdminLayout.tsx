@@ -7,6 +7,7 @@ import {
   MessageSquare,
   CheckCircle,
   Layers,
+  Pin,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ const adminNavItems = [
   { path: '/admin/poems', label: '诗词管理', icon: BookOpen },
   { path: '/admin/work-collections', label: '作品集管理', icon: Layers },
   { path: '/admin/comments', label: '评论管理', icon: MessageSquare },
+  { path: '/admin/forum', label: '论坛管理', icon: Pin },
   { path: '/admin/corrections', label: '纠错管理', icon: CheckCircle },
 ]
 

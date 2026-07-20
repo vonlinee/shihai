@@ -27,6 +27,7 @@ type App struct {
 	userHandler           *handlers.UserHandler
 	poemHandler           *handlers.PoemHandler
 	commentHandler        *handlers.CommentHandler
+	forumHandler          *handlers.ForumHandler
 	correctionHandler     *handlers.CorrectionHandler
 	announcementHandler   *handlers.AnnouncementHandler
 	workCollectionHandler *handlers.WorkCollectionHandler
@@ -131,6 +132,7 @@ func initApp(db *gorm.DB) *App {
 	authorRepo := repository.NewAuthorRepository(db)
 	poetRepo := repository.NewPoetRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
+	forumRepo := repository.NewForumRepository(db)
 	correctionRepo := repository.NewCorrectionRepository(db)
 	announcementRepo := repository.NewAnnouncementRepository(db)
 	workCollectionRepo := repository.NewWorkCollectionRepository(db)
@@ -145,6 +147,7 @@ func initApp(db *gorm.DB) *App {
 	poemAnnotationService := services.NewPoemAnnotationService(poemAnnotationRepo, poemRepo)
 	poemService.SetPoemAnnotationRepository(poemAnnotationRepo)
 	commentService := services.NewCommentService(commentRepo)
+	forumService := services.NewForumService(forumRepo)
 	correctionService := services.NewCorrectionService(correctionRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
 	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)
@@ -155,6 +158,7 @@ func initApp(db *gorm.DB) *App {
 	userHandler := handlers.NewUserHandler(userService)
 	poemHandler := handlers.NewPoemHandler(poemService, poemAnnotationService)
 	commentHandler := handlers.NewCommentHandler(commentService)
+	forumHandler := handlers.NewForumHandler(forumService)
 	correctionHandler := handlers.NewCorrectionHandler(correctionService)
 	announcementHandler := handlers.NewAnnouncementHandler(announcementService)
 	workCollectionHandler := handlers.NewWorkCollectionHandler(workCollectionService)
@@ -169,6 +173,7 @@ func initApp(db *gorm.DB) *App {
 		userHandler:           userHandler,
 		poemHandler:           poemHandler,
 		commentHandler:        commentHandler,
+		forumHandler:          forumHandler,
 		correctionHandler:     correctionHandler,
 		announcementHandler:   announcementHandler,
 		workCollectionHandler: workCollectionHandler,
@@ -262,6 +267,11 @@ func setupRoutes(r *gin.Engine, app *App) {
 		api.GET("/comments", app.commentHandler.GetComments)
 		api.POST("/comments/vote", app.commentHandler.VoteComment)
 
+		// Forum - Public read
+		api.GET("/forum/posts", app.forumHandler.ListPosts)
+		api.GET("/forum/posts/:id", app.forumHandler.GetPostByID)
+		api.GET("/forum/posts/:id/replies", app.forumHandler.ListReplies)
+
 		// ========== Protected Routes ==========
 		authorized := api.Group("/")
 		authorized.Use(middleware.Auth())
@@ -274,6 +284,13 @@ func setupRoutes(r *gin.Engine, app *App) {
 			// Comments - Protected
 			authorized.POST("/comments", app.commentHandler.CreateComment)
 			authorized.DELETE("/comments/:id", app.commentHandler.DeleteComment)
+
+			// Forum - Protected write
+			authorized.POST("/forum/posts", app.rbacMiddleware.RequirePermission(models.PermForumCreate), app.forumHandler.CreatePost)
+			authorized.PUT("/forum/posts/:id", app.forumHandler.UpdatePost)
+			authorized.DELETE("/forum/posts/:id", app.forumHandler.DeletePost)
+			authorized.POST("/forum/posts/:id/replies", app.rbacMiddleware.RequirePermission(models.PermForumCreate), app.forumHandler.CreateReply)
+			authorized.DELETE("/forum/replies/:id", app.forumHandler.DeleteReply)
 		}
 
 		// ========== RBAC Routes ==========
@@ -355,5 +372,11 @@ func setupRoutes(r *gin.Engine, app *App) {
 			// Corrections Admin
 			admin.GET("/corrections", app.rbacMiddleware.RequirePermission(models.PermCorrectionList), app.correctionHandler.ListCorrections)
 		}
+
+		// Forum Admin（forum:moderate 权限可独立授予 reviewer，不套用 admin/editor 角色门槛）
+		api.GET("/admin/forum/posts", middleware.Auth(), app.rbacMiddleware.RequirePermission(models.PermForumModerate), app.forumHandler.ListAllPosts)
+		api.PUT("/admin/forum/posts/:id/pin", middleware.Auth(), app.rbacMiddleware.RequirePermission(models.PermForumModerate), app.forumHandler.SetPostPinned)
+		api.DELETE("/admin/forum/posts/:id", middleware.Auth(), app.rbacMiddleware.RequirePermission(models.PermForumModerate), app.forumHandler.AdminDeletePost)
+		api.DELETE("/admin/forum/replies/:id", middleware.Auth(), app.rbacMiddleware.RequirePermission(models.PermForumModerate), app.forumHandler.AdminDeleteReply)
 	}
 }

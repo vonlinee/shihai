@@ -38,6 +38,7 @@ const AdminUsersPage = lazyNamed(() => import('./pages/admin/UsersPage'), 'Admin
 const AdminPoemsPage = lazyNamed(() => import('./pages/admin/PoemsPage'), 'AdminPoemsPage')
 const AdminWorkCollectionsPage = lazyNamed(() => import('./pages/admin/WorkCollectionsPage'), 'AdminWorkCollectionsPage')
 const AdminCommentsPage = lazyNamed(() => import('./pages/admin/CommentsPage'), 'AdminCommentsPage')
+const AdminForumPage = lazyNamed(() => import('./pages/admin/ForumPage'), 'AdminForumPage')
 const AdminCorrectionsPage = lazyNamed(() => import('./pages/admin/CorrectionsPage'), 'AdminCorrectionsPage')
 
 export const router = createBrowserRouter([
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
       { path: 'poems', element: withSuspense(<PoemListPage />) },
       { path: 'poems/:id', element: withSuspense(<PoemDetailPage />) },
       { path: 'forum', element: withSuspense(<ForumPage />) },
+      { path: 'forum/:id', element: withSuspense(<ForumPage />) },
       { path: 'quiz', element: withSuspense(<QuizPage />) },
       { path: 'login', element: withSuspense(<LoginPage />) },
       { path: 'register', element: withSuspense(<RegisterPage />) },
@@ -65,6 +67,7 @@ export const router = createBrowserRouter([
       { path: 'poems', element: withSuspense(<AdminPoemsPage />) },
       { path: 'work-collections', element: withSuspense(<AdminWorkCollectionsPage />) },
       { path: 'comments', element: withSuspense(<AdminCommentsPage />) },
+      { path: 'forum', element: withSuspense(<AdminForumPage />) },
       { path: 'corrections', element: withSuspense(<AdminCorrectionsPage />) },
     ],
   },

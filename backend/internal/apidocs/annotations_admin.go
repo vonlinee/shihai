@@ -8,6 +8,7 @@ import (
 var (
 	_ dto.AdminCreateUserRequest
 	_ dto.CorrectionResponse
+	_ dto.ForumPostPinRequest
 	_ utils.Response
 )
 
@@ -434,3 +435,58 @@ func swaggerAdminListComments() {}
 // @Failure 403 {object} utils.Response
 // @Router /api/admin/corrections [get]
 func swaggerAdminListCorrections() {}
+
+// swaggerAdminListForumPosts documents GET /api/admin/forum/posts.
+// @Summary 查询后台论坛帖子列表
+// @Tags 后台论坛
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(20)
+// @Param keyword query string false "关键词"
+// @Param includeDeleted query bool false "是否包含已删除帖子"
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/admin/forum/posts [get]
+func swaggerAdminListForumPosts() {}
+
+// swaggerAdminPinForumPost documents PUT /api/admin/forum/posts/{id}/pin.
+// @Summary 设置论坛帖子置顶状态
+// @Tags 后台论坛
+// @Security BearerAuth
+// @Param id path string true "帖子 ID"
+// @Param request body dto.ForumPostPinRequest true "置顶状态"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/admin/forum/posts/{id}/pin [put]
+func swaggerAdminPinForumPost() {}
+
+// swaggerAdminDeleteForumPost documents DELETE /api/admin/forum/posts/{id}.
+// @Summary 后台删除论坛帖子
+// @Tags 后台论坛
+// @Security BearerAuth
+// @Param id path string true "帖子 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/admin/forum/posts/{id} [delete]
+func swaggerAdminDeleteForumPost() {}
+
+// swaggerAdminDeleteForumReply documents DELETE /api/admin/forum/replies/{id}.
+// @Summary 后台删除论坛回复
+// @Tags 后台论坛
+// @Security BearerAuth
+// @Param id path string true "回复 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/admin/forum/replies/{id} [delete]
+func swaggerAdminDeleteForumReply() {}

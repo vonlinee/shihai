@@ -17,6 +17,7 @@ import {
   type PoetUpdateRequest,
   type AdminCreateUserRequest,
   type CorrectionListParams,
+  type AdminForumPostListParams,
 } from '@/services/adminService';
 import { toast } from 'sonner';
 
@@ -148,6 +149,46 @@ export function useAdminCorrections(params?: CorrectionListParams) {
   return useQuery({
     queryKey: ['admin', 'corrections', params],
     queryFn: () => adminService.getCorrections(params),
+  });
+}
+
+export function useAdminForumPosts(params?: AdminForumPostListParams) {
+  return useQuery({
+    queryKey: ['admin', 'forumPosts', params],
+    queryFn: () => adminService.getForumPosts(params),
+  });
+}
+
+export function useAdminSetForumPostPinned() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, isPinned }: { id: AdminID; isPinned: boolean }) =>
+      adminService.setForumPostPinned(id, isPinned),
+    onSuccess: (_, variables) => {
+      toast.success(variables.isPinned ? '帖子已置顶' : '帖子已取消置顶');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'forumPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['forum'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '更新置顶状态失败');
+    },
+  });
+}
+
+export function useAdminDeleteForumPost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: AdminID) => adminService.deleteForumPost(id),
+    onSuccess: () => {
+      toast.success('帖子已删除');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'forumPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['forum'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '删除帖子失败');
+    },
   });
 }
 

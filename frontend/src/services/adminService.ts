@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest } from '@/types';
+import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest, ForumPost } from '@/types';
 
 type AdminID = string | number;
 
@@ -178,6 +178,22 @@ export interface CorrectionListResponse {
   pageSize: number;
 }
 
+// ─── Forum Admin ────────────────────────────────────────────────────────────
+
+export interface AdminForumPostListParams {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  includeDeleted?: boolean;
+}
+
+export interface AdminForumPostListResponse {
+  list: ForumPost[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // ─── Poet Admin ──────────────────────────────────────────────────────────────
 
 export interface PoetCreateRequest {
@@ -312,6 +328,19 @@ export const adminService = {
   // Admin corrections
   getCorrections(params?: CorrectionListParams): Promise<CorrectionListResponse> {
     return api.get<CorrectionListResponse>('/admin/corrections', params as Record<string, unknown>);
+  },
+
+  // Admin forum
+  getForumPosts(params?: AdminForumPostListParams): Promise<AdminForumPostListResponse> {
+    return api.get<AdminForumPostListResponse>('/admin/forum/posts', params as Record<string, unknown>);
+  },
+
+  setForumPostPinned(id: AdminID, isPinned: boolean): Promise<void> {
+    return api.put<void>(`/admin/forum/posts/${id}/pin`, { isPinned });
+  },
+
+  deleteForumPost(id: AdminID): Promise<void> {
+    return api.delete<void>(`/admin/forum/posts/${id}`);
   },
 
   // Dynasties

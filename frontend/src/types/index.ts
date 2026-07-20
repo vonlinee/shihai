@@ -193,30 +193,62 @@ export interface QuizRecord {
 }
 
 // Forum types
+export interface ForumUser {
+  /** 用户 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 用户名。 */
+  username: string;
+  /** 用户显示名称。 */
+  name: string;
+  /** 用户头像地址。 */
+  avatar?: string;
+}
+
 export interface ForumPost {
-  id: number;
-  userId: number;
-  user?: User;
+  /** 帖子 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 发帖用户 Snowflake ID，以字符串传输。 */
+  userId: string;
+  /** 发帖用户摘要。 */
+  user?: ForumUser;
+  /** 帖子标题。 */
   title: string;
+  /** 帖子正文。 */
   content: string;
+  /** 浏览量。 */
   views: number;
+  /** 回复数量。 */
   replyCount: number;
+  /** 是否置顶。 */
   isPinned: boolean;
+  /** 是否已被业务删除。 */
   isDeleted: boolean;
+  /** 创建时间，ISO 日期字符串。 */
   createdAt: string;
+  /** 更新时间，ISO 日期字符串。 */
   updatedAt: string;
 }
 
 export interface ForumReply {
-  id: number;
-  postId: number;
-  post?: ForumPost;
-  userId: number;
-  user?: User;
+  /** 回复 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 所属帖子 Snowflake ID，以字符串传输。 */
+  postId: string;
+  /** 回复用户 Snowflake ID，以字符串传输。 */
+  userId: string;
+  /** 回复用户摘要。 */
+  user?: ForumUser;
+  /** 回复正文。 */
   content: string;
-  parentId?: number;
+  /** 父回复 Snowflake ID，楼中楼回复时存在。 */
+  parentId?: string;
+  /** 父回复摘要，楼中楼回复时可能返回。 */
+  parent?: ForumReply;
+  /** 是否已被业务删除。 */
   isDeleted: boolean;
+  /** 创建时间，ISO 日期字符串。 */
   createdAt: string;
+  /** 更新时间，ISO 日期字符串。 */
   updatedAt: string;
 }
 

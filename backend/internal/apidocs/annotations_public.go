@@ -7,6 +7,9 @@ import (
 
 var (
 	_ dto.RegisterRequest
+	_ dto.ForumPostCreateRequest
+	_ dto.ForumPostUpdateRequest
+	_ dto.ForumReplyCreateRequest
 	_ utils.Response
 )
 
@@ -206,3 +209,104 @@ func swaggerCreateComment() {}
 // @Failure 403 {object} utils.Response
 // @Router /api/comments/{id} [delete]
 func swaggerDeleteComment() {}
+
+// swaggerListForumPosts documents GET /api/forum/posts.
+// @Summary 查询论坛帖子列表
+// @Tags 论坛
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(20)
+// @Param keyword query string false "关键词"
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/forum/posts [get]
+func swaggerListForumPosts() {}
+
+// swaggerGetForumPost documents GET /api/forum/posts/{id}.
+// @Summary 获取论坛帖子详情
+// @Tags 论坛
+// @Param id path string true "帖子 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/forum/posts/{id} [get]
+func swaggerGetForumPost() {}
+
+// swaggerListForumReplies documents GET /api/forum/posts/{id}/replies.
+// @Summary 查询论坛帖子回复
+// @Tags 论坛
+// @Param id path string true "帖子 ID"
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(50)
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/forum/posts/{id}/replies [get]
+func swaggerListForumReplies() {}
+
+// swaggerCreateForumPost documents POST /api/forum/posts.
+// @Summary 创建论坛帖子
+// @Tags 论坛
+// @Security BearerAuth
+// @Param request body dto.ForumPostCreateRequest true "帖子信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 422 {object} utils.Response
+// @Router /api/forum/posts [post]
+func swaggerCreateForumPost() {}
+
+// swaggerUpdateForumPost documents PUT /api/forum/posts/{id}.
+// @Summary 更新自己的论坛帖子
+// @Tags 论坛
+// @Security BearerAuth
+// @Param id path string true "帖子 ID"
+// @Param request body dto.ForumPostUpdateRequest true "帖子信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/forum/posts/{id} [put]
+func swaggerUpdateForumPost() {}
+
+// swaggerDeleteForumPost documents DELETE /api/forum/posts/{id}.
+// @Summary 删除自己的论坛帖子
+// @Tags 论坛
+// @Security BearerAuth
+// @Param id path string true "帖子 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/forum/posts/{id} [delete]
+func swaggerDeleteForumPost() {}
+
+// swaggerCreateForumReply documents POST /api/forum/posts/{id}/replies.
+// @Summary 创建论坛回复
+// @Tags 论坛
+// @Security BearerAuth
+// @Param id path string true "帖子 ID"
+// @Param request body dto.ForumReplyCreateRequest true "回复信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Failure 422 {object} utils.Response
+// @Router /api/forum/posts/{id}/replies [post]
+func swaggerCreateForumReply() {}
+
+// swaggerDeleteForumReply documents DELETE /api/forum/replies/{id}.
+// @Summary 删除自己的论坛回复
+// @Tags 论坛
+// @Security BearerAuth
+// @Param id path string true "回复 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/forum/replies/{id} [delete]
+func swaggerDeleteForumReply() {}
