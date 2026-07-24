@@ -10,6 +10,8 @@ type CommentRepository struct {
 	db *gorm.DB
 }
 
+const commentReplyPreloadDepth = 5
+
 func NewCommentRepository(db *gorm.DB) *CommentRepository {
 	return &CommentRepository{db: db}
 }
@@ -22,7 +24,7 @@ func (r *CommentRepository) Create(comment *models.Comment) error {
 // GetByID 根据ID获取评论
 func (r *CommentRepository) GetByID(id uint64) (*models.Comment, error) {
 	var comment models.Comment
-	err := r.db.Preload("User").Preload("Replies.User").First(&comment, id).Error
+	err := preloadCommentReplies(r.db.Preload("User"), commentReplyPreloadDepth).First(&comment, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +38,8 @@ func (r *CommentRepository) ListByPoem(poemID uint64, page, pageSize int) ([]mod
 
 	query := r.db.Model(&models.Comment{}).
 		Where("poem_id = ? AND parent_id IS NULL", poemID).
-		Preload("User").
-		Preload("Replies.User")
+		Preload("User")
+	query = preloadCommentReplies(query, commentReplyPreloadDepth)
 
 	err := query.Count(&total).Error
 	if err != nil {
@@ -60,9 +62,7 @@ func (r *CommentRepository) ListAll(page, pageSize int) ([]models.Comment, int64
 	var total int64
 
 	baseQuery := func() *gorm.DB {
-		return r.db.Model(&models.Comment{}).
-			Preload("User").
-			Preload("Replies.User")
+		return preloadCommentReplies(r.db.Model(&models.Comment{}).Preload("User"), commentReplyPreloadDepth)
 	}
 
 	err := baseQuery().Count(&total).Error
@@ -130,4 +130,18 @@ func (r *CommentRepository) CreateVote(vote *models.CommentVote) error {
 // UpdateVote 更新投票
 func (r *CommentRepository) UpdateVote(vote *models.CommentVote) error {
 	return r.db.Save(vote).Error
+}
+
+func preloadCommentReplies(query *gorm.DB, depth int) *gorm.DB {
+	path := "Replies"
+	for i := 0; i < depth; i++ {
+		currentPath := path
+		query = query.
+			Preload(currentPath, func(db *gorm.DB) *gorm.DB {
+				return db.Where("is_deleted = ?", false).Order("created_at ASC")
+			}).
+			Preload(currentPath + ".User")
+		path += ".Replies"
+	}
+	return query
 }

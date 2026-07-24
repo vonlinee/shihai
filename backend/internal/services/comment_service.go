@@ -60,6 +60,13 @@ func (s *CommentService) GetAllComments(page, pageSize int) ([]dto.CommentRespon
 
 // CreateComment 创建评论
 func (s *CommentService) CreateComment(userID *uint64, req *dto.CommentCreateRequest) (*dto.CommentResponse, error) {
+	if req.ParentID != nil {
+		parent, err := s.commentRepo.GetByID(uint64(*req.ParentID))
+		if err != nil || parent.IsDeleted || parent.PoemID != uint64(req.PoemID) {
+			return nil, errors.New("invalid parent comment")
+		}
+	}
+
 	comment := &models.Comment{
 		PoemID:      uint64(req.PoemID),
 		UserID:      userID,
