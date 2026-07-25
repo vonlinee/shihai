@@ -24,7 +24,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Check, ChevronDown, ChevronUp, ChevronsUpDown, Clipboard, Filter, GripVertical, Info, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, ChevronsUpDown, Clipboard, Filter, GripVertical, Info, Loader2, X } from 'lucide-react'
 
 import { cn } from '@/utils/cn'
 
@@ -500,6 +500,9 @@ export function DataTable<TData>({
     width: column.getSize(),
   }))
   const tableMinWidth = leafColumns.reduce((total, column) => total + column.getSize(), 0)
+  const rows = table.getRowModel().rows
+  const shouldShowLoadingRows = loading && rows.length === 0
+  const shouldShowLoadingOverlay = loading && rows.length > 0
   const moveColumn = (fromColumnId: string, toColumnId: string) => {
     if (fromColumnId === toColumnId) return
 
@@ -566,7 +569,11 @@ export function DataTable<TData>({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div ref={tableWrapperRef} className={cn('relative w-full min-w-0 max-w-full overflow-hidden', className)}>
+      <div
+        ref={tableWrapperRef}
+        aria-busy={loading}
+        className={cn('relative w-full min-w-0 max-w-full overflow-hidden', className)}
+      >
       {resizeGuideX !== null && (
         <div
           aria-hidden="true"
@@ -691,14 +698,40 @@ export function DataTable<TData>({
           ))}
         </TableHeader>
         <TableBody>
-          {loading ? (
-            <TableRow>
-              <TableCell colSpan={leafColumns.length} className="h-24 text-center text-muted-foreground">
-                {loadingText}
-              </TableCell>
-            </TableRow>
-          ) : table.getRowModel().rows.length > 0 ? (
-            table.getRowModel().rows.map((row) => (
+          {shouldShowLoadingRows ? (
+            Array.from({ length: 5 }).map((_, rowIndex) => (
+              <TableRow key={`loading-${rowIndex}`}>
+                {leafColumns.map((column, columnIndex) => {
+                  const meta = column.columnDef.meta
+                  const fixedOffset = getPinnedOffset(orderedColumns, column.id, meta?.fixed)
+                  const width = toCssSize(enableColumnResizing ? column.getSize() : meta?.width ?? column.getSize())
+                  const minWidth = toCssSize(meta?.minWidth)
+
+                  return (
+                    <TableCell
+                      key={`${column.id}-${rowIndex}`}
+                      style={{
+                        left: meta?.fixed === 'left' ? fixedOffset : undefined,
+                        minWidth,
+                        right: meta?.fixed === 'right' ? fixedOffset : undefined,
+                        width,
+                      }}
+                      className={cn(
+                        getTextAlignClass(meta?.align),
+                        meta?.fixed && 'sticky z-10 bg-background',
+                        meta?.fixed === 'left' && 'left-0 shadow-sm',
+                        meta?.fixed === 'right' && 'right-0 shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]',
+                        meta?.className,
+                      )}
+                    >
+                      <Skeleton className={cn('h-4', columnIndex === 0 ? 'w-4' : 'w-full')} />
+                    </TableCell>
+                  )
+                })}
+              </TableRow>
+            ))
+          ) : rows.length > 0 ? (
+            rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => {
                   const meta = cell.column.columnDef.meta
@@ -765,6 +798,18 @@ export function DataTable<TData>({
         </TableBody>
         </Table>
       </div>
+      {shouldShowLoadingOverlay && (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+          <div
+            role="status"
+            aria-live="polite"
+            className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm"
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            {loadingText}
+          </div>
+        </div>
+      )}
       </div>
     </TooltipProvider>
   )

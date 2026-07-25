@@ -250,7 +250,7 @@ function PoemsTab() {
   const [poetSearchKeyword, setPoetSearchKeyword] = useState('')
   const [debouncedPoetSearchKeyword, setDebouncedPoetSearchKeyword] = useState('')
 
-  const { data: poemData, isLoading } = usePoems({ keyword: searchQuery || undefined, page, pageSize })
+  const { data: poemData, isFetching: isPoemsFetching } = usePoems({ keyword: searchQuery || undefined, page, pageSize })
   const editingAnnotationPoemId = showPoemDialog && editingPoemId ? editingPoemId : null
   const { data: editingAnnotations, isLoading: isEditingAnnotationsLoading } = useAdminPoemAnnotations(editingAnnotationPoemId)
   const { data: dynasties } = useDynasties()
@@ -625,25 +625,21 @@ function PoemsTab() {
 
       <Card className="ink-border">
         <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
-          ) : poems.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">暂无诗词数据</div>
-          ) : (
-            <DataTable
-              columns={poemColumns}
-              data={poems}
-              emptyText="暂无诗词数据"
-              enableColumnDragging
-              enableColumnFilters
-              getRowId={(poem) => toEntityId(poem.id)}
-            />
-          )}
+          <DataTable
+            columns={poemColumns}
+            data={poems}
+            emptyText="暂无诗词数据"
+            enableColumnDragging
+            enableColumnFilters
+            getRowId={(poem) => toEntityId(poem.id)}
+            loading={isPoemsFetching}
+          />
           <Pagination
             className="mt-4"
             page={page}
             pageSize={pageSize}
             total={total}
+            disabled={isPoemsFetching}
             onPageChange={(nextPage) => {
               setSelectedPoemIds([])
               setPage(nextPage)

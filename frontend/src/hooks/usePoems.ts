@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { poemService, type PoemID, type PoetListParams } from '@/services/poemService';
 import type { PoemSearchParams } from '@/types';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ export function usePoems(params?: PoemSearchParams) {
   return useQuery({
     queryKey: ['poems', params],
     queryFn: () => poemService.getPoems(params),
+    placeholderData: keepPreviousData,
   });
 }
 
