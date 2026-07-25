@@ -1,4 +1,4 @@
-// Package apidocs maintains Swagger annotations and registers the API documentation routes.
+// Package apidocs maintains Swagger metadata and registers the API documentation routes.
 package apidocs
 
 // @title 识海 API

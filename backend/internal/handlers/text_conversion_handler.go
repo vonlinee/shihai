@@ -24,6 +24,15 @@ func NewTextConversionHandler(textConversionService textConversionService) *Text
 }
 
 // ConvertTexts 批量转换文本，并按输入顺序返回转换结果。
+// @Summary 批量简繁转换
+// @Tags 后台文本转换
+// @Security BearerAuth
+// @Param request body dto.TextConversionRequest true "转换信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/text-conversion [post]
 func (h *TextConversionHandler) ConvertTexts(c *gin.Context) {
 	var req dto.TextConversionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

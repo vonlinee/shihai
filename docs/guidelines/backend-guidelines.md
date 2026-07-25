@@ -112,7 +112,8 @@ Repository 不决定用户是否有权限，也不拼装面向前端的展示文
 
 ### 4.2 Swagger 文档
 
-- 新增、修改或删除 HTTP 接口时，必须同步调整 `internal/apidocs/annotations_*.go` 中对应的 Swagger 注解。
+- 新增、修改或删除 HTTP 接口时，必须同步调整真实 Handler 方法上的 Swagger 注解。
+- Swagger 注解必须写在实际处理该接口的 Handler 方法上，禁止新增只用于承载 Swagger 文档的空方法或独立方法。
 - 注解必须与实际接口的请求方法、路径、认证要求、参数、请求体、响应结构和主要状态码保持一致。
 - 修改接口路由、请求或响应 DTO、认证要求及 Swagger 注解后，必须在 `backend/` 目录重新生成 `docs/swagger/`，并将生成结果纳入同一次变更。
 - 重新生成后必须运行 `go test ./internal/apidocs`，验证 Swagger UI 和文档接口；后端功能修改仍需按测试章节运行相关测试。

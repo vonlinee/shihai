@@ -18,6 +18,14 @@ func NewAnnouncementHandler(announcementService *services.AnnouncementService) *
 }
 
 // GetAnnouncements 获取公告列表
+// @Summary 查询公告列表
+// @Tags 公告
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Param pinned query bool false "仅置顶公告"
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/announcements [get]
 func (h *AnnouncementHandler) GetAnnouncements(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -33,6 +41,13 @@ func (h *AnnouncementHandler) GetAnnouncements(c *gin.Context) {
 }
 
 // GetAnnouncementByID 根据ID获取公告
+// @Summary 获取公告详情
+// @Tags 公告
+// @Param id path string true "公告 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/announcements/{id} [get]
 func (h *AnnouncementHandler) GetAnnouncementByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -50,6 +65,15 @@ func (h *AnnouncementHandler) GetAnnouncementByID(c *gin.Context) {
 }
 
 // CreateAnnouncement 创建公告
+// @Summary 创建公告
+// @Tags 后台公告
+// @Security BearerAuth
+// @Param request body object true "公告信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/announcements [post]
 func (h *AnnouncementHandler) CreateAnnouncement(c *gin.Context) {
 	var req struct {
 		Title    string `json:"title" binding:"required"`
@@ -72,6 +96,16 @@ func (h *AnnouncementHandler) CreateAnnouncement(c *gin.Context) {
 }
 
 // UpdateAnnouncement 更新公告
+// @Summary 更新公告
+// @Tags 后台公告
+// @Security BearerAuth
+// @Param id path string true "公告 ID"
+// @Param request body object true "公告信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/announcements/{id} [put]
 func (h *AnnouncementHandler) UpdateAnnouncement(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -100,6 +134,15 @@ func (h *AnnouncementHandler) UpdateAnnouncement(c *gin.Context) {
 }
 
 // DeleteAnnouncement 删除公告
+// @Summary 删除公告
+// @Tags 后台公告
+// @Security BearerAuth
+// @Param id path string true "公告 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/announcements/{id} [delete]
 func (h *AnnouncementHandler) DeleteAnnouncement(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

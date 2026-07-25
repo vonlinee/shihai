@@ -19,6 +19,12 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 }
 
 // Register 用户注册
+// @Summary 用户注册
+// @Tags 认证
+// @Param request body dto.RegisterRequest true "注册信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Router /api/auth/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -36,6 +42,15 @@ func (h *UserHandler) Register(c *gin.Context) {
 }
 
 // AdminCreateUser 管理员创建用户
+// @Summary 创建用户
+// @Tags 后台用户
+// @Security BearerAuth
+// @Param request body dto.AdminCreateUserRequest true "用户信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/users [post]
 func (h *UserHandler) AdminCreateUser(c *gin.Context) {
 	var req dto.AdminCreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -53,6 +68,13 @@ func (h *UserHandler) AdminCreateUser(c *gin.Context) {
 }
 
 // Login 用户登录
+// @Summary 用户登录
+// @Tags 认证
+// @Param request body dto.LoginRequest true "登录信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Router /api/auth/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -70,6 +92,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 // GetProfile 获取当前用户信息
+// @Summary 获取当前用户资料
+// @Tags 用户
+// @Security BearerAuth
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/user/profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -87,6 +116,14 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 }
 
 // UpdateProfile 更新当前用户信息
+// @Summary 更新当前用户资料
+// @Tags 用户
+// @Security BearerAuth
+// @Param request body dto.UpdateUserRequest true "用户资料"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Router /api/user/profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -110,6 +147,14 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 }
 
 // ChangePassword 修改密码
+// @Summary 修改当前用户密码
+// @Tags 用户
+// @Security BearerAuth
+// @Param request body dto.ChangePasswordRequest true "密码信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Router /api/user/password [put]
 func (h *UserHandler) ChangePassword(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -133,6 +178,17 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 }
 
 // GetUserList 获取用户列表（管理员）
+// @Summary 查询用户列表
+// @Tags 后台用户
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Param keyword query string false "关键词"
+// @Param role query string false "角色"
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/users [get]
 func (h *UserHandler) GetUserList(c *gin.Context) {
 	var req dto.UserListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -150,6 +206,15 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 }
 
 // GetUserByID 根据ID获取用户
+// @Summary 获取用户详情
+// @Tags 后台用户
+// @Security BearerAuth
+// @Param id path string true "用户 ID"
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/admin/users/{id} [get]
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -167,6 +232,15 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 }
 
 // DeleteUser 删除用户
+// @Summary 删除用户
+// @Tags 后台用户
+// @Security BearerAuth
+// @Param id path string true "用户 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

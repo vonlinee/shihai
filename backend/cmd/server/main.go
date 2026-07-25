@@ -76,6 +76,7 @@ func main() {
 
 	// Create Gin router
 	r := gin.Default()
+	healthHandler := handlers.NewHealthHandler()
 
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
@@ -90,9 +91,7 @@ func main() {
 	})
 
 	// Health check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	r.GET("/health", healthHandler.Check)
 
 	// Setup routes
 	setupRoutes(r, app)

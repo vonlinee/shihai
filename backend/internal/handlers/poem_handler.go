@@ -24,6 +24,18 @@ func NewPoemHandler(poemService *services.PoemService, annotationService ...*ser
 }
 
 // GetPoemList 获取诗词列表
+// @Summary 查询诗词列表
+// @Tags 诗词
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Param keyword query string false "关键词"
+// @Param dynasty query string false "朝代"
+// @Param author query string false "作者"
+// @Param genre query string false "体裁"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/poems [get]
 func (h *PoemHandler) GetPoemList(c *gin.Context) {
 	var req dto.PoemListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -41,6 +53,13 @@ func (h *PoemHandler) GetPoemList(c *gin.Context) {
 }
 
 // GetPoemByID 根据ID获取诗词
+// @Summary 获取诗词详情
+// @Tags 诗词
+// @Param id path string true "诗词 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /api/poems/{id} [get]
 func (h *PoemHandler) GetPoemByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -58,6 +77,15 @@ func (h *PoemHandler) GetPoemByID(c *gin.Context) {
 }
 
 // CreatePoem 创建诗词
+// @Summary 创建诗词
+// @Tags 后台诗词
+// @Security BearerAuth
+// @Param request body dto.PoemCreateRequest true "诗词信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poems [post]
 func (h *PoemHandler) CreatePoem(c *gin.Context) {
 	var req dto.PoemCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,6 +103,16 @@ func (h *PoemHandler) CreatePoem(c *gin.Context) {
 }
 
 // UpdatePoem 更新诗词
+// @Summary 更新诗词
+// @Tags 后台诗词
+// @Security BearerAuth
+// @Param id path string true "诗词 ID"
+// @Param request body dto.PoemUpdateRequest true "诗词信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poems/{id} [put]
 func (h *PoemHandler) UpdatePoem(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -98,6 +136,15 @@ func (h *PoemHandler) UpdatePoem(c *gin.Context) {
 }
 
 // DeletePoem 删除诗词
+// @Summary 删除诗词
+// @Tags 后台诗词
+// @Security BearerAuth
+// @Param id path string true "诗词 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poems/{id} [delete]
 func (h *PoemHandler) DeletePoem(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -114,7 +161,16 @@ func (h *PoemHandler) DeletePoem(c *gin.Context) {
 	utils.SuccessWithMessage(c, "poem deleted successfully", nil)
 }
 
-// LikePoem 点赞诗词
+// BatchDeletePoems 批量删除诗词
+// @Summary 批量删除诗词
+// @Tags 后台诗词
+// @Security BearerAuth
+// @Param request body dto.BatchDeleteRequest true "诗词 ID 列表"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poems [delete]
 func (h *PoemHandler) BatchDeletePoems(c *gin.Context) {
 	var req dto.BatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -130,6 +186,14 @@ func (h *PoemHandler) BatchDeletePoems(c *gin.Context) {
 	utils.SuccessWithMessage(c, "poems deleted successfully", nil)
 }
 
+// LikePoem 点赞诗词
+// @Summary 点赞诗词
+// @Tags 诗词
+// @Param id path string true "诗词 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/poems/{id}/like [post]
 func (h *PoemHandler) LikePoem(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -147,6 +211,12 @@ func (h *PoemHandler) LikePoem(c *gin.Context) {
 }
 
 // GetRandomPoems 随机获取诗词
+// @Summary 随机获取诗词
+// @Tags 诗词
+// @Param limit query int false "返回数量" default(5)
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/poems/random [get]
 func (h *PoemHandler) GetRandomPoems(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "5")
 	limit, err := strconv.Atoi(limitStr)
@@ -164,6 +234,11 @@ func (h *PoemHandler) GetRandomPoems(c *gin.Context) {
 }
 
 // GetDynastyList 获取朝代列表
+// @Summary 查询朝代列表
+// @Tags 诗词基础数据
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/dynasties [get]
 func (h *PoemHandler) GetDynastyList(c *gin.Context) {
 	dynasties, err := h.poemService.GetDynastyList()
 	if err != nil {
@@ -175,6 +250,16 @@ func (h *PoemHandler) GetDynastyList(c *gin.Context) {
 }
 
 // GetPoetList 获取诗人列表
+// @Summary 查询诗人列表
+// @Tags 诗词基础数据
+// @Param keyword query string false "关键词"
+// @Param dynastyId query string false "朝代 ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页数量"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/poets [get]
 func (h *PoemHandler) GetPoetList(c *gin.Context) {
 	keyword := c.Query("keyword")
 	dynastyIDParam := c.Query("dynastyId")
@@ -215,6 +300,11 @@ func (h *PoemHandler) GetPoetList(c *gin.Context) {
 }
 
 // GetGenreList 获取体裁列表
+// @Summary 查询体裁列表
+// @Tags 诗词基础数据
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/genres [get]
 func (h *PoemHandler) GetGenreList(c *gin.Context) {
 	genres, err := h.poemService.GetGenreList()
 	if err != nil {
@@ -226,6 +316,15 @@ func (h *PoemHandler) GetGenreList(c *gin.Context) {
 }
 
 // CreateDynasty 创建朝代
+// @Summary 创建朝代
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.DynastyCreateRequest true "朝代信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/dynasties [post]
 func (h *PoemHandler) CreateDynasty(c *gin.Context) {
 	var req dto.DynastyCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -243,6 +342,16 @@ func (h *PoemHandler) CreateDynasty(c *gin.Context) {
 }
 
 // UpdateDynasty 更新朝代
+// @Summary 更新朝代
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "朝代 ID"
+// @Param request body dto.DynastyUpdateRequest true "朝代信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/dynasties/{id} [put]
 func (h *PoemHandler) UpdateDynasty(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -266,6 +375,15 @@ func (h *PoemHandler) UpdateDynasty(c *gin.Context) {
 }
 
 // DeleteDynasty 删除朝代
+// @Summary 删除朝代
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "朝代 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/dynasties/{id} [delete]
 func (h *PoemHandler) DeleteDynasty(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -282,7 +400,16 @@ func (h *PoemHandler) DeleteDynasty(c *gin.Context) {
 	utils.SuccessWithMessage(c, "dynasty deleted successfully", nil)
 }
 
-// CreatePoet 创建诗人
+// BatchDeleteDynasties 批量删除朝代
+// @Summary 批量删除朝代
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.BatchDeleteRequest true "朝代 ID 列表"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/dynasties [delete]
 func (h *PoemHandler) BatchDeleteDynasties(c *gin.Context) {
 	var req dto.BatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -298,6 +425,16 @@ func (h *PoemHandler) BatchDeleteDynasties(c *gin.Context) {
 	utils.SuccessWithMessage(c, "dynasties deleted successfully", nil)
 }
 
+// CreatePoet 创建诗人
+// @Summary 创建诗人
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.PoetCreateRequest true "诗人信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poets [post]
 func (h *PoemHandler) CreatePoet(c *gin.Context) {
 	var req dto.PoetCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -315,6 +452,16 @@ func (h *PoemHandler) CreatePoet(c *gin.Context) {
 }
 
 // UpdatePoet 更新诗人
+// @Summary 更新诗人
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "诗人 ID"
+// @Param request body dto.PoetUpdateRequest true "诗人信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poets/{id} [put]
 func (h *PoemHandler) UpdatePoet(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -338,6 +485,15 @@ func (h *PoemHandler) UpdatePoet(c *gin.Context) {
 }
 
 // DeletePoet 删除诗人
+// @Summary 删除诗人
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "诗人 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poets/{id} [delete]
 func (h *PoemHandler) DeletePoet(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -354,6 +510,16 @@ func (h *PoemHandler) DeletePoet(c *gin.Context) {
 	utils.SuccessWithMessage(c, "poet deleted successfully", nil)
 }
 
+// BatchDeletePoets 批量删除诗人
+// @Summary 批量删除诗人
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.BatchDeleteRequest true "诗人 ID 列表"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poets [delete]
 func (h *PoemHandler) BatchDeletePoets(c *gin.Context) {
 	var req dto.BatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -369,6 +535,16 @@ func (h *PoemHandler) BatchDeletePoets(c *gin.Context) {
 	utils.SuccessWithMessage(c, "poets deleted successfully", nil)
 }
 
+// GetPoemAnnotations 查询诗词标注。
+// @Summary 查询诗词标注
+// @Tags 后台诗词标注
+// @Security BearerAuth
+// @Param id path string true "诗词 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poems/{id}/annotations [get]
 func (h *PoemHandler) GetPoemAnnotations(c *gin.Context) {
 	if h.poemAnnotationService == nil {
 		utils.InternalServerError(c, "poem annotation service not configured")
@@ -388,6 +564,17 @@ func (h *PoemHandler) GetPoemAnnotations(c *gin.Context) {
 	utils.Success(c, annotations)
 }
 
+// CreatePoemAnnotation 创建诗词标注。
+// @Summary 创建诗词标注
+// @Tags 后台诗词标注
+// @Security BearerAuth
+// @Param id path string true "诗词 ID"
+// @Param request body dto.PoemAnnotationCreateRequest true "标注信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poems/{id}/annotations [post]
 func (h *PoemHandler) CreatePoemAnnotation(c *gin.Context) {
 	if h.poemAnnotationService == nil {
 		utils.InternalServerError(c, "poem annotation service not configured")
@@ -413,6 +600,17 @@ func (h *PoemHandler) CreatePoemAnnotation(c *gin.Context) {
 	utils.Success(c, annotation)
 }
 
+// UpdatePoemAnnotation 更新诗词标注。
+// @Summary 更新诗词标注
+// @Tags 后台诗词标注
+// @Security BearerAuth
+// @Param id path string true "标注 ID"
+// @Param request body dto.PoemAnnotationUpdateRequest true "标注信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poem-annotations/{id} [put]
 func (h *PoemHandler) UpdatePoemAnnotation(c *gin.Context) {
 	if h.poemAnnotationService == nil {
 		utils.InternalServerError(c, "poem annotation service not configured")
@@ -438,6 +636,16 @@ func (h *PoemHandler) UpdatePoemAnnotation(c *gin.Context) {
 	utils.Success(c, annotation)
 }
 
+// DeletePoemAnnotation 删除诗词标注。
+// @Summary 删除诗词标注
+// @Tags 后台诗词标注
+// @Security BearerAuth
+// @Param id path string true "标注 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poem-annotations/{id} [delete]
 func (h *PoemHandler) DeletePoemAnnotation(c *gin.Context) {
 	if h.poemAnnotationService == nil {
 		utils.InternalServerError(c, "poem annotation service not configured")
