@@ -14,6 +14,7 @@ import (
 
 	"shihai/internal/config"
 	"shihai/internal/models"
+	"shihai/internal/poetry"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -159,9 +160,11 @@ func buildPoemModels(poems []poem, authorIDs map[string]uint64, dynastyID uint64
 			continue
 		}
 
+		content := buildPoemContent(p.Paragraphs)
 		poemModels = append(poemModels, models.Poem{
 			Title:     strings.TrimSpace(p.Title),
-			Content:   buildPoemContent(p.Paragraphs),
+			Content:   content,
+			Pingze:    poetry.RecognizePingzeLines(content),
 			AuthorID:  authorID,
 			DynastyID: dynastyID,
 		})

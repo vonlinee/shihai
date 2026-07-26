@@ -31,6 +31,8 @@ export interface AdminCreateUserRequest {
 export interface PoemCreateRequest {
   title: string;
   content: string[];
+  /** 与 content 每个文本元素对应的平仄标记，只包含平/仄/? 或空字符串。 */
+  pingze?: string[];
   authorId?: number | string;
   authorName?: string;
   dynastyId?: number | string;
@@ -47,6 +49,8 @@ export interface PoemCreateRequest {
 export interface PoemUpdateRequest {
   title?: string;
   content?: string[];
+  /** 与 content 每个文本元素对应的平仄标记，只包含平/仄/? 或空字符串。 */
+  pingze?: string[];
   authorId?: number | string;
   dynastyId?: number | string;
   genre?: string;
@@ -95,6 +99,16 @@ export interface TextConversionRequest {
 export interface TextConversionResponse {
   mode: TextConversionMode;
   texts: string[];
+}
+
+export interface PingzeRecognitionRequest {
+  /** 按正文行拆分的待识别文本列表。 */
+  texts: string[];
+}
+
+export interface PingzeRecognitionResponse {
+  /** 与 texts 每个文本元素对应的平仄标记。 */
+  pingze: string[];
 }
 
 // ─── Work Collection Admin ───────────────────────────────────────────────────
@@ -267,6 +281,10 @@ export const adminService = {
 
   convertTexts(data: TextConversionRequest): Promise<TextConversionResponse> {
     return api.post<TextConversionResponse>('/admin/text-conversion', data);
+  },
+
+  recognizePingze(data: PingzeRecognitionRequest): Promise<PingzeRecognitionResponse> {
+    return api.post<PingzeRecognitionResponse>('/admin/poems/pingze-recognition', data);
   },
 
   // Work Collections

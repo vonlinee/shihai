@@ -6,6 +6,7 @@ import {
   type PoemUpdateRequest,
   type PoemAnnotationUpsertRequest,
   type TextConversionRequest,
+  type PingzeRecognitionRequest,
   type WorkCollectionListParams,
   type WorkCollectionCreateRequest,
   type WorkCollectionUpdateRequest,
@@ -134,6 +135,15 @@ export function useAdminConvertTexts() {
     mutationFn: (data: TextConversionRequest) => adminService.convertTexts(data),
     onError: (error: Error) => {
       toast.error(error.message || '文本转换失败');
+    },
+  });
+}
+
+export function useAdminRecognizePingze() {
+  return useMutation({
+    mutationFn: (data: PingzeRecognitionRequest) => adminService.recognizePingze(data),
+    onError: (error: Error) => {
+      toast.error(error.message || '平仄识别失败');
     },
   });
 }

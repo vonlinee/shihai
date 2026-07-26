@@ -86,6 +86,8 @@ export interface Poem {
   id: number;
   title: string;
   content: string[];
+  /** 与 content 每个文本元素对应的平仄标记，只包含平/仄/? 或空字符串。 */
+  pingze: string[];
   authorId: number;
   author?: Author;
   dynastyId: number;

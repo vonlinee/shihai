@@ -1,8 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"shihai/internal/models"
+	"shihai/internal/poetry"
 	"shihai/pkg/utils"
 
 	"gorm.io/driver/postgres"
@@ -90,6 +92,9 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 	if err != nil {
 		return err
 	}
+	if err := backfillPoemPingze(db); err != nil {
+		return err
+	}
 	if err := MigrateMissingPoetsFromPoems(db); err != nil {
 		return err
 	}
@@ -99,6 +104,67 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 		return err
 	}
 	return err
+}
+
+// backfillPoemPingze 为历史诗词补齐与正文行数对应的平仄数组。
+//
+// db 数据库连接。新增 pingze 列后，历史诗词没有人工维护的平仄数据；这里只补空标记，
+// 不按现代普通话自动推断，避免多音字和古入声导致错误数据入库。
+func backfillPoemPingze(db *gorm.DB) error {
+	for _, sql := range buildPoemPingzeBackfillSQL("poem") {
+		if err := db.Exec(sql).Error; err != nil {
+			return err
+		}
+	}
+	return backfillMissingPoemPingzeValues(db)
+}
+
+// buildPoemPingzeBackfillSQL 构造历史诗词平仄字段的回填 SQL。
+//
+// tableName 待回填的表名。返回 SQL 会在 pingze 为空或不是 JSON 数组时按 content 数组长度补空字符串。
+func buildPoemPingzeBackfillSQL(tableName string) []string {
+	return []string{
+		fmt.Sprintf(`
+UPDATE "%s"
+SET "pingze" = COALESCE((
+    SELECT jsonb_agg(to_jsonb(''::text) ORDER BY content_lines.ord)
+    FROM jsonb_array_elements(COALESCE("content", '[]'::jsonb)) WITH ORDINALITY AS content_lines(line, ord)
+), '[]'::jsonb)
+WHERE "pingze" IS NULL
+   OR jsonb_typeof("pingze") <> 'array';`, tableName),
+	}
+}
+
+func backfillMissingPoemPingzeValues(db *gorm.DB) error {
+	var poems []models.Poem
+	return db.Model(&models.Poem{}).
+		Select("id", "content", "pingze").
+		FindInBatches(&poems, 100, func(tx *gorm.DB, batch int) error {
+			for _, poem := range poems {
+				if poetry.HasPingzeValue(poem.Pingze) {
+					continue
+				}
+				pingze := poetry.RecognizePingzeLines(poem.Content)
+				pingzeJSON, err := marshalPoemPingzeJSON(pingze)
+				if err != nil {
+					return err
+				}
+				if err := db.Model(&models.Poem{}).
+					Where("id = ?", poem.ID).
+					UpdateColumn("pingze", gorm.Expr("?::jsonb", pingzeJSON)).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		}).Error
+}
+
+func marshalPoemPingzeJSON(pingze []string) (string, error) {
+	data, err := json.Marshal(pingze)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // migratePoemContentToJSONB 在 GORM 自动迁移前修复旧库中的诗词正文列类型。

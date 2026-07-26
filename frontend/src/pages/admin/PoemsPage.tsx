@@ -2,6 +2,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -11,11 +12,12 @@ import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ChineseVariantToggle } from '@/components/poetry/ChineseVariantToggle'
-import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, X, BookOpen, Crown, User, Wand2 } from 'lucide-react'
 import { usePoems, useDynasties, usePoetList, useGenres } from '@/hooks/usePoems'
 import {
   useAdminDeletePoem, useAdminCreatePoem, useAdminUpdatePoem,
   useAdminConvertTexts,
+  useAdminRecognizePingze,
   useAdminBatchDeletePoems,
   useAdminPoemAnnotations,
   useAdminCreateDynasty, useAdminUpdateDynasty, useAdminDeleteDynasty,
@@ -38,6 +40,7 @@ type TabKey = 'poems' | 'dynasties' | 'poets'
 type PoemFormData = {
   title: string
   content: string
+  pingze: string
   authorId?: string
   authorName?: string
   dynastyId?: string
@@ -50,7 +53,7 @@ type PoemFormData = {
 type PoemTextField = 'translation' | 'appreciation' | 'annotation'
 type ConvertiblePoemTextField = 'title' | PoemTextField
 type PoemConversionTarget = ConvertiblePoemTextField | 'content' | 'poemAnnotations'
-type PoemFormTabKey = PoemTextField | 'poemAnnotations'
+type PoemFormTabKey = PoemTextField | 'pingze' | 'poemAnnotations'
 
 const tabs: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
   { key: 'poems', label: '诗词', icon: BookOpen },
@@ -61,6 +64,7 @@ const tabs: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
 const emptyPoemFormData: PoemFormData = {
   title: '',
   content: '',
+  pingze: '',
   genre: '',
   translation: '',
   appreciation: '',
@@ -75,6 +79,7 @@ const poemTextFields: { key: PoemTextField; label: string; placeholder: string }
 
 const poemFormTabs: { key: PoemFormTabKey; label: string; placeholder?: string }[] = [
   ...poemTextFields,
+  { key: 'pingze', label: '平仄' },
   { key: 'poemAnnotations', label: '诗词标注' },
 ]
 
@@ -86,6 +91,28 @@ function createEmptyPoemFormData(): PoemFormData {
 
 function formatPoemContentForInput(content: Poem['content']): string {
   return content.join('\n')
+}
+
+function formatPoemPingzeForInput(pingze: Poem['pingze'] | null | undefined): string {
+  return (pingze ?? []).join('\n')
+}
+
+function splitPoemPingzeInput(value: string): string[] {
+  return value.split(/\r?\n/).map((line) => line.trim())
+}
+
+function hasPoemPingzeInput(value: string): boolean {
+  return splitPoemPingzeInput(value).some((line) => line !== '')
+}
+
+function isPoemPingzeMark(mark: string): boolean {
+  return mark === '平' || mark === '仄' || mark === '?' || !/^\p{Script=Han}$/u.test(mark)
+}
+
+function getInvalidPoemPingzeLine(value: string): number | null {
+  const lines = splitPoemPingzeInput(value)
+  const invalidLineIndex = lines.findIndex((line) => [...line].some((mark) => !isPoemPingzeMark(mark)))
+  return invalidLineIndex >= 0 ? invalidLineIndex + 1 : null
 }
 
 function toPoemUpdateId(id: string | undefined): string | undefined {
@@ -289,11 +316,14 @@ function PoemsTab() {
   const createPoemMutation = useAdminCreatePoem()
   const updatePoemMutation = useAdminUpdatePoem()
   const convertTextsMutation = useAdminConvertTexts()
+  const recognizePingzeMutation = useAdminRecognizePingze()
   const { confirm, ConfirmDialog } = useConfirmDialog()
   const poems = poemData?.list ?? []
   const total = poemData?.total ?? 0
   const visiblePoemIds = poems.map((poem) => toEntityId(poem.id))
   const allVisiblePoemsSelected = visiblePoemIds.length > 0 && visiblePoemIds.every((id) => selectedPoemIds.includes(id))
+  const poemContentLineCount = Math.max(3, splitPoemContentInput(formData.content).length)
+  const invalidPingzeLine = getInvalidPoemPingzeLine(formData.pingze)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -368,6 +398,7 @@ function PoemsTab() {
     setFormData({
       title: poem.title,
       content: formatPoemContentForInput(poem.content),
+      pingze: formatPoemPingzeForInput(poem.pingze),
       authorId: poem.authorId ? String(poem.authorId) : undefined,
       authorName: poem.author?.name,
       dynastyId: poem.dynastyId ? String(poem.dynastyId) : undefined,
@@ -403,6 +434,7 @@ function PoemsTab() {
       appreciation: formData.appreciation,
       annotation: formData.annotation,
     }
+    if (hasPoemPingzeInput(formData.pingze)) payload.pingze = splitPoemPingzeInput(formData.pingze)
     const annotations = toPoemAnnotationPayloads(annotationDrafts)
     if (annotations.length > 0) payload.annotations = annotations
     if (formData.dynastyName) payload.dynastyName = formData.dynastyName
@@ -420,6 +452,7 @@ function PoemsTab() {
       annotation: formData.annotation,
       annotations: toPoemAnnotationPayloads(annotationDrafts),
     }
+    if (hasPoemPingzeInput(formData.pingze)) payload.pingze = splitPoemPingzeInput(formData.pingze)
     const dynastyId = toPoemUpdateId(formData.dynastyId)
     const authorId = toPoemUpdateId(formData.authorId)
     if (dynastyId) payload.dynastyId = dynastyId
@@ -429,6 +462,10 @@ function PoemsTab() {
 
   const handlePoemSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (invalidPingzeLine !== null) {
+      toast.error(`第 ${invalidPingzeLine} 行平仄只能填写“平”“仄”“?”或非汉字字符`)
+      return
+    }
     if (editingPoemId) {
       updatePoemMutation.mutate(
         { id: editingPoemId, data: buildUpdatePayload() },
@@ -514,6 +551,23 @@ function PoemsTab() {
           })
         },
         onSettled: () => setConvertingTarget(null),
+      },
+    )
+  }
+
+  const handleRecognizePoemPingze = () => {
+    if (recognizePingzeMutation.isPending) return
+    const contentLines = splitPoemContentInput(formData.content)
+    if (contentLines.length === 0) {
+      return
+    }
+    recognizePingzeMutation.mutate(
+      { texts: contentLines },
+      {
+        onSuccess: (response) => {
+          setFormData((current) => ({ ...current, pingze: response.pingze.join('\n') }))
+          toast.success('平仄识别完成')
+        },
       },
     )
   }
@@ -728,7 +782,7 @@ function PoemsTab() {
                 onConvertContent={handleConvertPoemContent}
               />
               <Tabs defaultValue="translation" className="space-y-3">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   {poemFormTabs.map((field) => (
                     <TabsTrigger key={field.key} value={field.key}>
                       {field.label}
@@ -755,6 +809,31 @@ function PoemsTab() {
                     />
                   </TabsContent>
                 ))}
+                <TabsContent value="pingze" className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <label htmlFor="poem-pingze" className="text-sm font-medium">平仄</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      disabled={!formData.content.trim() || recognizePingzeMutation.isPending}
+                      onClick={handleRecognizePoemPingze}
+                    >
+                      <Wand2 className="h-3.5 w-3.5" />
+                      {recognizePingzeMutation.isPending ? '识别中...' : '自动识别'}
+                    </Button>
+                  </div>
+                  <textarea
+                    id="poem-pingze"
+                    value={formData.pingze}
+                    onChange={(e) => setFormData({ ...formData, pingze: e.target.value })}
+                    placeholder="平平仄仄平"
+                    rows={poemContentLineCount}
+                    aria-invalid={invalidPingzeLine !== null}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </TabsContent>
                 <TabsContent value="poemAnnotations" className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

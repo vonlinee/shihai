@@ -84,6 +84,7 @@ func TestGetPoemByIDReturnsContentArray(t *testing.T) {
 			BaseModel: models.BaseModel{ID: 1},
 			Title:     "静夜思",
 			Content:   []string{"床前明月光，", "疑是地上霜。"},
+			Pingze:    []string{"平平平仄平", "平仄仄仄平"},
 		},
 	}
 	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
@@ -94,6 +95,79 @@ func TestGetPoemByIDReturnsContentArray(t *testing.T) {
 		t.Fatalf("GetPoemByID error = %v, want nil", err)
 	}
 	assertStringSliceEqual(t, resp.Content, []string{"床前明月光，", "疑是地上霜。"})
+	assertStringSliceEqual(t, resp.Pingze, []string{"平平平仄平", "平仄仄仄平"})
+}
+
+func TestCreatePoemStoresPingzeByContentLine(t *testing.T) {
+	poemRepo := &fakePoemRepository{}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:   "静夜思",
+		Content: []string{"床前明月光", "疑是地上霜"},
+		Pingze:  []string{"平平平仄平", "平仄仄仄平"},
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	assertStringSliceEqual(t, poemRepo.createdPingze, []string{"平平平仄平", "平仄仄仄平"})
+	assertStringSliceEqual(t, resp.Pingze, []string{"平平平仄平", "平仄仄仄平"})
+}
+
+func TestCreatePoemRejectsInvalidPingzeMark(t *testing.T) {
+	service := NewPoemService(&fakePoemRepository{}, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	_, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:   "静夜思",
+		Content: []string{"床前明月光"},
+		Pingze:  []string{"平平中仄平"},
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "pingze can only contain") {
+		t.Fatalf("CreatePoem error = %v, want invalid pingze error", err)
+	}
+}
+
+func TestCreatePoemAutoRecognizesPingzeWhenMissing(t *testing.T) {
+	poemRepo := &fakePoemRepository{}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:   "测试",
+		Content: []string{"我爱你"},
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	assertStringSliceEqual(t, poemRepo.createdPingze, []string{"仄仄仄"})
+	assertStringSliceEqual(t, resp.Pingze, []string{"仄仄仄"})
+}
+
+func TestUpdatePoemAlignsPingzeWhenContentChanges(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		existingPoem: &models.Poem{
+			BaseModel: models.BaseModel{ID: 1},
+			Title:     "静夜思",
+			Content:   []string{"床前明月光"},
+			Pingze:    []string{"平平平仄平"},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.UpdatePoem(1, &dto.PoemUpdateRequest{
+		Content: []string{"我爱你", "中国"},
+	})
+
+	if err != nil {
+		t.Fatalf("UpdatePoem error = %v, want nil", err)
+	}
+	if poemRepo.updatedPoem == nil {
+		t.Fatal("updated poem = nil, want saved poem")
+	}
+	assertStringSliceEqual(t, poemRepo.updatedPoem.Pingze, []string{"仄仄仄", "平平"})
+	assertStringSliceEqual(t, resp.Pingze, []string{"仄仄仄", "平平"})
 }
 
 func TestGetPoemByIDReturnsAllPersistedAnnotations(t *testing.T) {
@@ -380,6 +454,8 @@ type fakePoemRepository struct {
 	createdAuthorID  uint64
 	createdDynastyID uint64
 	createdContent   []string
+	createdPingze    []string
+	updatedPoem      *models.Poem
 	existingPoem     *models.Poem
 	batchDeletedIDs  []uint64
 }
@@ -389,6 +465,7 @@ func (r *fakePoemRepository) Create(poem *models.Poem) error {
 	r.createdAuthorID = poem.AuthorID
 	r.createdDynastyID = poem.DynastyID
 	r.createdContent = append([]string(nil), poem.Content...)
+	r.createdPingze = append([]string(nil), poem.Pingze...)
 	poem.ID = 1
 	return nil
 }
@@ -401,6 +478,10 @@ func (r *fakePoemRepository) GetByID(id uint64) (*models.Poem, error) {
 }
 
 func (r *fakePoemRepository) Update(poem *models.Poem) error {
+	copied := *poem
+	copied.Content = append([]string(nil), poem.Content...)
+	copied.Pingze = append([]string(nil), poem.Pingze...)
+	r.updatedPoem = &copied
 	return nil
 }
 

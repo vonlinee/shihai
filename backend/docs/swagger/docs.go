@@ -918,6 +918,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/admin/poems/pingze-recognition": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台诗词"
+                ],
+                "summary": "批量识别平仄",
+                "parameters": [
+                    {
+                        "description": "平仄识别信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PingzeRecognitionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/admin/poems/{id}": {
             "put": {
                 "security": [
@@ -4342,6 +4392,21 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PingzeRecognitionRequest": {
+            "type": "object",
+            "required": [
+                "texts"
+            ],
+            "properties": {
+                "texts": {
+                    "description": "Texts 待识别文本列表，响应保持相同顺序。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "dto.PoemAnnotationCreateRequest": {
             "type": "object",
             "required": [
@@ -4526,6 +4591,13 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50
                 },
+                "pingze": {
+                    "description": "Pingze 与 Content 每个文本元素对应的平仄标记，只允许平/仄/?。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "title": {
                     "type": "string",
                     "maxLength": 200
@@ -4573,6 +4645,13 @@ const docTemplate = `{
                 "genre": {
                     "type": "string",
                     "maxLength": 50
+                },
+                "pingze": {
+                    "description": "Pingze 与 Content 每个文本元素对应的平仄标记，只允许平/仄/?；nil 表示本次不主动覆盖。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "title": {
                     "type": "string",

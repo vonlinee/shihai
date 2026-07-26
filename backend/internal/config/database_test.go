@@ -62,3 +62,31 @@ func TestBuildMissingPoetMigrationSQLCreatesPoetsForPoemAuthors(t *testing.T) {
 		t.Fatalf("missing poet migration sql %q should not use postgres-invalid named placeholder :id", sql)
 	}
 }
+
+func TestBuildPoemPingzeBackfillSQLFillsMissingJSONArray(t *testing.T) {
+	sqlStatements := buildPoemPingzeBackfillSQL("poem")
+	sql := strings.Join(sqlStatements, "\n")
+
+	for _, want := range []string{
+		`UPDATE "poem"`,
+		`SET "pingze" = COALESCE`,
+		`jsonb_agg(to_jsonb(''::text) ORDER BY content_lines.ord)`,
+		`WHERE "pingze" IS NULL`,
+		`OR jsonb_typeof("pingze") <> 'array'`,
+	} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("pingze backfill sql %q does not contain %q", sql, want)
+		}
+	}
+}
+
+func TestMarshalPoemPingzeJSONReturnsJSONArray(t *testing.T) {
+	got, err := marshalPoemPingzeJSON([]string{"平仄?", "仄平"})
+
+	if err != nil {
+		t.Fatalf("marshalPoemPingzeJSON error = %v, want nil", err)
+	}
+	if got != `["平仄?","仄平"]` {
+		t.Fatalf("marshalPoemPingzeJSON = %q, want JSON array", got)
+	}
+}

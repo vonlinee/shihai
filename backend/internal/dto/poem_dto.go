@@ -19,6 +19,7 @@ type PoemListRequest struct {
 type PoemCreateRequest struct {
 	Title        string                         `json:"title" binding:"required,max=200"`
 	Content      []string                       `json:"content" binding:"required"`
+	Pingze       []string                       `json:"pingze"` // Pingze 与 Content 每个文本元素对应的平仄标记，只允许平/仄/?。
 	AuthorID     RequestID                      `json:"authorId"`
 	AuthorName   string                         `json:"authorName"`
 	DynastyID    RequestID                      `json:"dynastyId"`
@@ -35,6 +36,7 @@ type PoemCreateRequest struct {
 type PoemUpdateRequest struct {
 	Title        string                         `json:"title" binding:"max=200"`
 	Content      []string                       `json:"content"`
+	Pingze       *[]string                      `json:"pingze"` // Pingze 与 Content 每个文本元素对应的平仄标记，只允许平/仄/?；nil 表示本次不主动覆盖。
 	AuthorID     RequestID                      `json:"authorId"`
 	DynastyID    RequestID                      `json:"dynastyId"`
 	Genre        string                         `json:"genre" binding:"max=50"`
@@ -121,6 +123,7 @@ type PoemResponse struct {
 	ID           uint64                   `json:"id,string"`
 	Title        string                   `json:"title"`
 	Content      []string                 `json:"content"`
+	Pingze       []string                 `json:"pingze"` // Pingze 与 Content 每个文本元素对应的平仄标记。
 	AuthorID     uint64                   `json:"authorId,string"`
 	Author       AuthorResponse           `json:"author,omitempty"`
 	DynastyID    uint64                   `json:"dynastyId,string"`

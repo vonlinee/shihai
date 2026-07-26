@@ -6,6 +6,7 @@ import (
 
 	"shihai/internal/dto"
 	"shihai/internal/models"
+	"shihai/internal/poetry"
 )
 
 type PoemService struct {
@@ -121,9 +122,15 @@ func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse,
 		return nil, err
 	}
 
+	pingze, err := poetry.PreparePingzeLinesForSave(req.Content, req.Pingze)
+	if err != nil {
+		return nil, err
+	}
+
 	poem := &models.Poem{
 		Title:        req.Title,
 		Content:      req.Content,
+		Pingze:       pingze,
 		AuthorID:     authorID,
 		DynastyID:    dynastyID,
 		Genre:        req.Genre,
@@ -151,11 +158,22 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 		return nil, errors.New("poem not found")
 	}
 
+	contentChanged := false
 	if req.Title != "" {
 		poem.Title = req.Title
 	}
 	if len(req.Content) > 0 {
 		poem.Content = req.Content
+		contentChanged = true
+	}
+	if req.Pingze != nil {
+		pingze, err := poetry.PreparePingzeLinesForSave(poem.Content, *req.Pingze)
+		if err != nil {
+			return nil, err
+		}
+		poem.Pingze = pingze
+	} else if contentChanged {
+		poem.Pingze = poetry.RecognizePingzeLines(poem.Content)
 	}
 	if req.AuthorID > 0 {
 		poem.AuthorID = uint64(req.AuthorID)
@@ -537,6 +555,7 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 		ID:           poem.ID,
 		Title:        poem.Title,
 		Content:      poem.Content,
+		Pingze:       poetry.AlignPingzeLines(poem.Content, poem.Pingze),
 		AuthorID:     poem.AuthorID,
 		DynastyID:    poem.DynastyID,
 		Genre:        poem.Genre,

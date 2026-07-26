@@ -176,6 +176,7 @@ func TestBuildPoemModelsResolvesAuthorAndDynastyIDs(t *testing.T) {
 		t.Fatalf("title = %q, want 静夜思", poemModels[0].Title)
 	}
 	assertStringSliceEqual(t, poemModels[0].Content, []string{"床前明月光，疑是地上霜。"})
+	assertStringSliceEqual(t, poemModels[0].Pingze, []string{"平平平仄平，平仄仄仄平。"})
 }
 
 func TestBuildPoemModelsStoresJoinedParagraphsAsSingleContentItem(t *testing.T) {
@@ -193,6 +194,7 @@ func TestBuildPoemModelsStoresJoinedParagraphsAsSingleContentItem(t *testing.T) 
 		t.Fatalf("poem model count = %d, want 1", len(poemModels))
 	}
 	assertStringSliceEqual(t, poemModels[0].Content, []string{"床前明月光，疑是地上霜。举头望明月，低头思故乡。"})
+	assertStringSliceEqual(t, poemModels[0].Pingze, []string{"平平平仄平，平仄仄仄平。仄平仄平仄，平平平仄平。"})
 }
 
 func TestBuildPoemModelsSkipsPoemsWithoutKnownAuthor(t *testing.T) {
