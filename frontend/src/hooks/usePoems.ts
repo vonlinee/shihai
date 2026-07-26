@@ -74,3 +74,11 @@ export function useGenres() {
     staleTime: 1000 * 60 * 30,
   });
 }
+
+export function useGenreCategories() {
+  return useQuery({
+    queryKey: ['genre-categories'],
+    queryFn: () => poemService.getGenreCategories(),
+    staleTime: 1000 * 60 * 30,
+  });
+}

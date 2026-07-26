@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest, ForumPost } from '@/types';
+import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest, ForumPost, PoemType } from '@/types';
 
 type AdminID = string | number;
 
@@ -37,6 +37,8 @@ export interface PoemCreateRequest {
   authorName?: string;
   dynastyId?: number | string;
   dynastyName?: string;
+  /** 体裁一级分类，例如诗、词、曲、文。 */
+  genreCategory?: string;
   genre?: string;
   translation?: string;
   appreciation?: string;
@@ -53,6 +55,8 @@ export interface PoemUpdateRequest {
   pingze?: string[];
   authorId?: number | string;
   dynastyId?: number | string;
+  /** 体裁一级分类，例如诗、词、曲、文。 */
+  genreCategory?: string;
   genre?: string;
   translation?: string;
   appreciation?: string;
@@ -176,6 +180,32 @@ export interface DynastyCreateRequest {
 export interface DynastyUpdateRequest {
   name?: string;
   period?: string;
+  description?: string;
+}
+
+export interface PoemTypeCreateRequest {
+  /** 细分类别名称，也是保存到诗词 genre 字段的值。 */
+  name: string;
+  /** 一级分类，例如诗、词、曲、文。 */
+  category: string;
+  /** 常见句数；未限定时传 null 或省略。 */
+  lines?: number | null;
+  /** 常见每句字数；未限定时传 null 或省略。 */
+  charsPerLine?: number | null;
+  /** 体裁说明。 */
+  description?: string;
+}
+
+export interface PoemTypeUpdateRequest {
+  /** 细分类别名称，也是保存到诗词 genre 字段的值。 */
+  name: string;
+  /** 一级分类，例如诗、词、曲、文。 */
+  category: string;
+  /** 常见句数；未限定时传 null 或省略。 */
+  lines?: number | null;
+  /** 常见每句字数；未限定时传 null 或省略。 */
+  charsPerLine?: number | null;
+  /** 体裁说明。 */
   description?: string;
 }
 
@@ -376,6 +406,27 @@ export const adminService = {
 
   batchDeleteDynasties(ids: AdminID[]): Promise<void> {
     return api.delete<void>('/admin/dynasties', { ids });
+  },
+
+  // Poem types
+  getPoemTypes(): Promise<PoemType[]> {
+    return api.get<PoemType[]>('/admin/poem-types');
+  },
+
+  createPoemType(data: PoemTypeCreateRequest): Promise<PoemType> {
+    return api.post<PoemType>('/admin/poem-types', data);
+  },
+
+  updatePoemType(id: AdminID, data: PoemTypeUpdateRequest): Promise<PoemType> {
+    return api.put<PoemType>(`/admin/poem-types/${id}`, data);
+  },
+
+  deletePoemType(id: AdminID): Promise<void> {
+    return api.delete<void>(`/admin/poem-types/${id}`);
+  },
+
+  batchDeletePoemTypes(ids: AdminID[]): Promise<void> {
+    return api.delete<void>('/admin/poem-types', { ids });
   },
 
   // Poets

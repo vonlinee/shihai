@@ -378,6 +378,10 @@ definitions:
       genre:
         maxLength: 50
         type: string
+      genreCategory:
+        description: GenreCategory 体裁一级分类，例如诗、词、曲、文。
+        maxLength: 50
+        type: string
       pingze:
         description: Pingze 与 Content 每个文本元素对应的平仄标记，只允许平/仄/?。
         items:
@@ -417,6 +421,10 @@ definitions:
       dynastyId:
         type: integer
       genre:
+        maxLength: 50
+        type: string
+      genreCategory:
+        description: GenreCategory 体裁一级分类，例如诗、词、曲、文。
         maxLength: 50
         type: string
       pingze:
@@ -2385,6 +2393,20 @@ paths:
       summary: 删除自己的论坛回复
       tags:
       - 论坛
+  /api/genre-categories:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 查询分层体裁列表
+      tags:
+      - 诗词基础数据
   /api/genres:
     get:
       responses:

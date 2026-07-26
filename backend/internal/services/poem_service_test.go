@@ -78,6 +78,107 @@ func TestCreatePoemPrefersDynastyNameOverStaleDynastyID(t *testing.T) {
 	assertStringSliceEqual(t, poemRepo.createdContent, []string{"1111", "2222"})
 }
 
+func TestGetGenreCategoriesGroupsPoemTypesByCategory(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		poemTypes: []models.PoemType{
+			{Name: "五言绝句", Category: "诗", Lines: intPtrForTest(4), CharsPerLine: intPtrForTest(5), Description: "四句，每句五字"},
+			{Name: "小令", Category: "词", Description: "篇幅较短的词调"},
+			{Name: "散文", Category: "文", Description: "不受韵律严格约束"},
+			{Name: "未分类", Description: "缺少分类"},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	categories, err := service.GetGenreCategories()
+
+	if err != nil {
+		t.Fatalf("GetGenreCategories error = %v, want nil", err)
+	}
+	if len(categories) != 4 {
+		t.Fatalf("category count = %d, want 4", len(categories))
+	}
+	assertGenreCategory(t, categories[0], "诗", []string{"五言绝句"})
+	assertGenreCategory(t, categories[1], "词", []string{"小令"})
+	assertGenreCategory(t, categories[2], "文", []string{"散文"})
+	assertGenreCategory(t, categories[3], "其他", []string{"未分类"})
+	if categories[0].Genres[0].Lines == nil || *categories[0].Genres[0].Lines != 4 {
+		t.Fatalf("poem genre lines = %v, want 4", categories[0].Genres[0].Lines)
+	}
+	if categories[0].Genres[0].CharsPerLine == nil || *categories[0].Genres[0].CharsPerLine != 5 {
+		t.Fatalf("poem genre chars per line = %v, want 5", categories[0].Genres[0].CharsPerLine)
+	}
+}
+
+func TestCreatePoemTypeStoresReferenceData(t *testing.T) {
+	poemRepo := &fakePoemRepository{}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+	lines := 4
+	charsPerLine := 5
+
+	resp, err := service.CreatePoemType(&dto.PoemTypeCreateRequest{
+		Name:         "五言绝句",
+		Category:     "诗",
+		Lines:        &lines,
+		CharsPerLine: &charsPerLine,
+		Description:  "四句，每句五字",
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoemType error = %v, want nil", err)
+	}
+	if poemRepo.createdPoemType == nil {
+		t.Fatal("created poem type = nil, want saved poem type")
+	}
+	if poemRepo.createdPoemType.Name != "五言绝句" || poemRepo.createdPoemType.Category != "诗" {
+		t.Fatalf("created poem type = %#v, want 五言绝句 under 诗", poemRepo.createdPoemType)
+	}
+	if resp.ID != 1 || resp.Name != "五言绝句" || resp.Category != "诗" {
+		t.Fatalf("response poem type = %#v, want created response", resp)
+	}
+}
+
+func TestUpdatePoemTypeCanClearLineConstraints(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		poemTypeByID: &models.PoemType{
+			BaseModel:    models.BaseModel{ID: 9},
+			Name:         "五言绝句",
+			Category:     "诗",
+			Lines:        intPtrForTest(4),
+			CharsPerLine: intPtrForTest(5),
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.UpdatePoemType(9, &dto.PoemTypeUpdateRequest{
+		Name:        "古体诗",
+		Category:    "诗",
+		Description: "不限句数",
+	})
+
+	if err != nil {
+		t.Fatalf("UpdatePoemType error = %v, want nil", err)
+	}
+	if poemRepo.updatedPoemType == nil {
+		t.Fatal("updated poem type = nil, want saved poem type")
+	}
+	if poemRepo.updatedPoemType.Lines != nil || poemRepo.updatedPoemType.CharsPerLine != nil {
+		t.Fatalf("updated line constraints = %v/%v, want nil/nil", poemRepo.updatedPoemType.Lines, poemRepo.updatedPoemType.CharsPerLine)
+	}
+	if resp.Name != "古体诗" || resp.Description != "不限句数" {
+		t.Fatalf("response poem type = %#v, want updated response", resp)
+	}
+}
+
+func TestBatchDeletePoemTypesRejectsEmptyIDs(t *testing.T) {
+	service := NewPoemService(&fakePoemRepository{}, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	err := service.BatchDeletePoemTypes(nil)
+
+	if err == nil || !strings.Contains(err.Error(), "ids cannot be empty") {
+		t.Fatalf("BatchDeletePoemTypes error = %v, want ids cannot be empty", err)
+	}
+}
+
 func TestGetPoemByIDReturnsContentArray(t *testing.T) {
 	poemRepo := &fakePoemRepository{
 		existingPoem: &models.Poem{
@@ -113,6 +214,48 @@ func TestCreatePoemStoresPingzeByContentLine(t *testing.T) {
 	}
 	assertStringSliceEqual(t, poemRepo.createdPingze, []string{"平平平仄平", "平仄仄仄平"})
 	assertStringSliceEqual(t, resp.Pingze, []string{"平平平仄平", "平仄仄仄平"})
+}
+
+func TestCreatePoemStoresGenreCategory(t *testing.T) {
+	poemRepo := &fakePoemRepository{}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:         "静夜思",
+		Content:       []string{"床前明月光"},
+		GenreCategory: "诗",
+		Genre:         "五言绝句",
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	if poemRepo.createdGenreCategory != "诗" {
+		t.Fatalf("created genre category = %q, want 诗", poemRepo.createdGenreCategory)
+	}
+	if resp.GenreCategory != "诗" {
+		t.Fatalf("response genre category = %q, want 诗", resp.GenreCategory)
+	}
+}
+
+func TestCreatePoemInfersGenreCategoryFromReferenceData(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		poemTypes: []models.PoemType{{Name: "小令", Category: "词"}},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	_, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:   "测试",
+		Content: []string{"我爱你"},
+		Genre:   "小令",
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	if poemRepo.createdGenreCategory != "词" {
+		t.Fatalf("created genre category = %q, want 词", poemRepo.createdGenreCategory)
+	}
 }
 
 func TestCreatePoemRejectsInvalidPingzeMark(t *testing.T) {
@@ -168,6 +311,34 @@ func TestUpdatePoemAlignsPingzeWhenContentChanges(t *testing.T) {
 	}
 	assertStringSliceEqual(t, poemRepo.updatedPoem.Pingze, []string{"仄仄仄", "平平"})
 	assertStringSliceEqual(t, resp.Pingze, []string{"仄仄仄", "平平"})
+}
+
+func TestUpdatePoemStoresGenreCategory(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		existingPoem: &models.Poem{
+			BaseModel: models.BaseModel{ID: 1},
+			Genre:     "五言绝句",
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.UpdatePoem(1, &dto.PoemUpdateRequest{
+		GenreCategory: "诗",
+		Genre:         "七言律诗",
+	})
+
+	if err != nil {
+		t.Fatalf("UpdatePoem error = %v, want nil", err)
+	}
+	if poemRepo.updatedPoem == nil {
+		t.Fatal("updated poem = nil, want saved poem")
+	}
+	if poemRepo.updatedPoem.GenreCategory != "诗" {
+		t.Fatalf("updated genre category = %q, want 诗", poemRepo.updatedPoem.GenreCategory)
+	}
+	if resp.GenreCategory != "诗" {
+		t.Fatalf("response genre category = %q, want 诗", resp.GenreCategory)
+	}
 }
 
 func TestGetPoemByIDReturnsAllPersistedAnnotations(t *testing.T) {
@@ -450,14 +621,21 @@ func TestCreatePoemSyncsAnnotationsWhenProvided(t *testing.T) {
 }
 
 type fakePoemRepository struct {
-	createCalls      int
-	createdAuthorID  uint64
-	createdDynastyID uint64
-	createdContent   []string
-	createdPingze    []string
-	updatedPoem      *models.Poem
-	existingPoem     *models.Poem
-	batchDeletedIDs  []uint64
+	createCalls          int
+	createdAuthorID      uint64
+	createdDynastyID     uint64
+	createdContent       []string
+	createdPingze        []string
+	createdGenreCategory string
+	updatedPoem          *models.Poem
+	existingPoem         *models.Poem
+	poemTypes            []models.PoemType
+	createdPoemType      *models.PoemType
+	poemTypeByID         *models.PoemType
+	updatedPoemType      *models.PoemType
+	deletedPoemTypeID    uint64
+	batchDeletedTypeIDs  []uint64
+	batchDeletedIDs      []uint64
 }
 
 func (r *fakePoemRepository) Create(poem *models.Poem) error {
@@ -466,6 +644,7 @@ func (r *fakePoemRepository) Create(poem *models.Poem) error {
 	r.createdDynastyID = poem.DynastyID
 	r.createdContent = append([]string(nil), poem.Content...)
 	r.createdPingze = append([]string(nil), poem.Pingze...)
+	r.createdGenreCategory = poem.GenreCategory
 	poem.ID = 1
 	return nil
 }
@@ -512,6 +691,41 @@ func (r *fakePoemRepository) GetRandom(limit int) ([]models.Poem, error) {
 
 func (r *fakePoemRepository) DistinctGenres() ([]string, error) {
 	return nil, nil
+}
+
+func (r *fakePoemRepository) ListPoemTypes() ([]models.PoemType, error) {
+	return r.poemTypes, nil
+}
+
+func (r *fakePoemRepository) CreatePoemType(poemType *models.PoemType) error {
+	copied := *poemType
+	copied.ID = 1
+	r.createdPoemType = &copied
+	poemType.ID = 1
+	return nil
+}
+
+func (r *fakePoemRepository) GetPoemTypeByID(id uint64) (*models.PoemType, error) {
+	if r.poemTypeByID != nil {
+		return r.poemTypeByID, nil
+	}
+	return nil, errors.New("not found")
+}
+
+func (r *fakePoemRepository) UpdatePoemType(poemType *models.PoemType) error {
+	copied := *poemType
+	r.updatedPoemType = &copied
+	return nil
+}
+
+func (r *fakePoemRepository) DeletePoemType(id uint64) error {
+	r.deletedPoemTypeID = id
+	return nil
+}
+
+func (r *fakePoemRepository) BatchDeletePoemTypes(ids []uint64) error {
+	r.batchDeletedTypeIDs = append([]uint64(nil), ids...)
+	return nil
 }
 
 type fakeDynastyRepository struct {
@@ -673,4 +887,21 @@ func assertUint64SliceEqual(t *testing.T, got []uint64, want []uint64) {
 			t.Fatalf("slice[%d] = %d, want %d; got %v", i, got[i], want[i], got)
 		}
 	}
+}
+
+func assertGenreCategory(t *testing.T, got dto.GenreCategoryResponse, wantName string, wantGenres []string) {
+	t.Helper()
+
+	if got.Name != wantName {
+		t.Fatalf("category name = %q, want %q", got.Name, wantName)
+	}
+	gotGenres := make([]string, 0, len(got.Genres))
+	for _, genre := range got.Genres {
+		gotGenres = append(gotGenres, genre.Name)
+	}
+	assertStringSliceEqual(t, gotGenres, wantGenres)
+}
+
+func intPtrForTest(value int) *int {
+	return &value
 }

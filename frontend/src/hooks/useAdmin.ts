@@ -14,6 +14,8 @@ import {
   type WorkCollectionItemUpdateRequest,
   type DynastyCreateRequest,
   type DynastyUpdateRequest,
+  type PoemTypeCreateRequest,
+  type PoemTypeUpdateRequest,
   type PoetCreateRequest,
   type PoetUpdateRequest,
   type AdminCreateUserRequest,
@@ -434,6 +436,80 @@ export function useAdminBatchDeleteDynasties() {
     onSuccess: (_, ids) => {
       toast.success(`已删除 ${ids.length} 个朝代`);
       queryClient.invalidateQueries({ queryKey: ['dynasties'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '批量删除失败');
+    },
+  });
+}
+
+// ─── Poem Type Admin ──────────────────────────────────────────────────────
+
+function invalidatePoemTypeQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ['admin', 'poemTypes'] });
+  queryClient.invalidateQueries({ queryKey: ['genres'] });
+  queryClient.invalidateQueries({ queryKey: ['genre-categories'] });
+  queryClient.invalidateQueries({ queryKey: ['poems'] });
+}
+
+export function useAdminPoemTypes() {
+  return useQuery({
+    queryKey: ['admin', 'poemTypes'],
+    queryFn: () => adminService.getPoemTypes(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useAdminCreatePoemType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PoemTypeCreateRequest) => adminService.createPoemType(data),
+    onSuccess: () => {
+      toast.success('体裁添加成功');
+      invalidatePoemTypeQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '添加失败');
+    },
+  });
+}
+
+export function useAdminUpdatePoemType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: AdminID; data: PoemTypeUpdateRequest }) =>
+      adminService.updatePoemType(id, data),
+    onSuccess: () => {
+      toast.success('体裁更新成功');
+      invalidatePoemTypeQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '更新失败');
+    },
+  });
+}
+
+export function useAdminDeletePoemType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: AdminID) => adminService.deletePoemType(id),
+    onSuccess: () => {
+      toast.success('体裁已删除');
+      invalidatePoemTypeQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '删除失败');
+    },
+  });
+}
+
+export function useAdminBatchDeletePoemTypes() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: AdminID[]) => adminService.batchDeletePoemTypes(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`已删除 ${ids.length} 个体裁`);
+      invalidatePoemTypeQueries(queryClient);
     },
     onError: (error: Error) => {
       toast.error(error.message || '批量删除失败');

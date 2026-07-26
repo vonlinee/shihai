@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Poem, Dynasty, Poet, PoemSearchParams } from '@/types';
+import type { Poem, Dynasty, Poet, PoemSearchParams, GenreCategory } from '@/types';
 
 export type PoemID = string | number;
 
@@ -55,5 +55,9 @@ export const poemService = {
 
   getGenres(): Promise<string[]> {
     return api.get<string[]>('/genres');
+  },
+
+  getGenreCategories(): Promise<GenreCategory[]> {
+    return api.get<GenreCategory[]>('/genre-categories');
   },
 };

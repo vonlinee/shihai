@@ -28,6 +28,12 @@ type poemRepository interface {
 	IncrementLikes(id uint64) error
 	GetRandom(limit int) ([]models.Poem, error)
 	DistinctGenres() ([]string, error)
+	ListPoemTypes() ([]models.PoemType, error)
+	CreatePoemType(poemType *models.PoemType) error
+	GetPoemTypeByID(id uint64) (*models.PoemType, error)
+	UpdatePoemType(poemType *models.PoemType) error
+	DeletePoemType(id uint64) error
+	BatchDeletePoemTypes(ids []uint64) error
 }
 
 type dynastyRepository interface {
@@ -128,17 +134,18 @@ func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse,
 	}
 
 	poem := &models.Poem{
-		Title:        req.Title,
-		Content:      req.Content,
-		Pingze:       pingze,
-		AuthorID:     authorID,
-		DynastyID:    dynastyID,
-		Genre:        req.Genre,
-		Translation:  req.Translation,
-		Appreciation: req.Appreciation,
-		Annotation:   req.Annotation,
-		AudioURL:     req.AudioURL,
-		CoverImage:   req.CoverImage,
+		Title:         req.Title,
+		Content:       req.Content,
+		Pingze:        pingze,
+		AuthorID:      authorID,
+		DynastyID:     dynastyID,
+		GenreCategory: s.resolveGenreCategory(req.GenreCategory, req.Genre),
+		Genre:         req.Genre,
+		Translation:   req.Translation,
+		Appreciation:  req.Appreciation,
+		Annotation:    req.Annotation,
+		AudioURL:      req.AudioURL,
+		CoverImage:    req.CoverImage,
 	}
 
 	if err := s.poemRepo.Create(poem); err != nil {
@@ -180,6 +187,11 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 	}
 	if req.DynastyID > 0 {
 		poem.DynastyID = uint64(req.DynastyID)
+	}
+	if req.GenreCategory != "" {
+		poem.GenreCategory = req.GenreCategory
+	} else if req.Genre != "" || (poem.GenreCategory == "" && poem.Genre != "") {
+		poem.GenreCategory = s.resolveGenreCategory("", firstNonEmpty(req.Genre, poem.Genre))
 	}
 	if req.Genre != "" {
 		poem.Genre = req.Genre
@@ -349,6 +361,156 @@ func (s *PoemService) GetPoetList(keyword string, dynastyID uint64, page, pageSi
 
 func (s *PoemService) GetGenreList() ([]string, error) {
 	return s.poemRepo.DistinctGenres()
+}
+
+func (s *PoemService) resolveGenreCategory(genreCategory, genre string) string {
+	genreCategory = strings.TrimSpace(genreCategory)
+	if genreCategory != "" {
+		return genreCategory
+	}
+	genre = strings.TrimSpace(genre)
+	if genre == "" {
+		return ""
+	}
+	poemTypes, err := s.poemRepo.ListPoemTypes()
+	if err != nil {
+		return ""
+	}
+	for _, poemType := range poemTypes {
+		if poemType.Name == genre {
+			category := strings.TrimSpace(poemType.Category)
+			if category == "" {
+				return "其他"
+			}
+			return category
+		}
+	}
+	return "其他"
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// GetGenreCategories returns poem genres grouped by top-level category.
+func (s *PoemService) GetGenreCategories() ([]dto.GenreCategoryResponse, error) {
+	poemTypes, err := s.poemRepo.ListPoemTypes()
+	if err != nil {
+		return nil, err
+	}
+	return toGenreCategoryResponses(poemTypes), nil
+}
+
+func toGenreCategoryResponses(poemTypes []models.PoemType) []dto.GenreCategoryResponse {
+	categories := make([]dto.GenreCategoryResponse, 0)
+	categoryIndexes := make(map[string]int)
+	for _, poemType := range poemTypes {
+		categoryName := strings.TrimSpace(poemType.Category)
+		if categoryName == "" {
+			categoryName = "其他"
+		}
+		categoryIndex, ok := categoryIndexes[categoryName]
+		if !ok {
+			categoryIndex = len(categories)
+			categoryIndexes[categoryName] = categoryIndex
+			categories = append(categories, dto.GenreCategoryResponse{Name: categoryName})
+		}
+		categories[categoryIndex].Genres = append(categories[categoryIndex].Genres, dto.GenreResponse{
+			Name:         poemType.Name,
+			Lines:        poemType.Lines,
+			CharsPerLine: poemType.CharsPerLine,
+			Description:  poemType.Description,
+		})
+	}
+	return categories
+}
+
+// GetPoemTypes returns poem type reference data for admin management.
+func (s *PoemService) GetPoemTypes() ([]dto.PoemTypeResponse, error) {
+	poemTypes, err := s.poemRepo.ListPoemTypes()
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]dto.PoemTypeResponse, 0, len(poemTypes))
+	for _, poemType := range poemTypes {
+		responses = append(responses, toPoemTypeResponse(&poemType))
+	}
+	return responses, nil
+}
+
+// CreatePoemType creates poem type reference data.
+func (s *PoemService) CreatePoemType(req *dto.PoemTypeCreateRequest) (*dto.PoemTypeResponse, error) {
+	poemType := &models.PoemType{
+		Name:         strings.TrimSpace(req.Name),
+		Category:     strings.TrimSpace(req.Category),
+		Lines:        req.Lines,
+		CharsPerLine: req.CharsPerLine,
+		Description:  req.Description,
+	}
+	if poemType.Name == "" {
+		return nil, errors.New("poem type name is required")
+	}
+	if poemType.Category == "" {
+		return nil, errors.New("poem type category is required")
+	}
+	if err := s.poemRepo.CreatePoemType(poemType); err != nil {
+		return nil, err
+	}
+	return responsePtr(toPoemTypeResponse(poemType)), nil
+}
+
+// UpdatePoemType updates poem type reference data.
+func (s *PoemService) UpdatePoemType(id uint64, req *dto.PoemTypeUpdateRequest) (*dto.PoemTypeResponse, error) {
+	poemType, err := s.poemRepo.GetPoemTypeByID(id)
+	if err != nil {
+		return nil, errors.New("poem type not found")
+	}
+	poemType.Name = strings.TrimSpace(req.Name)
+	poemType.Category = strings.TrimSpace(req.Category)
+	poemType.Lines = req.Lines
+	poemType.CharsPerLine = req.CharsPerLine
+	poemType.Description = req.Description
+	if poemType.Name == "" {
+		return nil, errors.New("poem type name is required")
+	}
+	if poemType.Category == "" {
+		return nil, errors.New("poem type category is required")
+	}
+	if err := s.poemRepo.UpdatePoemType(poemType); err != nil {
+		return nil, err
+	}
+	return responsePtr(toPoemTypeResponse(poemType)), nil
+}
+
+// DeletePoemType deletes poem type reference data.
+func (s *PoemService) DeletePoemType(id uint64) error {
+	return s.poemRepo.DeletePoemType(id)
+}
+
+// BatchDeletePoemTypes deletes poem type reference data by IDs.
+func (s *PoemService) BatchDeletePoemTypes(ids []uint64) error {
+	if err := validateBatchDeleteIDs(ids); err != nil {
+		return err
+	}
+	return s.poemRepo.BatchDeletePoemTypes(ids)
+}
+
+func toPoemTypeResponse(poemType *models.PoemType) dto.PoemTypeResponse {
+	return dto.PoemTypeResponse{
+		ID:           poemType.ID,
+		Name:         poemType.Name,
+		Category:     poemType.Category,
+		Lines:        poemType.Lines,
+		CharsPerLine: poemType.CharsPerLine,
+		Description:  poemType.Description,
+		CreatedAt:    poemType.CreatedAt,
+		UpdatedAt:    poemType.UpdatedAt,
+	}
 }
 
 func (s *PoemService) CreateDynasty(req *dto.DynastyCreateRequest) (*dto.DynastyResponse, error) {
@@ -552,24 +714,25 @@ func (s *PoemService) resolveAuthorID(reqAuthorID uint64, authorName string, dyn
 
 func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 	resp := &dto.PoemResponse{
-		ID:           poem.ID,
-		Title:        poem.Title,
-		Content:      poem.Content,
-		Pingze:       poetry.AlignPingzeLines(poem.Content, poem.Pingze),
-		AuthorID:     poem.AuthorID,
-		DynastyID:    poem.DynastyID,
-		Genre:        poem.Genre,
-		Translation:  poem.Translation,
-		Appreciation: poem.Appreciation,
-		Annotation:   poem.Annotation,
-		AudioURL:     poem.AudioURL,
-		CoverImage:   poem.CoverImage,
-		Views:        poem.Views,
-		Likes:        poem.Likes,
-		Dislikes:     poem.Dislikes,
-		Favorites:    poem.Favorites,
-		CreatedAt:    poem.CreatedAt,
-		UpdatedAt:    poem.UpdatedAt,
+		ID:            poem.ID,
+		Title:         poem.Title,
+		Content:       poem.Content,
+		Pingze:        poetry.AlignPingzeLines(poem.Content, poem.Pingze),
+		AuthorID:      poem.AuthorID,
+		DynastyID:     poem.DynastyID,
+		GenreCategory: poem.GenreCategory,
+		Genre:         poem.Genre,
+		Translation:   poem.Translation,
+		Appreciation:  poem.Appreciation,
+		Annotation:    poem.Annotation,
+		AudioURL:      poem.AudioURL,
+		CoverImage:    poem.CoverImage,
+		Views:         poem.Views,
+		Likes:         poem.Likes,
+		Dislikes:      poem.Dislikes,
+		Favorites:     poem.Favorites,
+		CreatedAt:     poem.CreatedAt,
+		UpdatedAt:     poem.UpdatedAt,
 	}
 
 	if poem.Author.ID > 0 {

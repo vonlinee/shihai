@@ -261,6 +261,7 @@ func setupRoutes(r *gin.Engine, app *App) {
 		api.GET("/dynasties", app.poemHandler.GetDynastyList)
 		api.GET("/poets", app.poemHandler.GetPoetList)
 		api.GET("/genres", app.poemHandler.GetGenreList)
+		api.GET("/genre-categories", app.poemHandler.GetGenreCategories)
 
 		// Announcements - Public
 		api.GET("/announcements", app.announcementHandler.GetAnnouncements)
@@ -338,6 +339,11 @@ func setupRoutes(r *gin.Engine, app *App) {
 			admin.PUT("/poems/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoem)
 			admin.DELETE("/poems", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.BatchDeletePoems)
 			admin.DELETE("/poems/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeletePoem)
+			admin.GET("/poem-types", app.rbacMiddleware.RequirePermission(models.PermPoemList), app.poemHandler.GetPoemTypes)
+			admin.POST("/poem-types", app.rbacMiddleware.RequirePermission(models.PermPoemCreate), app.poemHandler.CreatePoemType)
+			admin.PUT("/poem-types/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoemType)
+			admin.DELETE("/poem-types", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.BatchDeletePoemTypes)
+			admin.DELETE("/poem-types/:id", app.rbacMiddleware.RequirePermission(models.PermPoemDelete), app.poemHandler.DeletePoemType)
 			admin.GET("/poems/:id/annotations", app.rbacMiddleware.RequirePermission(models.PermPoemRead), app.poemHandler.GetPoemAnnotations)
 			admin.POST("/poems/:id/annotations", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.CreatePoemAnnotation)
 			admin.PUT("/poem-annotations/:id", app.rbacMiddleware.RequirePermission(models.PermPoemUpdate), app.poemHandler.UpdatePoemAnnotation)

@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const poemTypeDisplayOrder = "CASE category WHEN '诗' THEN 1 WHEN '词' THEN 2 WHEN '曲' THEN 3 WHEN '文' THEN 4 WHEN '其他' THEN 99 ELSE 90 END ASC, id ASC"
+
 type PoemRepository struct {
 	db *gorm.DB
 }
@@ -43,9 +45,47 @@ func (r *PoemRepository) ExistsByID(id uint64) (bool, error) {
 func (r *PoemRepository) DistinctGenres() ([]string, error) {
 	var genres []string
 	err := r.db.Model(&models.PoemType{}).
-		Order("id ASC").
+		Order(poemTypeDisplayOrder).
 		Pluck("name", &genres).Error
 	return genres, err
+}
+
+// ListPoemTypes returns poem type reference data in configured display order.
+func (r *PoemRepository) ListPoemTypes() ([]models.PoemType, error) {
+	var poemTypes []models.PoemType
+	err := r.db.Model(&models.PoemType{}).
+		Order(poemTypeDisplayOrder).
+		Find(&poemTypes).Error
+	return poemTypes, err
+}
+
+// CreatePoemType creates poem type reference data.
+func (r *PoemRepository) CreatePoemType(poemType *models.PoemType) error {
+	return r.db.Create(poemType).Error
+}
+
+// GetPoemTypeByID returns poem type reference data by ID.
+func (r *PoemRepository) GetPoemTypeByID(id uint64) (*models.PoemType, error) {
+	var poemType models.PoemType
+	if err := r.db.First(&poemType, id).Error; err != nil {
+		return nil, err
+	}
+	return &poemType, nil
+}
+
+// UpdatePoemType updates poem type reference data.
+func (r *PoemRepository) UpdatePoemType(poemType *models.PoemType) error {
+	return r.db.Save(poemType).Error
+}
+
+// DeletePoemType deletes poem type reference data by ID.
+func (r *PoemRepository) DeletePoemType(id uint64) error {
+	return r.db.Delete(&models.PoemType{}, id).Error
+}
+
+// BatchDeletePoemTypes deletes poem type reference data by IDs.
+func (r *PoemRepository) BatchDeletePoemTypes(ids []uint64) error {
+	return r.db.Where("id IN ?", ids).Delete(&models.PoemType{}).Error
 }
 
 // Update 更新诗词

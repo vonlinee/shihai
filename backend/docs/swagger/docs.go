@@ -2833,6 +2833,28 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/genre-categories": {
+            "get": {
+                "tags": [
+                    "诗词基础数据"
+                ],
+                "summary": "查询分层体裁列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/genres": {
             "get": {
                 "tags": [
@@ -4591,6 +4613,11 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50
                 },
+                "genreCategory": {
+                    "description": "GenreCategory 体裁一级分类，例如诗、词、曲、文。",
+                    "type": "string",
+                    "maxLength": 50
+                },
                 "pingze": {
                     "description": "Pingze 与 Content 每个文本元素对应的平仄标记，只允许平/仄/?。",
                     "type": "array",
@@ -4643,6 +4670,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "genre": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "genreCategory": {
+                    "description": "GenreCategory 体裁一级分类，例如诗、词、曲、文。",
                     "type": "string",
                     "maxLength": 50
                 },

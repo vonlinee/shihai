@@ -24,6 +24,8 @@ interface ComboboxProps {
   groupValue?: string | number | undefined
   onGroupChange?: (value: string | number, option: ComboboxOption) => void
   groupPlaceholder?: string
+  groupSelectedPlaceholder?: string
+  groupRequiredMessage?: string
 }
 
 export function Combobox({
@@ -43,6 +45,8 @@ export function Combobox({
   groupValue,
   onGroupChange,
   groupPlaceholder = '选择分类',
+  groupSelectedPlaceholder = '请选择分类',
+  groupRequiredMessage = '请先选择分类',
 }: ComboboxProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
@@ -56,7 +60,7 @@ export function Combobox({
 
   // Find the selected option label
   const selectedOption = options.find((o) => String(o.value) === String(value))
-  const displayValue = isCustom ? inputValue : (selectedOption?.label || '')
+  const displayValue = isCustom ? inputValue : (selectedOption?.label || (value !== undefined && value !== '' ? String(value) : ''))
 
   // Filter options by input
   const filteredOptions = useMemo(
@@ -231,12 +235,12 @@ export function Combobox({
               </div>
               <div className="min-w-0">
                 <div className="border-b px-3 py-2 text-xs text-muted-foreground">
-                  {selectedGroupOption?.label ?? '请选择朝代'}
+                  {selectedGroupOption?.label ?? groupSelectedPlaceholder}
                 </div>
                 {!groupValue ? (
                   <div className="flex flex-col items-center justify-center px-3 text-center text-sm text-muted-foreground" style={{ height: virtualListHeight - virtualItemHeight }}>
                     <SearchX className="mb-2 h-8 w-8 opacity-40" />
-                    <p>请先选择朝代</p>
+                    <p>{groupRequiredMessage}</p>
                   </div>
                 ) : isLoading && filteredOptions.length === 0 ? (
                   <div className="px-3 py-6 text-center text-sm text-muted-foreground">

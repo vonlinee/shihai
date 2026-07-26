@@ -45,3 +45,28 @@ func TestDistinctGenresUsesPoemTypeReferenceData(t *testing.T) {
 		t.Fatalf("DistinctGenres SQL = %q, should not depend on poem rows", got)
 	}
 }
+
+func TestListPoemTypesUsesPoemTypeReferenceData(t *testing.T) {
+	capture := &sqlCaptureLogger{Interface: logger.Discard}
+	db, err := gorm.Open(postgres.Open("host=localhost user=test dbname=test sslmode=disable"), &gorm.Config{
+		DryRun:               true,
+		DisableAutomaticPing: true,
+		Logger:               capture,
+	})
+	if err != nil {
+		t.Fatalf("open dry-run db: %v", err)
+	}
+	repo := NewPoemRepository(db)
+
+	if _, err := repo.ListPoemTypes(); err != nil {
+		t.Fatalf("ListPoemTypes error = %v, want nil", err)
+	}
+
+	got := strings.Join(capture.sql, "\n")
+	if !strings.Contains(got, `"poem_type"`) {
+		t.Fatalf("ListPoemTypes SQL = %q, want query poem_type reference table", got)
+	}
+	if strings.Contains(got, `"poem"`) {
+		t.Fatalf("ListPoemTypes SQL = %q, should not depend on poem rows", got)
+	}
+}

@@ -315,6 +315,150 @@ func (h *PoemHandler) GetGenreList(c *gin.Context) {
 	utils.Success(c, genres)
 }
 
+// GetGenreCategories 获取分层体裁列表
+// @Summary 查询分层体裁列表
+// @Tags 诗词基础数据
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/genre-categories [get]
+func (h *PoemHandler) GetGenreCategories(c *gin.Context) {
+	categories, err := h.poemService.GetGenreCategories()
+	if err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.Success(c, categories)
+}
+
+// GetPoemTypes 查询体裁管理列表
+// @Summary 查询体裁管理列表
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/admin/poem-types [get]
+func (h *PoemHandler) GetPoemTypes(c *gin.Context) {
+	poemTypes, err := h.poemService.GetPoemTypes()
+	if err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.Success(c, poemTypes)
+}
+
+// CreatePoemType 创建体裁
+// @Summary 创建体裁
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.PoemTypeCreateRequest true "体裁信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poem-types [post]
+func (h *PoemHandler) CreatePoemType(c *gin.Context) {
+	var req dto.PoemTypeCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	poemType, err := h.poemService.CreatePoemType(&req)
+	if err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.Success(c, poemType)
+}
+
+// UpdatePoemType 更新体裁
+// @Summary 更新体裁
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "体裁 ID"
+// @Param request body dto.PoemTypeUpdateRequest true "体裁信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poem-types/{id} [put]
+func (h *PoemHandler) UpdatePoemType(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid poem type id")
+		return
+	}
+
+	var req dto.PoemTypeUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	poemType, err := h.poemService.UpdatePoemType(id, &req)
+	if err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.Success(c, poemType)
+}
+
+// DeletePoemType 删除体裁
+// @Summary 删除体裁
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "体裁 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poem-types/{id} [delete]
+func (h *PoemHandler) DeletePoemType(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid poem type id")
+		return
+	}
+
+	if err := h.poemService.DeletePoemType(id); err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "poem type deleted successfully", nil)
+}
+
+// BatchDeletePoemTypes 批量删除体裁
+// @Summary 批量删除体裁
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.BatchDeleteRequest true "体裁 ID 列表"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/poem-types [delete]
+func (h *PoemHandler) BatchDeletePoemTypes(c *gin.Context) {
+	var req dto.BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.poemService.BatchDeletePoemTypes(req.IDs); err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "poem types deleted successfully", nil)
+}
+
 // CreateDynasty 创建朝代
 // @Summary 创建朝代
 // @Tags 后台基础数据

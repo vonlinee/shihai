@@ -92,6 +92,8 @@ export interface Poem {
   author?: Author;
   dynastyId: number;
   dynasty?: Dynasty;
+  /** 体裁一级分类，例如诗、词、曲、文。 */
+  genreCategory?: string;
   genre?: string;
   translation?: string;
   appreciation?: string;
@@ -104,6 +106,43 @@ export interface Poem {
   dislikes: number;
   favorites: number;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface Genre {
+  /** 细分类别名称，也是保存到诗词 genre 字段的值。 */
+  name: string;
+  /** 常见句数；未限定时为 null 或省略。 */
+  lines?: number | null;
+  /** 常见每句字数；未限定时为 null 或省略。 */
+  charsPerLine?: number | null;
+  /** 细分类别说明。 */
+  description?: string;
+}
+
+export interface GenreCategory {
+  /** 一级体裁大类名称，例如诗、词、曲、文。 */
+  name: string;
+  /** 当前大类下可选的细分类别。 */
+  genres: Genre[];
+}
+
+export interface PoemType {
+  /** 体裁 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 细分类别名称，也是保存到诗词 genre 字段的值。 */
+  name: string;
+  /** 一级分类，例如诗、词、曲、文。 */
+  category: string;
+  /** 常见句数；未限定时为 null 或省略。 */
+  lines?: number | null;
+  /** 常见每句字数；未限定时为 null 或省略。 */
+  charsPerLine?: number | null;
+  /** 体裁说明。 */
+  description?: string;
+  /** 创建时间，ISO 日期字符串。 */
+  createdAt: string;
+  /** 更新时间，ISO 日期字符串。 */
   updatedAt: string;
 }
 
