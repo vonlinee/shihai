@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest, ForumPost, PoemType } from '@/types';
+import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkCollectionItem, PoemAnnotation, CorrectionRequest, ForumPost, PoemType, CiTune } from '@/types';
 
 type AdminID = string | number;
 
@@ -40,6 +40,8 @@ export interface PoemCreateRequest {
   /** 体裁一级分类，例如诗、词、曲、文。 */
   genreCategory?: string;
   genre?: string;
+  /** 词牌 ID，仅词使用；未传时后端会按标题解析。 */
+  ciTuneId?: number | string;
   translation?: string;
   appreciation?: string;
   annotation?: string;
@@ -58,6 +60,8 @@ export interface PoemUpdateRequest {
   /** 体裁一级分类，例如诗、词、曲、文。 */
   genreCategory?: string;
   genre?: string;
+  /** 词牌 ID，仅词使用；传 0 可清空。 */
+  ciTuneId?: number | string;
   translation?: string;
   appreciation?: string;
   annotation?: string;
@@ -207,6 +211,35 @@ export interface PoemTypeUpdateRequest {
   charsPerLine?: number | null;
   /** 体裁说明。 */
   description?: string;
+}
+
+export interface CiTuneCreateRequest {
+  /** 词牌名，例如水调歌头、念奴娇。 */
+  name: string;
+  /** 词牌别名，用于同调异名和标题解析。 */
+  aliases?: string[];
+  /** 所属词体裁 ID，例如小令、中调、长调；未归类时省略。 */
+  poemTypeId?: number | string;
+  /** 词牌说明。 */
+  description?: string;
+}
+
+export interface CiTuneUpdateRequest {
+  /** 词牌名，例如水调歌头、念奴娇。 */
+  name: string;
+  /** 词牌别名，用于同调异名和标题解析。 */
+  aliases?: string[];
+  /** 所属词体裁 ID，例如小令、中调、长调；未归类时省略。 */
+  poemTypeId?: number | string;
+  /** 词牌说明。 */
+  description?: string;
+}
+
+export interface CiTuneTitleParseResponse {
+  /** 匹配到的词牌；未匹配时省略。 */
+  ciTune?: CiTune;
+  /** 实际命中的词牌名或别名。 */
+  matchedName: string;
 }
 
 export interface CorrectionListParams {
@@ -427,6 +460,31 @@ export const adminService = {
 
   batchDeletePoemTypes(ids: AdminID[]): Promise<void> {
     return api.delete<void>('/admin/poem-types', { ids });
+  },
+
+  // Ci tunes
+  getCiTunes(): Promise<CiTune[]> {
+    return api.get<CiTune[]>('/admin/ci-tunes');
+  },
+
+  createCiTune(data: CiTuneCreateRequest): Promise<CiTune> {
+    return api.post<CiTune>('/admin/ci-tunes', data);
+  },
+
+  updateCiTune(id: AdminID, data: CiTuneUpdateRequest): Promise<CiTune> {
+    return api.put<CiTune>(`/admin/ci-tunes/${id}`, data);
+  },
+
+  deleteCiTune(id: AdminID): Promise<void> {
+    return api.delete<void>(`/admin/ci-tunes/${id}`);
+  },
+
+  batchDeleteCiTunes(ids: AdminID[]): Promise<void> {
+    return api.delete<void>('/admin/ci-tunes', { ids });
+  },
+
+  parseCiTuneTitle(title: string): Promise<CiTuneTitleParseResponse> {
+    return api.post<CiTuneTitleParseResponse>('/admin/ci-tunes/parse-title', { title });
   },
 
   // Poets

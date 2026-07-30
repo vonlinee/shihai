@@ -49,6 +49,8 @@ type Poem struct {
 	Dynasty       Dynasty  `json:"dynasty,omitempty"`
 	GenreCategory string   `json:"genreCategory" gorm:"size:50;comment:体裁一级分类"`
 	Genre         string   `json:"genre" gorm:"size:50;comment:体裁"`
+	CiTuneID      *uint64  `json:"ciTuneId" gorm:"index;comment:词牌ID，仅词使用"`
+	CiTune        *CiTune  `json:"ciTune,omitempty" gorm:"foreignKey:CiTuneID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Translation   string   `json:"translation" gorm:"type:text;comment:译文"`
 	Appreciation  string   `json:"appreciation" gorm:"type:text;comment:赏析"`
 	Annotation    string   `json:"annotation" gorm:"type:text;comment:注释"`
@@ -63,6 +65,21 @@ type Poem struct {
 // TableName specifies the database table name.
 func (Poem) TableName() string {
 	return "poem"
+}
+
+// CiTune stores tune-pattern metadata for ci works.
+type CiTune struct {
+	BaseModel
+	Name        string    `json:"name" gorm:"not null;size:100;uniqueIndex;comment:词牌名"`
+	Aliases     []string  `json:"aliases" gorm:"serializer:json;type:jsonb;comment:词牌别名，用于同调异名和标题解析"`
+	PoemTypeID  *uint64   `json:"poemTypeId" gorm:"index;comment:所属词体裁ID，例如小令、中调、长调"`
+	PoemType    *PoemType `json:"poemType,omitempty" gorm:"foreignKey:PoemTypeID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Description string    `json:"description" gorm:"type:text;comment:词牌说明"`
+}
+
+// TableName specifies the database table name.
+func (CiTune) TableName() string {
+	return "ci_tune"
 }
 
 // PoemAnnotation stores administrator-maintained notes for a selected poem text range.

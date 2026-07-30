@@ -171,6 +171,294 @@
                 }
             }
         },
+        "/api/admin/ci-tunes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "查询词牌管理列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "创建词牌",
+                "parameters": [
+                    {
+                        "description": "词牌信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CiTuneCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "批量删除词牌",
+                "parameters": [
+                    {
+                        "description": "词牌 ID 列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BatchDeleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/ci-tunes/parse-title": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "根据标题解析词牌",
+                "parameters": [
+                    {
+                        "description": "标题信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CiTuneTitleParseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/ci-tunes/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "更新词牌",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "词牌 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "词牌信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CiTuneUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "删除词牌",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "词牌 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/admin/comments/all": {
             "get": {
                 "security": [
@@ -784,6 +1072,244 @@
                     {
                         "type": "string",
                         "description": "标注 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/poem-types": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "查询体裁管理列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "创建体裁",
+                "parameters": [
+                    {
+                        "description": "体裁信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PoemTypeCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "批量删除体裁",
+                "parameters": [
+                    {
+                        "description": "体裁 ID 列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BatchDeleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/poem-types/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "更新体裁",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "体裁 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "体裁信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PoemTypeUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "后台基础数据"
+                ],
+                "summary": "删除体裁",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "体裁 ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -4188,6 +4714,75 @@
                 }
             }
         },
+        "dto.CiTuneCreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "aliases": {
+                    "description": "Aliases 词牌别名，用于标题解析。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "description": "Description 词牌说明。",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name 词牌名，例如水调歌头、念奴娇。",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "poemTypeId": {
+                    "description": "PoemTypeID 所属词体裁 ID；0 表示未归类。",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CiTuneTitleParseRequest": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "title": {
+                    "description": "Title 诗词标题，通常以词牌名开头。",
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "dto.CiTuneUpdateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "aliases": {
+                    "description": "Aliases 词牌别名，用于标题解析。",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "description": "Description 词牌说明。",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name 词牌名，例如水调歌头、念奴娇。",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "poemTypeId": {
+                    "description": "PoemTypeID 所属词体裁 ID；0 表示未归类。",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.CommentCreateRequest": {
             "type": "object",
             "required": [
@@ -4590,6 +5185,10 @@
                 "authorName": {
                     "type": "string"
                 },
+                "ciTuneId": {
+                    "description": "CiTuneID 词牌 ID，仅当体裁一级分类为词时使用；未提供时可由标题解析。",
+                    "type": "integer"
+                },
                 "content": {
                     "type": "array",
                     "items": {
@@ -4631,6 +5230,68 @@
                 }
             }
         },
+        "dto.PoemTypeCreateRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "description": "Category 一级分类，例如诗、词、曲、文。",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "charsPerLine": {
+                    "description": "CharsPerLine 常见每句字数；nil 表示不限定。",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "Description 体裁说明。",
+                    "type": "string"
+                },
+                "lines": {
+                    "description": "Lines 常见句数；nil 表示不限定。",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "Name 细分类别名称，也是诗词保存到 genre 字段的值。",
+                    "type": "string",
+                    "maxLength": 50
+                }
+            }
+        },
+        "dto.PoemTypeUpdateRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "name"
+            ],
+            "properties": {
+                "category": {
+                    "description": "Category 一级分类，例如诗、词、曲、文。",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "charsPerLine": {
+                    "description": "CharsPerLine 常见每句字数；nil 表示不限定。",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "Description 体裁说明。",
+                    "type": "string"
+                },
+                "lines": {
+                    "description": "Lines 常见句数；nil 表示不限定。",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "Name 细分类别名称，也是诗词保存到 genre 字段的值。",
+                    "type": "string",
+                    "maxLength": 50
+                }
+            }
+        },
         "dto.PoemUpdateRequest": {
             "type": "object",
             "properties": {
@@ -4651,6 +5312,10 @@
                     "maxLength": 500
                 },
                 "authorId": {
+                    "type": "integer"
+                },
+                "ciTuneId": {
+                    "description": "CiTuneID 词牌 ID，nil 表示不主动覆盖，0 表示清空。",
                     "type": "integer"
                 },
                 "content": {

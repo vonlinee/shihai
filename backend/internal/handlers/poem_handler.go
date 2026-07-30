@@ -459,6 +459,160 @@ func (h *PoemHandler) BatchDeletePoemTypes(c *gin.Context) {
 	utils.SuccessWithMessage(c, "poem types deleted successfully", nil)
 }
 
+// GetCiTunes 查询词牌管理列表
+// @Summary 查询词牌管理列表
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/admin/ci-tunes [get]
+func (h *PoemHandler) GetCiTunes(c *gin.Context) {
+	ciTunes, err := h.poemService.GetCiTunes()
+	if err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.Success(c, ciTunes)
+}
+
+// CreateCiTune 创建词牌
+// @Summary 创建词牌
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.CiTuneCreateRequest true "词牌信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/ci-tunes [post]
+func (h *PoemHandler) CreateCiTune(c *gin.Context) {
+	var req dto.CiTuneCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	ciTune, err := h.poemService.CreateCiTune(&req)
+	if err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.Success(c, ciTune)
+}
+
+// UpdateCiTune 更新词牌
+// @Summary 更新词牌
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "词牌 ID"
+// @Param request body dto.CiTuneUpdateRequest true "词牌信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/ci-tunes/{id} [put]
+func (h *PoemHandler) UpdateCiTune(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid ci tune id")
+		return
+	}
+
+	var req dto.CiTuneUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	ciTune, err := h.poemService.UpdateCiTune(id, &req)
+	if err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.Success(c, ciTune)
+}
+
+// DeleteCiTune 删除词牌
+// @Summary 删除词牌
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param id path string true "词牌 ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/ci-tunes/{id} [delete]
+func (h *PoemHandler) DeleteCiTune(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid ci tune id")
+		return
+	}
+
+	if err := h.poemService.DeleteCiTune(id); err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "ci tune deleted successfully", nil)
+}
+
+// BatchDeleteCiTunes 批量删除词牌
+// @Summary 批量删除词牌
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.BatchDeleteRequest true "词牌 ID 列表"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/ci-tunes [delete]
+func (h *PoemHandler) BatchDeleteCiTunes(c *gin.Context) {
+	var req dto.BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.poemService.BatchDeleteCiTunes(req.IDs); err != nil {
+		utils.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "ci tunes deleted successfully", nil)
+}
+
+// ParseCiTuneTitle 根据标题解析词牌
+// @Summary 根据标题解析词牌
+// @Tags 后台基础数据
+// @Security BearerAuth
+// @Param request body dto.CiTuneTitleParseRequest true "标题信息"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Router /api/admin/ci-tunes/parse-title [post]
+func (h *PoemHandler) ParseCiTuneTitle(c *gin.Context) {
+	var req dto.CiTuneTitleParseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.poemService.ParseCiTuneTitle(req.Title)
+	if err != nil {
+		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	utils.Success(c, result)
+}
+
 // CreateDynasty 创建朝代
 // @Summary 创建朝代
 // @Tags 后台基础数据

@@ -18,7 +18,9 @@ import {
   useAdminBatchDeletePoems,
   useAdminConvertTexts,
   useAdminCreatePoem,
+  useAdminCiTunes,
   useAdminDeletePoem,
+  useAdminParseCiTuneTitle,
   useAdminPoemAnnotations,
   useAdminRecognizePingze,
   useAdminUpdatePoem,
@@ -51,6 +53,7 @@ type PoemFormData = {
   dynastyName?: string
   genreCategory?: string
   genre: string | number | undefined
+  ciTuneId?: string
   translation: string
   appreciation: string
   annotation: string
@@ -245,6 +248,8 @@ export function PoemsTab() {
   const [selectedPoemIds, setSelectedPoemIds] = useState<string[]>([])
   const [poetSearchKeyword, setPoetSearchKeyword] = useState('')
   const [debouncedPoetSearchKeyword, setDebouncedPoetSearchKeyword] = useState('')
+  const [isCiTuneManuallySelected, setIsCiTuneManuallySelected] = useState(false)
+  const [lastParsedCiTuneTitle, setLastParsedCiTuneTitle] = useState('')
 
   const { data: poemData, isFetching: isPoemsFetching } = usePoems({ keyword: searchQuery || undefined, page, pageSize })
   const editingAnnotationPoemId = showPoemDialog && editingPoemId ? editingPoemId : null
@@ -257,6 +262,7 @@ export function PoemsTab() {
     pageSize: POET_SELECT_PAGE_SIZE,
   }, { enabled: showPoemDialog && Boolean(formData.dynastyId) })
   const { data: genreCategories } = useGenreCategories()
+  const { data: ciTunes, isLoading: isCiTunesLoading } = useAdminCiTunes()
 
   const dynastyOptions: ComboboxOption[] = useMemo(
     () => (dynasties ?? []).map((d) => ({ value: String(d.id), label: d.name, description: d.period })),
@@ -280,6 +286,7 @@ export function PoemsTab() {
     [genreCategories],
   )
   const selectedGenreCategory = formData.genreCategory || findGenreCategoryName(genreCategories, formData.genre)
+  const isCiSelected = selectedGenreCategory === '词'
   const selectedGenreCategoryData = useMemo(
     () => (genreCategories ?? []).find((category) => category.name === selectedGenreCategory),
     [genreCategories, selectedGenreCategory],
@@ -296,6 +303,14 @@ export function PoemsTab() {
     }
     return options
   }, [formData.genre, selectedGenreCategory, selectedGenreCategoryData?.genres])
+  const ciTuneOptions: ComboboxOption[] = useMemo(
+    () => (ciTunes ?? []).map((ciTune) => ({
+      value: ciTune.id,
+      label: ciTune.name,
+      description: ciTune.poemType?.name,
+    })),
+    [ciTunes],
+  )
 
   const deletePoemMutation = useAdminDeletePoem()
   const batchDeletePoemsMutation = useAdminBatchDeletePoems()
@@ -303,6 +318,8 @@ export function PoemsTab() {
   const updatePoemMutation = useAdminUpdatePoem()
   const convertTextsMutation = useAdminConvertTexts()
   const recognizePingzeMutation = useAdminRecognizePingze()
+  const parseCiTuneTitleMutation = useAdminParseCiTuneTitle()
+  const parseCiTuneTitle = parseCiTuneTitleMutation.mutate
   const { confirm, ConfirmDialog } = useConfirmDialog()
   const poems = poemData?.list ?? []
   const total = poemData?.total ?? 0
@@ -340,6 +357,54 @@ export function PoemsTab() {
     }
   }, [showPoemDialog])
 
+  useEffect(() => {
+    if (!showPoemDialog) return
+    if (isCiSelected) return
+
+    setIsCiTuneManuallySelected(false)
+    setLastParsedCiTuneTitle('')
+    setFormData((current) => {
+      if (!current.ciTuneId) return current
+      return { ...current, ciTuneId: undefined }
+    })
+  }, [isCiSelected, showPoemDialog])
+
+  useEffect(() => {
+    if (!showPoemDialog || !isCiSelected || isCiTuneManuallySelected) return
+
+    const title = formData.title.trim()
+    if (!title) {
+      setLastParsedCiTuneTitle('')
+      setFormData((current) => current.ciTuneId ? { ...current, ciTuneId: undefined } : current)
+      return
+    }
+    if (title === lastParsedCiTuneTitle) return
+
+    const timer = window.setTimeout(() => {
+      parseCiTuneTitle(title, {
+        onSuccess: (response) => {
+          setLastParsedCiTuneTitle(title)
+          setFormData((current) => {
+            if (current.title.trim() !== title) return current
+            const nextCiTuneId = response.ciTune?.id
+            return current.ciTuneId === nextCiTuneId
+              ? current
+              : { ...current, ciTuneId: nextCiTuneId }
+          })
+        },
+      })
+    }, 300)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    formData.title,
+    isCiSelected,
+    isCiTuneManuallySelected,
+    lastParsedCiTuneTitle,
+    parseCiTuneTitle,
+    showPoemDialog,
+  ])
+
   const handleDelete = useCallback(async (id: string) => {
     const confirmed = await confirm({
       title: '删除诗词',
@@ -376,6 +441,8 @@ export function PoemsTab() {
     setAnnotationDraftSourceId(null)
     setPoetSearchKeyword('')
     setDebouncedPoetSearchKeyword('')
+    setIsCiTuneManuallySelected(false)
+    setLastParsedCiTuneTitle('')
     setShowPoemDialog(true)
   }
 
@@ -391,6 +458,7 @@ export function PoemsTab() {
       dynastyName: poem.dynasty?.name,
       genreCategory: poem.genreCategory || findGenreCategoryName(genreCategories, poem.genre),
       genre: poem.genre || '',
+      ciTuneId: poem.ciTuneId,
       translation: poem.translation || '',
       appreciation: poem.appreciation || '',
       annotation: poem.annotation || '',
@@ -399,6 +467,8 @@ export function PoemsTab() {
     setAnnotationDraftSourceId(null)
     setPoetSearchKeyword('')
     setDebouncedPoetSearchKeyword('')
+    setIsCiTuneManuallySelected(Boolean(poem.ciTuneId))
+    setLastParsedCiTuneTitle(poem.title.trim())
     setShowPoemDialog(true)
   }, [genreCategories])
 
@@ -409,6 +479,8 @@ export function PoemsTab() {
     setAnnotationDraftSourceId(null)
     setPoetSearchKeyword('')
     setDebouncedPoetSearchKeyword('')
+    setIsCiTuneManuallySelected(false)
+    setLastParsedCiTuneTitle('')
     setShowPoemDialog(false)
   }
 
@@ -427,6 +499,7 @@ export function PoemsTab() {
     if (annotations.length > 0) payload.annotations = annotations
     if (formData.dynastyName) payload.dynastyName = formData.dynastyName
     if (formData.authorName) payload.authorName = formData.authorName
+    if (isCiSelected && formData.ciTuneId) payload.ciTuneId = formData.ciTuneId
     return payload
   }
 
@@ -442,6 +515,7 @@ export function PoemsTab() {
       annotations: toPoemAnnotationPayloads(annotationDrafts),
     }
     if (hasPoemPingzeInput(formData.pingze)) payload.pingze = splitPoemPingzeInput(formData.pingze)
+    if (isCiSelected) payload.ciTuneId = formData.ciTuneId || 0
     const dynastyId = toPoemUpdateId(formData.dynastyId)
     const authorId = toPoemUpdateId(formData.authorId)
     if (dynastyId) payload.dynastyId = dynastyId
@@ -618,6 +692,13 @@ export function PoemsTab() {
         meta: { filterPlaceholder: '筛选体裁', width: 140 },
       },
       {
+        accessorFn: (poem) => poem.ciTune?.name ?? '',
+        id: 'ciTune',
+        header: '词牌',
+        cell: ({ row }) => row.original.ciTune?.name ?? '-',
+        meta: { filterPlaceholder: '筛选词牌', width: 160 },
+      },
+      {
         accessorKey: 'views',
         header: '浏览量',
         meta: { align: 'center', width: 120 },
@@ -715,14 +796,24 @@ export function PoemsTab() {
             <form onSubmit={handlePoemSubmit} className="space-y-4 p-6 pt-4 overflow-y-auto">
               <div className="flex items-center gap-3">
                 <label htmlFor="poem-title" className="shrink-0 text-sm font-medium">标题 *</label>
-                <Input id="poem-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="诗词标题" required />
+                <Input
+                  id="poem-title"
+                  value={formData.title}
+                  onChange={(e) => {
+                    setFormData({ ...formData, title: e.target.value })
+                    setIsCiTuneManuallySelected(false)
+                    setLastParsedCiTuneTitle('')
+                  }}
+                  placeholder="诗词标题"
+                  required
+                />
                 <ChineseVariantToggle
                   disabled={!formData.title.trim()}
                   isLoading={convertingTarget === 'title'}
                   onChange={(_, mode) => handleConvertPoemTextField('title', mode)}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className={`grid gap-4 ${isCiSelected ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">体裁</label>
                   <Combobox
@@ -736,9 +827,30 @@ export function PoemsTab() {
                     groupPlaceholder="体裁大类"
                     groupSelectedPlaceholder="请选择细分类别"
                     groupRequiredMessage="请先选择体裁大类"
-                    onGroupChange={(val) => setFormData({ ...formData, genreCategory: String(val), genre: '' })}
+                    onGroupChange={(val) => {
+                      setFormData({ ...formData, genreCategory: String(val), genre: '', ciTuneId: undefined })
+                      setIsCiTuneManuallySelected(false)
+                      setLastParsedCiTuneTitle('')
+                    }}
                   />
                 </div>
+                {isCiSelected && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">词牌</label>
+                    <Combobox
+                      options={ciTuneOptions}
+                      value={formData.ciTuneId}
+                      onChange={(val) => {
+                        setFormData({ ...formData, ciTuneId: val ? String(val) : undefined })
+                        setIsCiTuneManuallySelected(Boolean(val))
+                      }}
+                      placeholder={parseCiTuneTitleMutation.isPending ? '正在根据标题解析...' : '选择词牌'}
+                      allowCustom={false}
+                      isLoading={isCiTunesLoading || parseCiTuneTitleMutation.isPending}
+                      virtualListHeight={240}
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">作者</label>
                   <Combobox options={poetOptions} value={formData.authorId}

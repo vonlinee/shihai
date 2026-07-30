@@ -2,7 +2,9 @@ package services
 
 import (
 	"errors"
+	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"shihai/internal/dto"
 	"shihai/internal/models"
@@ -34,6 +36,12 @@ type poemRepository interface {
 	UpdatePoemType(poemType *models.PoemType) error
 	DeletePoemType(id uint64) error
 	BatchDeletePoemTypes(ids []uint64) error
+	ListCiTunes() ([]models.CiTune, error)
+	CreateCiTune(ciTune *models.CiTune) error
+	GetCiTuneByID(id uint64) (*models.CiTune, error)
+	UpdateCiTune(ciTune *models.CiTune) error
+	DeleteCiTune(id uint64) error
+	BatchDeleteCiTunes(ids []uint64) error
 }
 
 type dynastyRepository interface {
@@ -133,14 +141,20 @@ func (s *PoemService) CreatePoem(req *dto.PoemCreateRequest) (*dto.PoemResponse,
 		return nil, err
 	}
 
+	genreCategory := s.resolveGenreCategory(req.GenreCategory, req.Genre)
+	ciTuneID, err := s.resolveCiTuneID(uint64(req.CiTuneID), req.Title, genreCategory)
+	if err != nil {
+		return nil, err
+	}
 	poem := &models.Poem{
 		Title:         req.Title,
 		Content:       req.Content,
 		Pingze:        pingze,
 		AuthorID:      authorID,
 		DynastyID:     dynastyID,
-		GenreCategory: s.resolveGenreCategory(req.GenreCategory, req.Genre),
+		GenreCategory: genreCategory,
 		Genre:         req.Genre,
+		CiTuneID:      ciTuneID,
 		Translation:   req.Translation,
 		Appreciation:  req.Appreciation,
 		Annotation:    req.Annotation,
@@ -210,6 +224,26 @@ func (s *PoemService) UpdatePoem(id uint64, req *dto.PoemUpdateRequest) (*dto.Po
 	}
 	if req.CoverImage != "" {
 		poem.CoverImage = req.CoverImage
+	}
+	if isCiCategory(poem.GenreCategory) {
+		if req.CiTuneID != nil {
+			ciTuneID, err := s.resolveCiTuneID(uint64(*req.CiTuneID), poem.Title, poem.GenreCategory)
+			if err != nil {
+				return nil, err
+			}
+			poem.CiTuneID = ciTuneID
+			poem.CiTune = nil
+		} else if poem.CiTuneID == nil {
+			ciTuneID, err := s.resolveCiTuneID(0, poem.Title, poem.GenreCategory)
+			if err != nil {
+				return nil, err
+			}
+			poem.CiTuneID = ciTuneID
+			poem.CiTune = nil
+		}
+	} else {
+		poem.CiTuneID = nil
+		poem.CiTune = nil
 	}
 
 	if err := s.poemRepo.Update(poem); err != nil {
@@ -513,6 +547,160 @@ func toPoemTypeResponse(poemType *models.PoemType) dto.PoemTypeResponse {
 	}
 }
 
+// GetCiTunes returns ci tune reference data for admin management.
+func (s *PoemService) GetCiTunes() ([]dto.CiTuneResponse, error) {
+	ciTunes, err := s.poemRepo.ListCiTunes()
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]dto.CiTuneResponse, 0, len(ciTunes))
+	for _, ciTune := range ciTunes {
+		responses = append(responses, toCiTuneResponse(&ciTune))
+	}
+	return responses, nil
+}
+
+// CreateCiTune creates ci tune reference data.
+func (s *PoemService) CreateCiTune(req *dto.CiTuneCreateRequest) (*dto.CiTuneResponse, error) {
+	poemTypeID, err := s.resolveCiTunePoemTypeID(uint64(req.PoemTypeID))
+	if err != nil {
+		return nil, err
+	}
+	ciTune := &models.CiTune{
+		Name:        strings.TrimSpace(req.Name),
+		Aliases:     normalizeCiTuneAliases(req.Aliases),
+		PoemTypeID:  poemTypeID,
+		Description: req.Description,
+	}
+	if ciTune.Name == "" {
+		return nil, errors.New("ci tune name is required")
+	}
+	if err := s.poemRepo.CreateCiTune(ciTune); err != nil {
+		return nil, err
+	}
+	if ciTune.PoemTypeID != nil {
+		if poemType, err := s.poemRepo.GetPoemTypeByID(*ciTune.PoemTypeID); err == nil {
+			ciTune.PoemType = poemType
+		}
+	}
+	return responsePtr(toCiTuneResponse(ciTune)), nil
+}
+
+// UpdateCiTune updates ci tune reference data.
+func (s *PoemService) UpdateCiTune(id uint64, req *dto.CiTuneUpdateRequest) (*dto.CiTuneResponse, error) {
+	ciTune, err := s.poemRepo.GetCiTuneByID(id)
+	if err != nil {
+		return nil, errors.New("ci tune not found")
+	}
+	poemTypeID, err := s.resolveCiTunePoemTypeID(uint64(req.PoemTypeID))
+	if err != nil {
+		return nil, err
+	}
+	ciTune.Name = strings.TrimSpace(req.Name)
+	ciTune.Aliases = normalizeCiTuneAliases(req.Aliases)
+	ciTune.PoemTypeID = poemTypeID
+	ciTune.PoemType = nil
+	ciTune.Description = req.Description
+	if ciTune.Name == "" {
+		return nil, errors.New("ci tune name is required")
+	}
+	if err := s.poemRepo.UpdateCiTune(ciTune); err != nil {
+		return nil, err
+	}
+	if ciTune.PoemTypeID != nil {
+		if poemType, err := s.poemRepo.GetPoemTypeByID(*ciTune.PoemTypeID); err == nil {
+			ciTune.PoemType = poemType
+		}
+	}
+	return responsePtr(toCiTuneResponse(ciTune)), nil
+}
+
+// DeleteCiTune deletes ci tune reference data.
+func (s *PoemService) DeleteCiTune(id uint64) error {
+	return s.poemRepo.DeleteCiTune(id)
+}
+
+// BatchDeleteCiTunes deletes ci tune reference data by IDs.
+func (s *PoemService) BatchDeleteCiTunes(ids []uint64) error {
+	if err := validateBatchDeleteIDs(ids); err != nil {
+		return err
+	}
+	return s.poemRepo.BatchDeleteCiTunes(ids)
+}
+
+// ParseCiTuneTitle parses a poem title and returns the matched ci tune.
+func (s *PoemService) ParseCiTuneTitle(title string) (*dto.CiTuneTitleParseResponse, error) {
+	ciTunes, err := s.poemRepo.ListCiTunes()
+	if err != nil {
+		return nil, err
+	}
+	ciTune, matchedName := findCiTuneByTitle(title, ciTunes)
+	if ciTune == nil {
+		return &dto.CiTuneTitleParseResponse{}, nil
+	}
+	response := toCiTuneResponse(ciTune)
+	return &dto.CiTuneTitleParseResponse{
+		CiTune:      &response,
+		MatchedName: matchedName,
+	}, nil
+}
+
+func (s *PoemService) resolveCiTuneID(reqCiTuneID uint64, title, genreCategory string) (*uint64, error) {
+	if !isCiCategory(genreCategory) {
+		return nil, nil
+	}
+	if reqCiTuneID > 0 {
+		if _, err := s.poemRepo.GetCiTuneByID(reqCiTuneID); err != nil {
+			return nil, errors.New("ci tune not found")
+		}
+		return &reqCiTuneID, nil
+	}
+	ciTunes, err := s.poemRepo.ListCiTunes()
+	if err != nil {
+		return nil, err
+	}
+	ciTune, _ := findCiTuneByTitle(title, ciTunes)
+	if ciTune == nil {
+		return nil, nil
+	}
+	return &ciTune.ID, nil
+}
+
+func (s *PoemService) resolveCiTunePoemTypeID(reqPoemTypeID uint64) (*uint64, error) {
+	if reqPoemTypeID == 0 {
+		return nil, nil
+	}
+	poemType, err := s.poemRepo.GetPoemTypeByID(reqPoemTypeID)
+	if err != nil {
+		return nil, errors.New("poem type not found")
+	}
+	if !isCiCategory(poemType.Category) {
+		return nil, errors.New("ci tune poem type must belong to ci category")
+	}
+	return &reqPoemTypeID, nil
+}
+
+func toCiTuneResponse(ciTune *models.CiTune) dto.CiTuneResponse {
+	aliases := append([]string(nil), ciTune.Aliases...)
+	if aliases == nil {
+		aliases = []string{}
+	}
+	response := dto.CiTuneResponse{
+		ID:          ciTune.ID,
+		Name:        ciTune.Name,
+		Aliases:     aliases,
+		PoemTypeID:  ciTune.PoemTypeID,
+		Description: ciTune.Description,
+		CreatedAt:   ciTune.CreatedAt,
+		UpdatedAt:   ciTune.UpdatedAt,
+	}
+	if ciTune.PoemType != nil && ciTune.PoemType.ID > 0 {
+		poemType := toPoemTypeResponse(ciTune.PoemType)
+		response.PoemType = &poemType
+	}
+	return response
+}
+
 func (s *PoemService) CreateDynasty(req *dto.DynastyCreateRequest) (*dto.DynastyResponse, error) {
 	dynasty := &models.Dynasty{
 		Name:        req.Name,
@@ -722,6 +910,7 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 		DynastyID:     poem.DynastyID,
 		GenreCategory: poem.GenreCategory,
 		Genre:         poem.Genre,
+		CiTuneID:      poem.CiTuneID,
 		Translation:   poem.Translation,
 		Appreciation:  poem.Appreciation,
 		Annotation:    poem.Annotation,
@@ -750,6 +939,10 @@ func (s *PoemService) toPoemResponse(poem *models.Poem) *dto.PoemResponse {
 			Period:      poem.Dynasty.Period,
 			Description: poem.Dynasty.Description,
 		}
+	}
+	if poem.CiTune != nil && poem.CiTune.ID > 0 {
+		ciTune := toCiTuneResponse(poem.CiTune)
+		resp.CiTune = &ciTune
 	}
 	return resp
 }
@@ -791,6 +984,77 @@ func (s *PoemService) toPoetResponse(poet *models.Poet) dto.PoetResponse {
 
 func responsePtr[T any](value T) *T {
 	return &value
+}
+
+func isCiCategory(category string) bool {
+	return strings.TrimSpace(category) == "词"
+}
+
+func normalizeCiTuneAliases(aliases []string) []string {
+	normalized := make([]string, 0, len(aliases))
+	seen := make(map[string]struct{}, len(aliases))
+	for _, alias := range aliases {
+		alias = strings.TrimSpace(alias)
+		if alias == "" {
+			continue
+		}
+		if _, ok := seen[alias]; ok {
+			continue
+		}
+		seen[alias] = struct{}{}
+		normalized = append(normalized, alias)
+	}
+	return normalized
+}
+
+func findCiTuneByTitle(title string, ciTunes []models.CiTune) (*models.CiTune, string) {
+	normalizedTitle := normalizeCiTuneTitle(title)
+	if normalizedTitle == "" {
+		return nil, ""
+	}
+
+	type candidate struct {
+		ciTune *models.CiTune
+		name   string
+	}
+	candidates := make([]candidate, 0, len(ciTunes))
+	for i := range ciTunes {
+		names := append([]string{ciTunes[i].Name}, ciTunes[i].Aliases...)
+		for _, name := range names {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			candidates = append(candidates, candidate{ciTune: &ciTunes[i], name: name})
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return utf8.RuneCountInString(candidates[i].name) > utf8.RuneCountInString(candidates[j].name)
+	})
+	for _, item := range candidates {
+		if hasCiTuneTitlePrefix(normalizedTitle, item.name) {
+			return item.ciTune, item.name
+		}
+	}
+	return nil, ""
+}
+
+func normalizeCiTuneTitle(title string) string {
+	title = strings.TrimSpace(title)
+	title = strings.Trim(title, "《》〈〉「」『』“”\"'")
+	return strings.TrimSpace(title)
+}
+
+func hasCiTuneTitlePrefix(title, name string) bool {
+	if !strings.HasPrefix(title, name) {
+		return false
+	}
+	remainder := strings.TrimPrefix(title, name)
+	if remainder == "" {
+		return true
+	}
+	firstRune, _ := utf8.DecodeRuneInString(remainder)
+	return strings.ContainsRune("·・ 　:：-—_，,。.", firstRune)
 }
 
 func validateBatchDeleteIDs(ids []uint64) error {

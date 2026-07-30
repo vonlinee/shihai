@@ -26,6 +26,7 @@ type PoemCreateRequest struct {
 	DynastyName   string                         `json:"dynastyName"`
 	GenreCategory string                         `json:"genreCategory" binding:"max=50"` // GenreCategory 体裁一级分类，例如诗、词、曲、文。
 	Genre         string                         `json:"genre" binding:"max=50"`
+	CiTuneID      RequestID                      `json:"ciTuneId"` // CiTuneID 词牌 ID，仅当体裁一级分类为词时使用；未提供时可由标题解析。
 	Translation   string                         `json:"translation"`
 	Appreciation  string                         `json:"appreciation"`
 	Annotation    string                         `json:"annotation"`
@@ -42,6 +43,7 @@ type PoemUpdateRequest struct {
 	DynastyID     RequestID                      `json:"dynastyId"`
 	GenreCategory string                         `json:"genreCategory" binding:"max=50"` // GenreCategory 体裁一级分类，例如诗、词、曲、文。
 	Genre         string                         `json:"genre" binding:"max=50"`
+	CiTuneID      *RequestID                     `json:"ciTuneId"` // CiTuneID 词牌 ID，nil 表示不主动覆盖，0 表示清空。
 	Translation   string                         `json:"translation"`
 	Appreciation  string                         `json:"appreciation"`
 	Annotation    string                         `json:"annotation"`
@@ -132,6 +134,8 @@ type PoemResponse struct {
 	Dynasty       DynastyResponse          `json:"dynasty,omitempty"`
 	GenreCategory string                   `json:"genreCategory"` // GenreCategory 体裁一级分类，例如诗、词、曲、文。
 	Genre         string                   `json:"genre"`
+	CiTuneID      *uint64                  `json:"ciTuneId,string,omitempty"` // CiTuneID 词牌 ID，仅词可能存在。
+	CiTune        *CiTuneResponse          `json:"ciTune,omitempty"`          // CiTune 词牌摘要，仅词可能存在。
 	Translation   string                   `json:"translation"`
 	Appreciation  string                   `json:"appreciation"`
 	Annotation    string                   `json:"annotation"`
@@ -188,6 +192,45 @@ type PoemTypeUpdateRequest struct {
 	Lines        *int   `json:"lines"`                              // Lines 常见句数；nil 表示不限定。
 	CharsPerLine *int   `json:"charsPerLine"`                       // CharsPerLine 常见每句字数；nil 表示不限定。
 	Description  string `json:"description"`                        // Description 体裁说明。
+}
+
+// CiTuneResponse describes ci tune reference data for admin management and poem editing.
+type CiTuneResponse struct {
+	ID          uint64            `json:"id,string"`                   // ID 词牌的 Snowflake 主键，对外序列化为字符串。
+	Name        string            `json:"name"`                        // Name 词牌名，例如水调歌头、念奴娇。
+	Aliases     []string          `json:"aliases"`                     // Aliases 词牌别名，用于兼容同调异名和标题解析。
+	PoemTypeID  *uint64           `json:"poemTypeId,string,omitempty"` // PoemTypeID 所属词体裁 ID，例如小令、中调、长调；nil 表示未归类。
+	PoemType    *PoemTypeResponse `json:"poemType,omitempty"`          // PoemType 所属词体裁摘要。
+	Description string            `json:"description"`                 // Description 词牌说明。
+	CreatedAt   time.Time         `json:"createdAt"`                   // CreatedAt 创建时间。
+	UpdatedAt   time.Time         `json:"updatedAt"`                   // UpdatedAt 更新时间。
+}
+
+// CiTuneCreateRequest describes the payload for creating ci tune reference data.
+type CiTuneCreateRequest struct {
+	Name        string    `json:"name" binding:"required,max=100"` // Name 词牌名，例如水调歌头、念奴娇。
+	Aliases     []string  `json:"aliases"`                         // Aliases 词牌别名，用于标题解析。
+	PoemTypeID  RequestID `json:"poemTypeId"`                      // PoemTypeID 所属词体裁 ID；0 表示未归类。
+	Description string    `json:"description"`                     // Description 词牌说明。
+}
+
+// CiTuneUpdateRequest describes the full replacement payload for ci tune reference data.
+type CiTuneUpdateRequest struct {
+	Name        string    `json:"name" binding:"required,max=100"` // Name 词牌名，例如水调歌头、念奴娇。
+	Aliases     []string  `json:"aliases"`                         // Aliases 词牌别名，用于标题解析。
+	PoemTypeID  RequestID `json:"poemTypeId"`                      // PoemTypeID 所属词体裁 ID；0 表示未归类。
+	Description string    `json:"description"`                     // Description 词牌说明。
+}
+
+// CiTuneTitleParseRequest describes a title to parse into a ci tune.
+type CiTuneTitleParseRequest struct {
+	Title string `json:"title" binding:"required,max=200"` // Title 诗词标题，通常以词牌名开头。
+}
+
+// CiTuneTitleParseResponse describes the matched ci tune and matched text.
+type CiTuneTitleParseResponse struct {
+	CiTune      *CiTuneResponse `json:"ciTune,omitempty"` // CiTune 匹配到的词牌；未匹配时为 nil。
+	MatchedName string          `json:"matchedName"`      // MatchedName 实际命中的词牌名或别名。
 }
 
 type AuthorResponse struct {

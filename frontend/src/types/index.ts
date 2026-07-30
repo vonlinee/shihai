@@ -95,6 +95,10 @@ export interface Poem {
   /** 体裁一级分类，例如诗、词、曲、文。 */
   genreCategory?: string;
   genre?: string;
+  /** 词牌 Snowflake ID，以字符串传输；仅词可能存在。 */
+  ciTuneId?: string;
+  /** 词牌摘要；仅词可能存在。 */
+  ciTune?: CiTune;
   translation?: string;
   appreciation?: string;
   annotation?: string;
@@ -139,6 +143,25 @@ export interface PoemType {
   /** 常见每句字数；未限定时为 null 或省略。 */
   charsPerLine?: number | null;
   /** 体裁说明。 */
+  description?: string;
+  /** 创建时间，ISO 日期字符串。 */
+  createdAt: string;
+  /** 更新时间，ISO 日期字符串。 */
+  updatedAt: string;
+}
+
+export interface CiTune {
+  /** 词牌 Snowflake ID，以字符串传输。 */
+  id: string;
+  /** 词牌名，例如水调歌头、念奴娇。 */
+  name: string;
+  /** 词牌别名，用于同调异名和标题解析。 */
+  aliases: string[];
+  /** 所属词体裁 Snowflake ID，例如小令、中调、长调；未归类时省略。 */
+  poemTypeId?: string;
+  /** 所属词体裁摘要。 */
+  poemType?: PoemType;
+  /** 词牌说明。 */
   description?: string;
   /** 创建时间，ISO 日期字符串。 */
   createdAt: string;

@@ -258,6 +258,75 @@ func TestCreatePoemInfersGenreCategoryFromReferenceData(t *testing.T) {
 	}
 }
 
+func TestCreatePoemAutoResolvesCiTuneByTitle(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		ciTunes: []models.CiTune{
+			{BaseModel: models.BaseModel{ID: 11}, Name: "水调歌头"},
+			{BaseModel: models.BaseModel{ID: 12}, Name: "水调"},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:         "水调歌头·明月几时有",
+		Content:       []string{"明月几时有"},
+		GenreCategory: "词",
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	if poemRepo.createdCiTuneID == nil || *poemRepo.createdCiTuneID != 11 {
+		t.Fatalf("created ci tune ID = %v, want 11", poemRepo.createdCiTuneID)
+	}
+	if resp.CiTuneID == nil || *resp.CiTuneID != 11 {
+		t.Fatalf("response ci tune ID = %v, want 11", resp.CiTuneID)
+	}
+}
+
+func TestParseCiTuneTitlePrefersLongestAlias(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		ciTunes: []models.CiTune{
+			{BaseModel: models.BaseModel{ID: 11}, Name: "水调"},
+			{BaseModel: models.BaseModel{ID: 12}, Name: "水调歌头", Aliases: []string{"元会曲"}},
+		},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	resp, err := service.ParseCiTuneTitle("水调歌头 明月几时有")
+
+	if err != nil {
+		t.Fatalf("ParseCiTuneTitle error = %v, want nil", err)
+	}
+	if resp.CiTune == nil || resp.CiTune.ID != 12 {
+		t.Fatalf("matched ci tune = %#v, want ID 12", resp.CiTune)
+	}
+	if resp.MatchedName != "水调歌头" {
+		t.Fatalf("matched name = %q, want 水调歌头", resp.MatchedName)
+	}
+}
+
+func TestCreatePoemClearsCiTuneForNonCiCategory(t *testing.T) {
+	poemRepo := &fakePoemRepository{
+		ciTuneByID: &models.CiTune{BaseModel: models.BaseModel{ID: 11}, Name: "水调歌头"},
+	}
+	service := NewPoemService(poemRepo, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
+
+	_, err := service.CreatePoem(&dto.PoemCreateRequest{
+		Title:         "静夜思",
+		Content:       []string{"床前明月光"},
+		GenreCategory: "诗",
+		CiTuneID:      dto.RequestID(11),
+	})
+
+	if err != nil {
+		t.Fatalf("CreatePoem error = %v, want nil", err)
+	}
+	if poemRepo.createdCiTuneID != nil {
+		t.Fatalf("created ci tune ID = %v, want nil", poemRepo.createdCiTuneID)
+	}
+}
+
 func TestCreatePoemRejectsInvalidPingzeMark(t *testing.T) {
 	service := NewPoemService(&fakePoemRepository{}, &fakeDynastyRepository{}, &fakeAuthorRepository{}, &fakePoetRepository{})
 
@@ -621,21 +690,28 @@ func TestCreatePoemSyncsAnnotationsWhenProvided(t *testing.T) {
 }
 
 type fakePoemRepository struct {
-	createCalls          int
-	createdAuthorID      uint64
-	createdDynastyID     uint64
-	createdContent       []string
-	createdPingze        []string
-	createdGenreCategory string
-	updatedPoem          *models.Poem
-	existingPoem         *models.Poem
-	poemTypes            []models.PoemType
-	createdPoemType      *models.PoemType
-	poemTypeByID         *models.PoemType
-	updatedPoemType      *models.PoemType
-	deletedPoemTypeID    uint64
-	batchDeletedTypeIDs  []uint64
-	batchDeletedIDs      []uint64
+	createCalls           int
+	createdAuthorID       uint64
+	createdDynastyID      uint64
+	createdContent        []string
+	createdPingze         []string
+	createdGenreCategory  string
+	createdCiTuneID       *uint64
+	updatedPoem           *models.Poem
+	existingPoem          *models.Poem
+	poemTypes             []models.PoemType
+	createdPoemType       *models.PoemType
+	poemTypeByID          *models.PoemType
+	updatedPoemType       *models.PoemType
+	deletedPoemTypeID     uint64
+	batchDeletedTypeIDs   []uint64
+	ciTunes               []models.CiTune
+	ciTuneByID            *models.CiTune
+	createdCiTune         *models.CiTune
+	updatedCiTune         *models.CiTune
+	deletedCiTuneID       uint64
+	batchDeletedCiTuneIDs []uint64
+	batchDeletedIDs       []uint64
 }
 
 func (r *fakePoemRepository) Create(poem *models.Poem) error {
@@ -645,6 +721,12 @@ func (r *fakePoemRepository) Create(poem *models.Poem) error {
 	r.createdContent = append([]string(nil), poem.Content...)
 	r.createdPingze = append([]string(nil), poem.Pingze...)
 	r.createdGenreCategory = poem.GenreCategory
+	if poem.CiTuneID != nil {
+		ciTuneID := *poem.CiTuneID
+		r.createdCiTuneID = &ciTuneID
+	} else {
+		r.createdCiTuneID = nil
+	}
 	poem.ID = 1
 	return nil
 }
@@ -725,6 +807,48 @@ func (r *fakePoemRepository) DeletePoemType(id uint64) error {
 
 func (r *fakePoemRepository) BatchDeletePoemTypes(ids []uint64) error {
 	r.batchDeletedTypeIDs = append([]uint64(nil), ids...)
+	return nil
+}
+
+func (r *fakePoemRepository) ListCiTunes() ([]models.CiTune, error) {
+	return r.ciTunes, nil
+}
+
+func (r *fakePoemRepository) CreateCiTune(ciTune *models.CiTune) error {
+	copied := *ciTune
+	copied.ID = 1
+	copied.Aliases = append([]string(nil), ciTune.Aliases...)
+	r.createdCiTune = &copied
+	ciTune.ID = 1
+	return nil
+}
+
+func (r *fakePoemRepository) GetCiTuneByID(id uint64) (*models.CiTune, error) {
+	if r.ciTuneByID != nil {
+		return r.ciTuneByID, nil
+	}
+	for i := range r.ciTunes {
+		if r.ciTunes[i].ID == id {
+			return &r.ciTunes[i], nil
+		}
+	}
+	return nil, errors.New("not found")
+}
+
+func (r *fakePoemRepository) UpdateCiTune(ciTune *models.CiTune) error {
+	copied := *ciTune
+	copied.Aliases = append([]string(nil), ciTune.Aliases...)
+	r.updatedCiTune = &copied
+	return nil
+}
+
+func (r *fakePoemRepository) DeleteCiTune(id uint64) error {
+	r.deletedCiTuneID = id
+	return nil
+}
+
+func (r *fakePoemRepository) BatchDeleteCiTunes(ids []uint64) error {
+	r.batchDeletedCiTuneIDs = append([]uint64(nil), ids...)
 	return nil
 }
 

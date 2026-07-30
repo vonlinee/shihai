@@ -7,6 +7,7 @@ import (
 )
 
 const poemTypeDisplayOrder = "CASE category WHEN '诗' THEN 1 WHEN '词' THEN 2 WHEN '曲' THEN 3 WHEN '文' THEN 4 WHEN '其他' THEN 99 ELSE 90 END ASC, id ASC"
+const ciTuneDisplayOrder = "id ASC"
 
 type PoemRepository struct {
 	db *gorm.DB
@@ -29,7 +30,7 @@ func (r *PoemRepository) Create(poem *models.Poem) error {
 // GetByID 根据ID获取诗词
 func (r *PoemRepository) GetByID(id uint64) (*models.Poem, error) {
 	var poem models.Poem
-	err := r.db.Preload("Author").Preload("Dynasty").First(&poem, id).Error
+	err := r.db.Preload("Author").Preload("Dynasty").Preload("CiTune").Preload("CiTune.PoemType").First(&poem, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +89,45 @@ func (r *PoemRepository) BatchDeletePoemTypes(ids []uint64) error {
 	return r.db.Where("id IN ?", ids).Delete(&models.PoemType{}).Error
 }
 
+// ListCiTunes returns ci tune reference data in display order.
+func (r *PoemRepository) ListCiTunes() ([]models.CiTune, error) {
+	var ciTunes []models.CiTune
+	err := r.db.Model(&models.CiTune{}).
+		Preload("PoemType").
+		Order(ciTuneDisplayOrder).
+		Find(&ciTunes).Error
+	return ciTunes, err
+}
+
+// CreateCiTune creates ci tune reference data.
+func (r *PoemRepository) CreateCiTune(ciTune *models.CiTune) error {
+	return r.db.Create(ciTune).Error
+}
+
+// GetCiTuneByID returns ci tune reference data by ID.
+func (r *PoemRepository) GetCiTuneByID(id uint64) (*models.CiTune, error) {
+	var ciTune models.CiTune
+	if err := r.db.Preload("PoemType").First(&ciTune, id).Error; err != nil {
+		return nil, err
+	}
+	return &ciTune, nil
+}
+
+// UpdateCiTune updates ci tune reference data.
+func (r *PoemRepository) UpdateCiTune(ciTune *models.CiTune) error {
+	return r.db.Save(ciTune).Error
+}
+
+// DeleteCiTune deletes ci tune reference data by ID.
+func (r *PoemRepository) DeleteCiTune(id uint64) error {
+	return r.db.Delete(&models.CiTune{}, id).Error
+}
+
+// BatchDeleteCiTunes deletes ci tune reference data by IDs.
+func (r *PoemRepository) BatchDeleteCiTunes(ids []uint64) error {
+	return r.db.Where("id IN ?", ids).Delete(&models.CiTune{}).Error
+}
+
 // Update 更新诗词
 func (r *PoemRepository) Update(poem *models.Poem) error {
 	return r.db.Save(poem).Error
@@ -107,7 +147,7 @@ func (r *PoemRepository) List(page, pageSize int, keyword, dynasty, author, genr
 	var poems []models.Poem
 	var total int64
 
-	query := r.db.Model(&models.Poem{}).Preload("Author").Preload("Dynasty")
+	query := r.db.Model(&models.Poem{}).Preload("Author").Preload("Dynasty").Preload("CiTune")
 
 	if keyword != "" {
 		query = query.Where("title LIKE ? OR content::text LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
@@ -155,6 +195,6 @@ func (r *PoemRepository) IncrementFavorites(id uint64) error {
 // GetRandom 随机获取诗词
 func (r *PoemRepository) GetRandom(limit int) ([]models.Poem, error) {
 	var poems []models.Poem
-	err := r.db.Order("RANDOM()").Limit(limit).Preload("Author").Preload("Dynasty").Find(&poems).Error
+	err := r.db.Order("RANDOM()").Limit(limit).Preload("Author").Preload("Dynasty").Preload("CiTune").Find(&poems).Error
 	return poems, err
 }

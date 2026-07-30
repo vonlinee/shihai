@@ -16,6 +16,8 @@ import {
   type DynastyUpdateRequest,
   type PoemTypeCreateRequest,
   type PoemTypeUpdateRequest,
+  type CiTuneCreateRequest,
+  type CiTuneUpdateRequest,
   type PoetCreateRequest,
   type PoetUpdateRequest,
   type AdminCreateUserRequest,
@@ -452,6 +454,12 @@ function invalidatePoemTypeQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['poems'] });
 }
 
+function invalidateCiTuneQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ['admin', 'ciTunes'] });
+  queryClient.invalidateQueries({ queryKey: ['poems'] });
+  queryClient.invalidateQueries({ queryKey: ['poem'] });
+}
+
 export function useAdminPoemTypes() {
   return useQuery({
     queryKey: ['admin', 'poemTypes'],
@@ -513,6 +521,80 @@ export function useAdminBatchDeletePoemTypes() {
     },
     onError: (error: Error) => {
       toast.error(error.message || '批量删除失败');
+    },
+  });
+}
+
+export function useAdminCiTunes() {
+  return useQuery({
+    queryKey: ['admin', 'ciTunes'],
+    queryFn: () => adminService.getCiTunes(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useAdminCreateCiTune() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CiTuneCreateRequest) => adminService.createCiTune(data),
+    onSuccess: () => {
+      toast.success('词牌添加成功');
+      invalidateCiTuneQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '添加失败');
+    },
+  });
+}
+
+export function useAdminUpdateCiTune() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: AdminID; data: CiTuneUpdateRequest }) =>
+      adminService.updateCiTune(id, data),
+    onSuccess: () => {
+      toast.success('词牌更新成功');
+      invalidateCiTuneQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '更新失败');
+    },
+  });
+}
+
+export function useAdminDeleteCiTune() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: AdminID) => adminService.deleteCiTune(id),
+    onSuccess: () => {
+      toast.success('词牌已删除');
+      invalidateCiTuneQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '删除失败');
+    },
+  });
+}
+
+export function useAdminBatchDeleteCiTunes() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: AdminID[]) => adminService.batchDeleteCiTunes(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`已删除 ${ids.length} 个词牌`);
+      invalidateCiTuneQueries(queryClient);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '批量删除失败');
+    },
+  });
+}
+
+export function useAdminParseCiTuneTitle() {
+  return useMutation({
+    mutationFn: (title: string) => adminService.parseCiTuneTitle(title),
+    onError: (error: Error) => {
+      toast.error(error.message || '词牌解析失败');
     },
   });
 }
