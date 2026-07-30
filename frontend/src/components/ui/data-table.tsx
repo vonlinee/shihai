@@ -584,7 +584,7 @@ export function DataTable<TData>({
       <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden">
         <Table
           className={cn('table-fixed', tableClassName)}
-          style={{ minWidth: `${tableMinWidth}px`, width: `${tableMinWidth}px` }}
+          style={{ minWidth: `${tableMinWidth}px`, width: '100%' }}
         >
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
