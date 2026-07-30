@@ -36,6 +36,12 @@ type poem struct {
 	ID         string   `json:"id"`
 }
 
+type ci struct {
+	Author     string   `json:"author"`
+	Paragraphs []string `json:"paragraphs"`
+	Rhythmic   string   `json:"rhythmic"`
+}
+
 func main() {
 	db, err := openDBWithGorm()
 	if err != nil {
@@ -48,6 +54,8 @@ func main() {
 	synAuthor(*db, root+"/全唐诗/authors.tang.json", 500)
 	synAuthor(*db, root+"/全唐诗/authors.song.json", 500)
 
+	synSongCiAuthor(*db, root+"/宋词/author.song.json", 500)
+
 	if err := ensurePoemAuthorForeignKey(*db); err != nil {
 		log.Fatalf("修复诗歌作者外键失败: %s", err)
 	}
@@ -57,8 +65,63 @@ func main() {
 		return
 	}
 	syncAllPoem(*db, root+"/全唐诗")
+	syncAllPoemCi(*db, root+"/宋词")
+	// TODO 宋词三百首.json
+
 	if err := config.MigrateMissingPoetsFromPoems(db); err != nil {
 		log.Fatalf("补齐诗人数据失败: %s", err)
+	}
+}
+
+// syncAllPoemCi 同步宋词
+// chinese-poetry\宋词 目录下 ci.song.xxx.json 文件
+func syncAllPoemCi(db gorm.DB, path string) {
+	err := walkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
+		if strings.HasPrefix(entry.Name(), "ci") {
+			arr := strings.Split(entry.Name(), ".")
+			if arr[1] == "song" {
+				fmt.Printf(">>> read poem ci from %s\n", path)
+				syncCi(db, path, 500)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("同步诗歌失败: %s", err)
+	}
+}
+
+// 同步宋词信息
+func syncCi(db gorm.DB, path string, batchSize int) {
+	text, _ := readFileToString(path)
+	var cis []ci
+	if err := json.Unmarshal([]byte(text), &cis); err != nil {
+		log.Fatalf("解析失败: %s", err)
+	}
+
+	authorIDs, err := loadAuthorIDsByName(db)
+	if err != nil {
+		log.Fatalf("查询作者失败: %s", err)
+		return
+	}
+	dynastyID, err := findDynastyIDByName(db, tangDynastyName)
+	if err != nil {
+		log.Fatalf("查询朝代失败: %s", err)
+		return
+	}
+
+	poemModels, skippedPoems := buildCiModels(cis, authorIDs, dynastyID)
+	for _, p := range skippedPoems {
+		log.Printf("skip poem without known author from %s: title=%q author=%q", path, p.Rhythmic, p.Author)
+	}
+	log.Printf("prepared poems from %s: total=%d insert=%d skipped=%d authorMappings=%d dynastyID=%d", path, len(cis), len(poemModels), len(skippedPoems), len(authorIDs), dynastyID)
+
+	if err := validatePoemAuthorReferences(db, poemModels); err != nil {
+		log.Fatalf("校验词作者外键失败: %s", err)
+		return
+	}
+	if err := batchInsert(db, poemModels, batchSize); err != nil {
+		printPgError("批量插入词失败:", err)
 	}
 }
 
@@ -140,6 +203,30 @@ func formatPgError(err error) string {
 		fmt.Sprintf("where=%s", pgErr.Where),
 	}
 	return strings.Join(fields, "\n")
+}
+
+func buildCiModels(poems []ci, authorIDs map[string]uint64, dynastyID uint64) ([]models.Poem, []ci) {
+	poemModels := make([]models.Poem, 0, len(poems))
+	skippedPoems := make([]ci, 0)
+
+	for _, p := range poems {
+		authorName := strings.TrimSpace(p.Author)
+		authorID, ok := authorIDs[authorName]
+		if !ok || authorID == 0 {
+			skippedPoems = append(skippedPoems, p)
+			continue
+		}
+
+		content := buildPoemContent(p.Paragraphs)
+		poemModels = append(poemModels, models.Poem{
+			Title:     strings.TrimSpace(p.Rhythmic),
+			Content:   content,
+			Pingze:    poetry.RecognizePingzeLines(content),
+			AuthorID:  authorID,
+			DynastyID: dynastyID,
+		})
+	}
+	return poemModels, skippedPoems
 }
 
 // buildPoemModels 将解析出的诗歌数据转换为可入库的诗歌模型。
@@ -362,6 +449,65 @@ type author struct {
 	Desc string `json:"desc"`
 	Name string `json:"name"`
 	ID   string `json:"id"`
+}
+
+type authorSongCi struct {
+	Desc             string `json:"description"`
+	Name             string `json:"name"`
+	ShortDescription string `json:"short_description"`
+}
+
+func synSongCiAuthor(db gorm.DB, path string, batchSize int) {
+	authorsContent, err := readFileToString(path)
+	if err != nil {
+		log.Fatalf("读取文件失败: %s", err)
+	}
+
+	var authors []authorSongCi
+	if err := json.Unmarshal([]byte(authorsContent), &authors); err != nil {
+		log.Fatalf("解析失败: %s", err)
+	}
+	log.Printf("read %d authors from %s\n", len(authors), path)
+
+	uniqueAuthors, duplicateAuthors := deduplicateSongCiAuthorsByName(authors)
+	for _, a := range duplicateAuthors {
+		log.Printf("skip duplicate author from %s: id=%s name=%q", path, a.Desc, a.Name)
+	}
+
+	authorModels := make([]models.Author, 0, len(uniqueAuthors))
+	for _, a := range uniqueAuthors {
+		authorModels = append(authorModels, models.Author{
+			Name:      strings.TrimSpace(a.Name),
+			Biography: strings.TrimSpace(a.Desc),
+		})
+	}
+
+	if err := batchInsert(db, authorModels, batchSize); err != nil {
+		log.Fatalf("批量插入作者失败: %s", err)
+	}
+}
+
+func deduplicateSongCiAuthorsByName(authors []authorSongCi) ([]authorSongCi, []authorSongCi) {
+	seen := make(map[string]struct{}, len(authors))
+	uniqueAuthors := make([]authorSongCi, 0, len(authors))
+	duplicateAuthors := make([]authorSongCi, 0)
+
+	for _, a := range authors {
+		name := strings.TrimSpace(a.Name)
+		if name == "" {
+			duplicateAuthors = append(duplicateAuthors, a)
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			duplicateAuthors = append(duplicateAuthors, a)
+			continue
+		}
+
+		seen[name] = struct{}{}
+		a.Name = name
+		uniqueAuthors = append(uniqueAuthors, a)
+	}
+	return uniqueAuthors, duplicateAuthors
 }
 
 func synAuthor(db gorm.DB, path string, batchSize int) {
