@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
+	"shihai/pkg/utils"
 	"strings"
 	"sync"
 
@@ -76,7 +76,7 @@ func main() {
 // syncAllPoemCi 同步宋词
 // chinese-poetry\宋词 目录下 ci.song.xxx.json 文件
 func syncAllPoemCi(db gorm.DB, path string) {
-	err := walkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
+	err := utils.WalkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
 		if strings.HasPrefix(entry.Name(), "ci") {
 			arr := strings.Split(entry.Name(), ".")
 			if arr[1] == "song" {
@@ -126,7 +126,7 @@ func syncCi(db gorm.DB, path string, batchSize int) {
 }
 
 func syncAllPoem(db gorm.DB, path string) {
-	err := walkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
+	err := utils.WalkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
 		if strings.HasPrefix(entry.Name(), "poet") {
 			arr := strings.Split(entry.Name(), ".")
 			if arr[1] == "tang" {
@@ -638,41 +638,4 @@ func logSkippedPoems(path string, skippedPoems []poem) {
 	for _, p := range skippedPoems {
 		log.Printf("skip poem without known author from %s: id=%s title=%q author=%q", path, p.ID, p.Title, p.Author)
 	}
-}
-
-// walkDirectChildFiles 遍历 rootDir 目录下的直接子文件。
-//
-// rootDir 待遍历的目录路径。
-// handleFile 接收文件完整路径和文件目录项；当回调返回错误时，遍历立即停止并返回该错误。
-func walkDirectChildFiles(rootDir string, handleFile func(path string, entry os.DirEntry) error) error {
-	entries, err := os.ReadDir(rootDir)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if err := handleFile(filepath.Join(rootDir, entry.Name()), entry); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// walkAllFiles 递归遍历 rootDir 目录下的所有文件。
-//
-// rootDir 待遍历的根目录路径。
-// handleFile 接收文件完整路径和文件目录项；当回调返回错误时，遍历立即停止并返回该错误。
-func walkAllFiles(rootDir string, handleFile func(path string, entry os.DirEntry) error) error {
-	return filepath.WalkDir(rootDir, func(path string, entry os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		return handleFile(path, entry)
-	})
 }
