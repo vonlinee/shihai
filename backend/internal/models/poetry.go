@@ -40,7 +40,7 @@ func (Poet) TableName() string {
 // Poem stores poem content and metadata.
 type Poem struct {
 	BaseModel
-	Title         string   `json:"title" gorm:"not null;size:200;comment:诗词标题"`
+	Title         string   `json:"title" gorm:"not null;size:500;comment:诗词标题"`
 	Content       []string `json:"content" gorm:"not null;serializer:json;type:jsonb;comment:诗词内容"`
 	Pingze        []string `json:"pingze" gorm:"serializer:json;type:jsonb;comment:诗词正文平仄，按正文文本行存储平/仄标记"` // Pingze 按 Content 每个文本元素对应存储平仄标记。
 	AuthorID      uint64   `json:"authorId" gorm:"comment:作者ID"`
