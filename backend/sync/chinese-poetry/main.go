@@ -34,19 +34,22 @@ type poem struct {
 	Paragraphs []string `json:"paragraphs"`
 	Title      string   `json:"title"`
 	ID         string   `json:"id"`
-}
-
-type ci struct {
-	Author     string   `json:"author"`
-	Paragraphs []string `json:"paragraphs"`
 	Rhythmic   string   `json:"rhythmic"`
 }
 
 func main() {
 	db, err := openDBWithGorm()
-	if err != nil {
+
+	if err != nil || db == nil {
 		log.Fatal("Failed to connect to database:", err)
+		return
 	}
+
+	// 如果需要在运行时临时关闭
+	//db.Logger = db.Logger.LogMode(logger.Silent)
+	// 或者恢复日志
+	// db.Logger = db.Logger.LogMode(logger.Info)
+
 	err = truncateModelCascade(*db, models.Author{})
 	if err != nil {
 		return
@@ -64,8 +67,8 @@ func main() {
 	if err != nil {
 		return
 	}
-	syncAllPoem(*db, root+"/全唐诗")
-	syncAllPoemCi(*db, root+"/宋词")
+	syncAllPoem(*db, root+"/全唐诗", "tang")
+	syncAllPoem(*db, root+"/宋词", "song")
 	// TODO 宋词三百首.json
 
 	if err := config.MigrateMissingPoetsFromPoems(db); err != nil {
@@ -73,63 +76,12 @@ func main() {
 	}
 }
 
-// syncAllPoemCi 同步宋词
-// chinese-poetry\宋词 目录下 ci.song.xxx.json 文件
-func syncAllPoemCi(db gorm.DB, path string) {
-	err := utils.WalkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
-		if strings.HasPrefix(entry.Name(), "ci") {
-			arr := strings.Split(entry.Name(), ".")
-			if arr[1] == "song" {
-				fmt.Printf(">>> read poem ci from %s\n", path)
-				syncCi(db, path, 500)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		log.Fatalf("同步诗歌失败: %s", err)
-	}
-}
-
-// 同步宋词信息
-func syncCi(db gorm.DB, path string, batchSize int) {
-	text, _ := readFileToString(path)
-	var cis []ci
-	if err := json.Unmarshal([]byte(text), &cis); err != nil {
-		log.Fatalf("解析失败: %s", err)
-	}
-
-	authorIDs, err := loadAuthorIDsByName(db)
-	if err != nil {
-		log.Fatalf("查询作者失败: %s", err)
-		return
-	}
-	dynastyID, err := findDynastyIDByName(db, tangDynastyName)
-	if err != nil {
-		log.Fatalf("查询朝代失败: %s", err)
-		return
-	}
-
-	poemModels, skippedPoems := buildCiModels(cis, authorIDs, dynastyID)
-	for _, p := range skippedPoems {
-		log.Printf("skip poem without known author from %s: title=%q author=%q", path, p.Rhythmic, p.Author)
-	}
-	log.Printf("prepared poems from %s: total=%d insert=%d skipped=%d authorMappings=%d dynastyID=%d", path, len(cis), len(poemModels), len(skippedPoems), len(authorIDs), dynastyID)
-
-	if err := validatePoemAuthorReferences(db, poemModels); err != nil {
-		log.Fatalf("校验词作者外键失败: %s", err)
-		return
-	}
-	if err := batchInsert(db, poemModels, batchSize); err != nil {
-		printPgError("批量插入词失败:", err)
-	}
-}
-
-func syncAllPoem(db gorm.DB, path string) {
+func syncAllPoem(db gorm.DB, path string, name string) {
 	err := utils.WalkDirectChildFiles(path, func(path string, entry os.DirEntry) error {
 		if strings.HasPrefix(entry.Name(), "poet") {
 			arr := strings.Split(entry.Name(), ".")
-			if arr[1] == "tang" {
+			if arr[1] == name {
+				fmt.Printf("handle file: %s\n", path)
 				fmt.Printf(">>> read poem from %s\n", path)
 				syncPoem(db, path, 500)
 			}
@@ -161,6 +113,7 @@ func syncPoem(db gorm.DB, path string, batchSize int) {
 	}
 
 	poemModels, skippedPoems := buildPoemModels(poems, authorIDs, dynastyID)
+
 	logSkippedPoems(path, skippedPoems)
 	log.Printf("prepared poems from %s: total=%d insert=%d skipped=%d authorMappings=%d dynastyID=%d", path, len(poems), len(poemModels), len(skippedPoems), len(authorIDs), dynastyID)
 
@@ -178,6 +131,7 @@ func syncPoem(db gorm.DB, path string, batchSize int) {
 // err 待打印的错误；当错误链中包含 pgconn.PgError 时，输出数据库错误码、表名、列名和约束名等信息。
 func printPgError(msg string, err error) {
 	log.Print(msg, formatPgError(err))
+	panic(msg)
 }
 
 // formatPgError 格式化 PostgreSQL 错误的关键诊断字段。
@@ -203,30 +157,6 @@ func formatPgError(err error) string {
 		fmt.Sprintf("where=%s", pgErr.Where),
 	}
 	return strings.Join(fields, "\n")
-}
-
-func buildCiModels(poems []ci, authorIDs map[string]uint64, dynastyID uint64) ([]models.Poem, []ci) {
-	poemModels := make([]models.Poem, 0, len(poems))
-	skippedPoems := make([]ci, 0)
-
-	for _, p := range poems {
-		authorName := strings.TrimSpace(p.Author)
-		authorID, ok := authorIDs[authorName]
-		if !ok || authorID == 0 {
-			skippedPoems = append(skippedPoems, p)
-			continue
-		}
-
-		content := buildPoemContent(p.Paragraphs)
-		poemModels = append(poemModels, models.Poem{
-			Title:     strings.TrimSpace(p.Rhythmic),
-			Content:   content,
-			Pingze:    poetry.RecognizePingzeLines(content),
-			AuthorID:  authorID,
-			DynastyID: dynastyID,
-		})
-	}
-	return poemModels, skippedPoems
 }
 
 // buildPoemModels 将解析出的诗歌数据转换为可入库的诗歌模型。
