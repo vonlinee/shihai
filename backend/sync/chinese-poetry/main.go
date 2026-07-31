@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"sort"
@@ -30,8 +31,8 @@ const (
 
 var root = "D:\\Develop\\Code\\Github\\chinese-poetry"
 
-func openDBWithGorm() (*gorm.DB, error) {
-	cfg := config.Load("config.json")
+func openDBWithGorm(configFile string) (*gorm.DB, error) {
+	cfg := config.Load(configFile)
 	return config.InitDB(&cfg.Database)
 }
 
@@ -50,14 +51,14 @@ type poemSyncSource struct {
 }
 
 func main() {
-	db, err := openDBWithGorm()
+	db, err := openDBWithGorm("config.json")
 
 	if err != nil || db == nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
 	// 如果需要在运行时临时关闭
-	//db.Logger = db.Logger.LogMode(logger.Silent)
+	db.Logger = db.Logger.LogMode(logger.Silent)
 	// 或者恢复日志
 	// db.Logger = db.Logger.LogMode(logger.Info)
 
@@ -128,9 +129,9 @@ func syncPoem(db gorm.DB, path string, batchSize int, dynastyName string) {
 		log.Fatalf("解析失败: %s", err)
 	}
 
-	authorIDs, err := loadAuthorIDsByName(db)
+	authorIDs, err := syncAuthors(db, poems, batchSize)
 	if err != nil {
-		log.Fatalf("查询作者失败: %s", err)
+		log.Fatalf("同步作者失败: %s", err)
 		return
 	}
 	dynastyID, err := findDynastyIDByName(db, dynastyName)
@@ -189,6 +190,115 @@ func formatPgError(err error) string {
 		fmt.Sprintf("where=%s", pgErr.Where),
 	}
 	return strings.Join(fields, "\n")
+}
+
+func syncAuthors(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, error) {
+	names := collectAuthorNames(poems)
+	if len(names) == 0 {
+		return map[string]uint64{}, nil
+	}
+
+	var authorIDs map[string]uint64
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var err error
+		authorIDs, err = resolveAuthorIDs(
+			names,
+			batchSize,
+			func(names []string) ([]models.Author, error) {
+				var authors []models.Author
+				err := tx.Where("name IN ?", names).Find(&authors).Error
+				return authors, err
+			},
+			func(batch []models.Author) error {
+				return tx.Omit(clause.Associations).
+					Clauses(clause.OnConflict{
+						Columns:   []clause.Column{{Name: "name"}},
+						DoNothing: true,
+					}).
+					CreateInBatches(&batch, len(batch)).Error
+			},
+		)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return authorIDs, nil
+}
+
+func resolveAuthorIDs(
+	names []string,
+	batchSize int,
+	list func(names []string) ([]models.Author, error),
+	insertBatch func(batch []models.Author) error,
+) (map[string]uint64, error) {
+	existingAuthors, err := list(names)
+	if err != nil {
+		return nil, fmt.Errorf("批量查询作者: %w", err)
+	}
+
+	authorIDs := make(map[string]uint64, len(names))
+	mergeAuthorIDs(authorIDs, existingAuthors)
+	missingAuthors := buildMissingAuthors(names, authorIDs)
+	if err := batchInsertInTransaction(missingAuthors, batchSize, insertBatch); err != nil {
+		return nil, fmt.Errorf("批量插入作者: %w", err)
+	}
+
+	if len(missingAuthors) > 0 {
+		resolvedAuthors, err := list(names)
+		if err != nil {
+			return nil, fmt.Errorf("批量回查作者: %w", err)
+		}
+		mergeAuthorIDs(authorIDs, resolvedAuthors)
+	}
+
+	for _, name := range names {
+		if authorIDs[name] == 0 {
+			return nil, fmt.Errorf("作者 %q 同步后未找到有效 ID", name)
+		}
+	}
+	return authorIDs, nil
+}
+
+func collectAuthorNames(poems []poem) []string {
+	seen := make(map[string]struct{})
+	for _, p := range poems {
+		name := normalizeAuthorName(p.Author)
+		if name != "" {
+			seen[name] = struct{}{}
+		}
+	}
+
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func buildMissingAuthors(names []string, existingIDs map[string]uint64) []models.Author {
+	missing := make([]models.Author, 0)
+	for _, name := range names {
+		if existingIDs[name] != 0 {
+			continue
+		}
+		missing = append(missing, models.Author{Name: name})
+	}
+	return missing
+}
+
+func mergeAuthorIDs(target map[string]uint64, authors []models.Author) {
+	for _, author := range authors {
+		name := normalizeAuthorName(author.Name)
+		if name != "" && author.ID != 0 {
+			target[name] = author.ID
+		}
+	}
+}
+
+func normalizeAuthorName(name string) string {
+	return strings.TrimSpace(name)
 }
 
 func syncCiTunes(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, error) {
@@ -319,7 +429,7 @@ func buildPoemModels(poems []poem, authorIDs map[string]uint64, dynastyID uint64
 	}
 
 	for _, p := range poems {
-		authorName := strings.TrimSpace(p.Author)
+		authorName := normalizeAuthorName(p.Author)
 		authorID, ok := authorIDs[authorName]
 		if !ok || authorID == 0 {
 			skippedPoems = append(skippedPoems, p)
@@ -494,27 +604,6 @@ func buildPoemAuthorForeignKeyRepairSQL() []string {
 		`ALTER TABLE "poem" DROP CONSTRAINT IF EXISTS "fk_poem_author"`,
 		`ALTER TABLE "poem" ADD CONSTRAINT "fk_poem_author" FOREIGN KEY ("author_id") REFERENCES "author"("id") ON UPDATE CASCADE ON DELETE RESTRICT`,
 	}
-}
-
-// loadAuthorIDsByName 查询作者名称到作者 ID 的映射。
-//
-// db 数据库连接。
-// 返回以去除首尾空白后的作者名称为键、作者 ID 为值的映射；查询失败时返回错误。
-func loadAuthorIDsByName(db gorm.DB) (map[string]uint64, error) {
-	var authors []models.Author
-	if err := db.Find(&authors).Error; err != nil {
-		return nil, err
-	}
-
-	authorIDs := make(map[string]uint64, len(authors))
-	for _, a := range authors {
-		name := strings.TrimSpace(a.Name)
-		if name == "" || a.ID == 0 {
-			continue
-		}
-		authorIDs[name] = a.ID
-	}
-	return authorIDs, nil
 }
 
 // findDynastyIDByName 根据朝代名称查询朝代 ID。

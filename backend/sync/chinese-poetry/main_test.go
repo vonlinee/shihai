@@ -249,6 +249,97 @@ func TestIsPoemDataFileMatchesConfiguredSource(t *testing.T) {
 	}
 }
 
+func TestCollectAuthorNamesTrimsDeduplicatesAndSorts(t *testing.T) {
+	poems := []poem{
+		{Author: " 苏轼 "},
+		{Author: "李白"},
+		{Author: "苏轼"},
+		{Author: " "},
+	}
+
+	names := collectAuthorNames(poems)
+
+	assertStringSliceEqual(t, names, []string{"李白", "苏轼"})
+}
+
+func TestBuildMissingAuthorsExcludesExistingNames(t *testing.T) {
+	names := []string{"李白", "杜甫", "苏轼"}
+	existingIDs := map[string]uint64{"杜甫": 101}
+
+	missing := buildMissingAuthors(names, existingIDs)
+
+	if len(missing) != 2 {
+		t.Fatalf("missing author count = %d, want 2", len(missing))
+	}
+	if missing[0].Name != "李白" || missing[1].Name != "苏轼" {
+		t.Fatalf("missing author names = [%q %q], want [李白 苏轼]", missing[0].Name, missing[1].Name)
+	}
+}
+
+func TestMergeAuthorIDsUsesNormalizedValidRecords(t *testing.T) {
+	authorIDs := map[string]uint64{"已有作者": 1}
+	mergeAuthorIDs(authorIDs, []models.Author{
+		{BaseModel: models.BaseModel{ID: 101}, Name: " 苏轼 "},
+		{Name: "无 ID 作者"},
+		{BaseModel: models.BaseModel{ID: 102}, Name: " "},
+	})
+
+	if authorIDs["已有作者"] != 1 || authorIDs["苏轼"] != 101 {
+		t.Fatalf("author IDs = %v, want existing and normalized IDs", authorIDs)
+	}
+	if _, exists := authorIDs["无 ID 作者"]; exists {
+		t.Fatal("author IDs contains record without ID")
+	}
+}
+
+func TestResolveAuthorIDsUsesBatchQueriesAndBatchInserts(t *testing.T) {
+	names := []string{"李白", "杜甫", "白居易", "苏轼", "辛弃疾"}
+	listCalls := 0
+	insertBatchSizes := make([]int, 0)
+
+	authorIDs, err := resolveAuthorIDs(
+		names,
+		2,
+		func(gotNames []string) ([]models.Author, error) {
+			listCalls++
+			if len(gotNames) != len(names) {
+				t.Fatalf("batch query name count = %d, want %d", len(gotNames), len(names))
+			}
+			if listCalls == 1 {
+				return []models.Author{{BaseModel: models.BaseModel{ID: 102}, Name: "杜甫"}}, nil
+			}
+			return []models.Author{
+				{BaseModel: models.BaseModel{ID: 101}, Name: "李白"},
+				{BaseModel: models.BaseModel{ID: 102}, Name: "杜甫"},
+				{BaseModel: models.BaseModel{ID: 103}, Name: "白居易"},
+				{BaseModel: models.BaseModel{ID: 104}, Name: "苏轼"},
+				{BaseModel: models.BaseModel{ID: 105}, Name: "辛弃疾"},
+			}, nil
+		},
+		func(batch []models.Author) error {
+			insertBatchSizes = append(insertBatchSizes, len(batch))
+			return nil
+		},
+	)
+
+	if err != nil {
+		t.Fatalf("resolveAuthorIDs error = %v, want nil", err)
+	}
+	if listCalls != 2 {
+		t.Errorf("batch query calls = %d, want 2", listCalls)
+	}
+	if len(insertBatchSizes) != 2 || insertBatchSizes[0] != 2 || insertBatchSizes[1] != 2 {
+		t.Errorf("insert batch sizes = %v, want [2 2]", insertBatchSizes)
+	}
+	for name, wantID := range map[string]uint64{
+		"李白": 101, "杜甫": 102, "白居易": 103, "苏轼": 104, "辛弃疾": 105,
+	} {
+		if authorIDs[name] != wantID {
+			t.Errorf("author %q ID = %d, want %d", name, authorIDs[name], wantID)
+		}
+	}
+}
+
 func TestCollectCiTuneNamesTrimsDeduplicatesAndSorts(t *testing.T) {
 	poems := []poem{
 		{Rhythmic: " 念奴娇 "},
