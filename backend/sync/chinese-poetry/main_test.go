@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"shihai/internal/models"
+	"shihai/pkg/utils"
 )
 
 type sampleEntity struct {
@@ -158,7 +159,7 @@ func TestBuildPoemModelsResolvesAuthorAndDynastyIDs(t *testing.T) {
 	}
 	authorIDs := map[string]uint64{"李白": 101}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, nil)
 
 	if len(skippedPoems) != 0 {
 		t.Fatalf("skipped poem count = %d, want 0", len(skippedPoems))
@@ -185,7 +186,7 @@ func TestBuildPoemModelsStoresJoinedParagraphsAsSingleContentItem(t *testing.T) 
 	}
 	authorIDs := map[string]uint64{"李白": 101}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, nil)
 
 	if len(skippedPoems) != 0 {
 		t.Fatalf("skipped poem count = %d, want 0", len(skippedPoems))
@@ -205,7 +206,7 @@ func TestBuildPoemModelsSkipsPoemsWithoutKnownAuthor(t *testing.T) {
 	}
 	authorIDs := map[string]uint64{"李白": 101}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, nil)
 
 	if len(poemModels) != 1 {
 		t.Fatalf("poem model count = %d, want 1", len(poemModels))
@@ -218,6 +219,148 @@ func TestBuildPoemModelsSkipsPoemsWithoutKnownAuthor(t *testing.T) {
 	}
 	if skippedPoems[0].Title != "无作者诗" || skippedPoems[1].Title != "空作者诗" {
 		t.Fatalf("skipped poem titles = [%q %q], want [无作者诗 空作者诗]", skippedPoems[0].Title, skippedPoems[1].Title)
+	}
+}
+
+func TestIsPoemDataFileMatchesConfiguredSource(t *testing.T) {
+	tangSource := poemSyncSource{filePrefix: "poet", fileDynasty: "tang"}
+	songSource := poemSyncSource{filePrefix: "ci", fileDynasty: "song"}
+	tests := []struct {
+		name        string
+		fileName    string
+		source      poemSyncSource
+		wantMatched bool
+	}{
+		{name: "唐诗文件", fileName: "poet.tang.0.json", source: tangSource, wantMatched: true},
+		{name: "宋词文件", fileName: "ci.song.1000.json", source: songSource, wantMatched: true},
+		{name: "宋词不能按唐诗前缀匹配", fileName: "ci.song.0.json", source: tangSource, wantMatched: false},
+		{name: "朝代不匹配", fileName: "poet.song.0.json", source: tangSource, wantMatched: false},
+		{name: "缺少数据分片", fileName: "ci.song.json", source: songSource, wantMatched: false},
+		{name: "非 JSON 文件", fileName: "ci.song.0.txt", source: songSource, wantMatched: false},
+		{name: "短文件名", fileName: "ci", source: songSource, wantMatched: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isPoemDataFile(tt.fileName, tt.source); got != tt.wantMatched {
+				t.Errorf("isPoemDataFile(%q) = %v, want %v", tt.fileName, got, tt.wantMatched)
+			}
+		})
+	}
+}
+
+func TestCollectCiTuneNamesTrimsDeduplicatesAndSorts(t *testing.T) {
+	poems := []poem{
+		{Rhythmic: " 念奴娇 "},
+		{Rhythmic: "水调歌头"},
+		{Rhythmic: "念奴娇"},
+		{Title: "静夜思"},
+	}
+
+	names := collectCiTuneNames(poems)
+
+	assertStringSliceEqual(t, names, []string{"念奴娇", "水调歌头"})
+}
+
+func TestBuildMissingCiTunesExcludesExistingNames(t *testing.T) {
+	names := []string{"念奴娇", "水调歌头", "蝶恋花"}
+	existingIDs := map[string]uint64{"水调歌头": 101}
+
+	missing := buildMissingCiTunes(names, existingIDs)
+
+	if len(missing) != 2 {
+		t.Fatalf("missing ci tune count = %d, want 2", len(missing))
+	}
+	if missing[0].Name != "念奴娇" || missing[1].Name != "蝶恋花" {
+		t.Fatalf("missing ci tune names = [%q %q], want [念奴娇 蝶恋花]", missing[0].Name, missing[1].Name)
+	}
+}
+
+func TestMergeCiTuneIDsUsesNormalizedValidRecords(t *testing.T) {
+	ciTuneIDs := map[string]uint64{"已有词牌": 1}
+	mergeCiTuneIDs(ciTuneIDs, []models.CiTune{
+		{BaseModel: models.BaseModel{ID: 101}, Name: " 念奴娇 "},
+		{Name: "无 ID 词牌"},
+		{BaseModel: models.BaseModel{ID: 102}, Name: " "},
+	})
+
+	if ciTuneIDs["已有词牌"] != 1 || ciTuneIDs["念奴娇"] != 101 {
+		t.Fatalf("ci tune IDs = %v, want existing and normalized IDs", ciTuneIDs)
+	}
+	if _, exists := ciTuneIDs["无 ID 词牌"]; exists {
+		t.Fatal("ci tune IDs contains record without ID")
+	}
+}
+
+func TestResolveCiTuneIDsUsesBatchQueriesAndBatchInserts(t *testing.T) {
+	names := []string{"卜算子", "念奴娇", "水调歌头", "蝶恋花", "鹧鸪天"}
+	listCalls := 0
+	insertBatchSizes := make([]int, 0)
+
+	ciTuneIDs, err := resolveCiTuneIDs(
+		names,
+		2,
+		func(gotNames []string) ([]models.CiTune, error) {
+			listCalls++
+			if len(gotNames) != len(names) {
+				t.Fatalf("batch query name count = %d, want %d", len(gotNames), len(names))
+			}
+			if listCalls == 1 {
+				return []models.CiTune{{BaseModel: models.BaseModel{ID: 103}, Name: "水调歌头"}}, nil
+			}
+			return []models.CiTune{
+				{BaseModel: models.BaseModel{ID: 101}, Name: "卜算子"},
+				{BaseModel: models.BaseModel{ID: 102}, Name: "念奴娇"},
+				{BaseModel: models.BaseModel{ID: 103}, Name: "水调歌头"},
+				{BaseModel: models.BaseModel{ID: 104}, Name: "蝶恋花"},
+				{BaseModel: models.BaseModel{ID: 105}, Name: "鹧鸪天"},
+			}, nil
+		},
+		func(batch []models.CiTune) error {
+			insertBatchSizes = append(insertBatchSizes, len(batch))
+			return nil
+		},
+	)
+
+	if err != nil {
+		t.Fatalf("resolveCiTuneIDs error = %v, want nil", err)
+	}
+	if listCalls != 2 {
+		t.Errorf("batch query calls = %d, want 2", listCalls)
+	}
+	if len(insertBatchSizes) != 2 || insertBatchSizes[0] != 2 || insertBatchSizes[1] != 2 {
+		t.Errorf("insert batch sizes = %v, want [2 2]", insertBatchSizes)
+	}
+	for name, wantID := range map[string]uint64{
+		"卜算子": 101, "念奴娇": 102, "水调歌头": 103, "蝶恋花": 104, "鹧鸪天": 105,
+	} {
+		if ciTuneIDs[name] != wantID {
+			t.Errorf("ci tune %q ID = %d, want %d", name, ciTuneIDs[name], wantID)
+		}
+	}
+}
+
+func TestBuildPoemModelsAssociatesCiTuneFromRhythmic(t *testing.T) {
+	rawPoems := []poem{
+		{Author: "苏轼", Rhythmic: " 念奴娇 ", Paragraphs: []string{"大江东去，浪淘尽。"}},
+		{Author: "李白", Title: "静夜思", Paragraphs: []string{"床前明月光。"}},
+	}
+	authorIDs := map[string]uint64{"苏轼": 11, "李白": 12}
+	ciTuneIDs := map[string]uint64{"念奴娇": 21}
+
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 31, ciTuneIDs)
+
+	if len(skippedPoems) != 0 || len(poemModels) != 2 {
+		t.Fatalf("models = %d, skipped = %d, want 2 and 0", len(poemModels), len(skippedPoems))
+	}
+	if poemModels[0].Title != "念奴娇" {
+		t.Errorf("ci title = %q, want 念奴娇", poemModels[0].Title)
+	}
+	if poemModels[0].CiTuneID == nil || *poemModels[0].CiTuneID != 21 {
+		t.Errorf("ci tune ID = %v, want 21", poemModels[0].CiTuneID)
+	}
+	if poemModels[1].CiTuneID != nil {
+		t.Errorf("poem ci tune ID = %v, want nil", poemModels[1].CiTuneID)
 	}
 }
 
@@ -308,7 +451,7 @@ func TestWalkDirectChildFilesVisitsOnlyDirectFiles(t *testing.T) {
 	mustWriteFile(t, filepath.Join(root, "nested", "ignored.json"), "ignored")
 
 	var visited []string
-	err := walkDirectChildFiles(root, func(path string, entry os.DirEntry) error {
+	err := utils.WalkDirectChildFiles(root, func(path string, entry os.DirEntry) error {
 		if entry.IsDir() {
 			t.Fatalf("visited directory %q, want files only", path)
 		}
@@ -330,7 +473,7 @@ func TestWalkAllFilesVisitsNestedFiles(t *testing.T) {
 	mustWriteFile(t, filepath.Join(root, "nested", "deep", "grandchild.json"), "grandchild")
 
 	var visited []string
-	err := walkAllFiles(root, func(path string, entry os.DirEntry) error {
+	err := utils.WalkAllFiles(root, func(path string, entry os.DirEntry) error {
 		if entry.IsDir() {
 			t.Fatalf("visited directory %q, want files only", path)
 		}
@@ -359,7 +502,7 @@ func TestWalkAllFilesStopsWhenCallbackReturnsError(t *testing.T) {
 	mustWriteFile(t, filepath.Join(root, "second.json"), "second")
 	expectedErr := errors.New("stop walking")
 
-	err := walkAllFiles(root, func(path string, entry os.DirEntry) error {
+	err := utils.WalkAllFiles(root, func(path string, entry os.DirEntry) error {
 		return expectedErr
 	})
 
