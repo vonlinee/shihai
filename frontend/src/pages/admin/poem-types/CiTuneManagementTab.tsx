@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Edit2, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
+import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
   useAdminBatchDeleteCiTunes,
@@ -20,7 +21,7 @@ import { toEntityId, toggleAllVisibleIds, toggleSelectedId } from '@/utils/uitoo
 import { CiTuneFormDialog, type CiTuneFormPayload } from './CiTuneFormDialog'
 
 export function CiTuneManagementTab() {
-  const { data: ciTunes, isLoading } = useAdminCiTunes()
+  const { data: ciTunes, isFetching, isLoading } = useAdminCiTunes()
   const { data: poemTypes } = useAdminPoemTypes()
   const createMutation = useAdminCreateCiTune()
   const updateMutation = useAdminUpdateCiTune()
@@ -30,9 +31,17 @@ export function CiTuneManagementTab() {
   const [showDialog, setShowDialog] = useState(false)
   const [editingCiTune, setEditingCiTune] = useState<CiTune | null>(null)
   const [selectedCiTuneIds, setSelectedCiTuneIds] = useState<string[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
-  const ciTuneList = ciTunes ?? []
-  const visibleCiTuneIds = ciTuneList.map((ciTune) => toEntityId(ciTune.id))
+  const ciTuneList = useMemo(() => ciTunes ?? [], [ciTunes])
+  const totalPages = Math.max(1, Math.ceil(ciTuneList.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pagedCiTunes = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return ciTuneList.slice(start, start + pageSize)
+  }, [ciTuneList, currentPage, pageSize])
+  const visibleCiTuneIds = pagedCiTunes.map((ciTune) => toEntityId(ciTune.id))
   const allVisibleCiTunesSelected = visibleCiTuneIds.length > 0 && visibleCiTuneIds.every((id) => selectedCiTuneIds.includes(id))
   const poemTypeOptions = useMemo(
     () => (poemTypes ?? [])
@@ -44,6 +53,13 @@ export function CiTuneManagementTab() {
       })),
     [poemTypes],
   )
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+      setSelectedCiTuneIds([])
+    }
+  }, [page, totalPages])
 
   const openCreate = () => {
     setEditingCiTune(null)
@@ -228,12 +244,28 @@ export function CiTuneManagementTab() {
         <CardContent className="pt-6">
           <DataTable
             columns={ciTuneColumns}
-            data={ciTuneList}
+            data={pagedCiTunes}
             emptyText="暂无词牌数据"
             enableColumnDragging
             enableColumnFilters
             getRowId={(ciTune) => toEntityId(ciTune.id)}
             loading={isLoading}
+          />
+          <Pagination
+            className="mt-4"
+            page={currentPage}
+            pageSize={pageSize}
+            total={ciTuneList.length}
+            disabled={isFetching}
+            onPageChange={(nextPage) => {
+              setSelectedCiTuneIds([])
+              setPage(nextPage)
+            }}
+            onPageSizeChange={(nextPageSize) => {
+              setSelectedCiTuneIds([])
+              setPageSize(nextPageSize)
+              setPage(1)
+            }}
           />
         </CardContent>
       </Card>

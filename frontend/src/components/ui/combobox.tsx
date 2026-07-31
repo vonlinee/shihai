@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, X, SearchX } from 'lucide-react'
 
 export interface ComboboxOption {
@@ -59,15 +59,20 @@ export function Combobox({
   const selectedGroupOption = groupOptions?.find((o) => String(o.value) === String(groupValue))
 
   // Find the selected option label
-  const selectedOption = options.find((o) => String(o.value) === String(value))
+  const selectedOption = useMemo(
+    () => options.find((o) => String(o.value) === String(value)),
+    [options, value],
+  )
   const displayValue = isCustom ? inputValue : (selectedOption?.label || (value !== undefined && value !== '' ? String(value) : ''))
 
   // Filter options by input
+  const deferredInputValue = useDeferredValue(inputValue)
+  const normalizedInputValue = deferredInputValue.toLowerCase()
   const filteredOptions = useMemo(
     () => options.filter((o) =>
-      o.label.toLowerCase().includes(inputValue.toLowerCase())
+      o.label.toLowerCase().includes(normalizedInputValue)
     ),
-    [inputValue, options]
+    [normalizedInputValue, options]
   )
   const listHeight = Math.min(virtualListHeight, filteredOptions.length * virtualItemHeight)
   const optionListViewportHeight = hasGroups ? Math.max(0, virtualListHeight - virtualItemHeight) : listHeight
@@ -122,9 +127,11 @@ export function Combobox({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setInputValue(val)
-    setIsCustom(true)
+    setIsCustom(allowCustom)
     onSearchChange?.(val)
-    onChange(val) // pass raw string as custom value
+    if (allowCustom) {
+      onChange(val)
+    }
     if (!isOpen) setIsOpen(true)
   }
 
@@ -151,7 +158,7 @@ export function Combobox({
     }
     if (e.key === 'Enter' && isOpen) {
       // If exact match, select it
-      const exactMatch = filteredOptions.find(
+      const exactMatch = options.find(
         (o) => o.label.toLowerCase() === inputValue.toLowerCase()
       )
       if (exactMatch) {
