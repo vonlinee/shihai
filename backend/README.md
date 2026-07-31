@@ -62,6 +62,26 @@ Project-level backend and Go development guidelines have been moved to `docs/gui
 
    *Note: GORM auto migrations are executed upon starting to ensure your database perfectly replicates the definitions inside `internal/models/`*.
 
+## Test
+
+```shell
+# run all test case
+go test -v
+
+# run specific test case
+go test -v -run TestJSONMap_Get
+
+# run benchmark
+go test -bench=. -benchmem
+
+# show test coverage rate
+go test -cover
+
+# generate test coverage report
+go test -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
 ## Swagger API Documentation
 
 After starting the service, open:

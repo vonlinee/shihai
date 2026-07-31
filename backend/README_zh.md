@@ -63,6 +63,26 @@ backend/
 
    *注意：项目启动时，GORM的 auto migration 工具会自动执行以同步最新的数据表结构至 `internal/models/` 里面的定义状态*。
 
+## Test
+
+```shell
+# 运行所有测试
+go test -v
+
+# 运行特定测试
+go test -v -run TestJSONMap_Get
+
+# 运行基准测试
+go test -bench=. -benchmem
+
+# 查看测试覆盖率
+go test -cover
+
+# 生成覆盖率报告
+go test -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
 ## Swagger API 文档
 
 服务启动后可访问：
