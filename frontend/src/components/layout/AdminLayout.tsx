@@ -99,11 +99,11 @@ export function AdminLayout() {
             to="/"
             title="诗海管理"
             className={cn(
-              'flex min-w-0 items-center gap-2 font-serif font-bold text-ink',
+              'flex min-w-0 items-center gap-2 font-serif font-bold text-foreground',
               isSidebarCollapsed ? 'h-10 w-10 justify-center text-xl' : 'text-xl',
             )}
           >
-            <span className="text-cinnabar">诗</span>
+            <span className="text-primary">诗</span>
             {!isSidebarCollapsed && <span className="truncate">海管理</span>}
           </Link>
           <button
@@ -181,7 +181,7 @@ export function AdminLayout() {
 
       <div className="min-w-0 flex h-screen flex-1 flex-col bg-background">
         <header className="z-50 flex h-14 shrink-0 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <h1 className="text-lg font-serif font-bold text-ink">{currentTitle}</h1>
+          <h1 className="text-lg font-serif font-bold text-foreground">{currentTitle}</h1>
           <UserMenu />
         </header>
 
