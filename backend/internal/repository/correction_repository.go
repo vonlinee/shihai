@@ -18,6 +18,33 @@ func NewCorrectionRepository(db *gorm.DB) *CorrectionRepository {
 	return &CorrectionRepository{db: db}
 }
 
+// Create stores a new correction request.
+func (r *CorrectionRepository) Create(correction *models.CorrectionRequest) error {
+	return r.db.Create(correction).Error
+}
+
+// GetByID returns a correction request with poem and user summaries.
+func (r *CorrectionRepository) GetByID(id uint64) (*models.CorrectionRequest, error) {
+	var correction models.CorrectionRequest
+	if err := r.db.
+		Preload("Poem").
+		Preload("User").
+		First(&correction, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &correction, nil
+}
+
+// UpdateStatus updates the review status of a correction request.
+func (r *CorrectionRepository) UpdateStatus(id uint64, status string) (*models.CorrectionRequest, error) {
+	if err := r.db.Model(&models.CorrectionRequest{}).
+		Where("id = ?", id).
+		Update("status", status).Error; err != nil {
+		return nil, err
+	}
+	return r.GetByID(id)
+}
+
 // List returns paginated correction requests with poem and user summaries preloaded.
 func (r *CorrectionRepository) List(page, pageSize int, keyword string) ([]models.CorrectionRequest, int64, error) {
 	var corrections []models.CorrectionRequest

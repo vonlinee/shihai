@@ -2969,6 +2969,80 @@
                 }
             }
         },
+        "/api/corrections": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "纠错"
+                ],
+                "summary": "提交诗词纠错申请",
+                "parameters": [
+                    {
+                        "description": "纠错申请",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CorrectionCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.CorrectionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/dynasties": {
             "get": {
                 "tags": [
@@ -4887,6 +4961,151 @@
                         "like",
                         "dislike"
                     ]
+                }
+            }
+        },
+        "dto.CorrectionCreateRequest": {
+            "type": "object",
+            "required": [
+                "originalText",
+                "poemId",
+                "reason",
+                "suggestedText",
+                "type"
+            ],
+            "properties": {
+                "originalText": {
+                    "description": "OriginalText 当前错误或待确认的原文。",
+                    "type": "string"
+                },
+                "poemId": {
+                    "description": "PoemID 被纠错诗词的 Snowflake ID。",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "Reason 纠错原因、依据和补充说明。",
+                    "type": "string"
+                },
+                "suggestedText": {
+                    "description": "SuggestedText 用户建议修改后的内容。",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type 纠错位置或类型，例如 title、author、dynasty、content、translation、appreciation、annotation 或 other。",
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "dto.CorrectionPoemSummary": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "ID 诗词 Snowflake ID，对外序列化为字符串。",
+                    "type": "string",
+                    "example": "0"
+                },
+                "title": {
+                    "description": "Title 诗词标题。",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CorrectionResponse": {
+            "type": "object",
+            "properties": {
+                "approveCount": {
+                    "description": "ApproveCount 支持票数。",
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "description": "CreatedAt 创建时间。",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID 纠错申请 Snowflake ID，对外序列化为字符串。",
+                    "type": "string",
+                    "example": "0"
+                },
+                "originalText": {
+                    "description": "OriginalText 被纠错的原文内容。",
+                    "type": "string"
+                },
+                "poem": {
+                    "description": "Poem 被纠错诗词摘要。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CorrectionPoemSummary"
+                        }
+                    ]
+                },
+                "poemId": {
+                    "description": "PoemID 被纠错诗词的 Snowflake ID。",
+                    "type": "string",
+                    "example": "0"
+                },
+                "reason": {
+                    "description": "Reason 用户提交的纠错理由。",
+                    "type": "string"
+                },
+                "rejectCount": {
+                    "description": "RejectCount 反对票数。",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "Status 当前状态：pending、voting、approved、rejected 或 completed。",
+                    "type": "string"
+                },
+                "suggestedText": {
+                    "description": "SuggestedText 用户建议修改后的内容。",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type 纠错类型。",
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "description": "UpdatedAt 更新时间。",
+                    "type": "string"
+                },
+                "user": {
+                    "description": "User 提交用户摘要。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CorrectionUserSummary"
+                        }
+                    ]
+                },
+                "userId": {
+                    "description": "UserID 提交用户的 Snowflake ID。",
+                    "type": "string",
+                    "example": "0"
+                },
+                "voteCount": {
+                    "description": "VoteCount 投票总数。",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CorrectionUserSummary": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "description": "Avatar 用户头像地址。",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID 用户 Snowflake ID，对外序列化为字符串。",
+                    "type": "string",
+                    "example": "0"
+                },
+                "name": {
+                    "description": "Name 用户显示名称。",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Username 用户名。",
+                    "type": "string"
                 }
             }
         },

@@ -166,6 +166,111 @@ definitions:
     - commentId
     - type
     type: object
+  dto.CorrectionCreateRequest:
+    properties:
+      originalText:
+        description: OriginalText 当前错误或待确认的原文。
+        type: string
+      poemId:
+        description: PoemID 被纠错诗词的 Snowflake ID。
+        type: integer
+      reason:
+        description: Reason 纠错原因、依据和补充说明。
+        type: string
+      suggestedText:
+        description: SuggestedText 用户建议修改后的内容。
+        type: string
+      type:
+        description: Type 纠错位置或类型，例如 title、author、dynasty、content、translation、appreciation、annotation
+          或 other。
+        maxLength: 20
+        type: string
+    required:
+    - originalText
+    - poemId
+    - reason
+    - suggestedText
+    - type
+    type: object
+  dto.CorrectionPoemSummary:
+    properties:
+      id:
+        description: ID 诗词 Snowflake ID，对外序列化为字符串。
+        example: "0"
+        type: string
+      title:
+        description: Title 诗词标题。
+        type: string
+    type: object
+  dto.CorrectionResponse:
+    properties:
+      approveCount:
+        description: ApproveCount 支持票数。
+        type: integer
+      createdAt:
+        description: CreatedAt 创建时间。
+        type: string
+      id:
+        description: ID 纠错申请 Snowflake ID，对外序列化为字符串。
+        example: "0"
+        type: string
+      originalText:
+        description: OriginalText 被纠错的原文内容。
+        type: string
+      poem:
+        allOf:
+        - $ref: '#/definitions/dto.CorrectionPoemSummary'
+        description: Poem 被纠错诗词摘要。
+      poemId:
+        description: PoemID 被纠错诗词的 Snowflake ID。
+        example: "0"
+        type: string
+      reason:
+        description: Reason 用户提交的纠错理由。
+        type: string
+      rejectCount:
+        description: RejectCount 反对票数。
+        type: integer
+      status:
+        description: Status 当前状态：pending、voting、approved、rejected 或 completed。
+        type: string
+      suggestedText:
+        description: SuggestedText 用户建议修改后的内容。
+        type: string
+      type:
+        description: Type 纠错类型。
+        type: string
+      updatedAt:
+        description: UpdatedAt 更新时间。
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/dto.CorrectionUserSummary'
+        description: User 提交用户摘要。
+      userId:
+        description: UserID 提交用户的 Snowflake ID。
+        example: "0"
+        type: string
+      voteCount:
+        description: VoteCount 投票总数。
+        type: integer
+    type: object
+  dto.CorrectionUserSummary:
+    properties:
+      avatar:
+        description: Avatar 用户头像地址。
+        type: string
+      id:
+        description: ID 用户 Snowflake ID，对外序列化为字符串。
+        example: "0"
+        type: string
+      name:
+        description: Name 用户显示名称。
+        type: string
+      username:
+        description: Username 用户名。
+        type: string
+    type: object
   dto.DashboardActivityResponse:
     properties:
       action:
@@ -2615,6 +2720,50 @@ paths:
       summary: 评论投票
       tags:
       - 评论
+  /api/corrections:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 纠错申请
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CorrectionCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CorrectionResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 提交诗词纠错申请
+      tags:
+      - 纠错
   /api/dynasties:
     get:
       responses:

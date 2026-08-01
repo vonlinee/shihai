@@ -12,8 +12,16 @@ type fakeCorrectionStore struct {
 	pageSize int
 	keyword  string
 	items    []models.CorrectionRequest
+	created  *models.CorrectionRequest
+	item     *models.CorrectionRequest
+	status   string
 	total    int64
 	err      error
+}
+
+func (s *fakeCorrectionStore) Create(correction *models.CorrectionRequest) error {
+	s.created = correction
+	return s.err
 }
 
 func (s *fakeCorrectionStore) List(page, pageSize int, keyword string) ([]models.CorrectionRequest, int64, error) {
@@ -21,6 +29,28 @@ func (s *fakeCorrectionStore) List(page, pageSize int, keyword string) ([]models
 	s.pageSize = pageSize
 	s.keyword = keyword
 	return s.items, s.total, s.err
+}
+
+func (s *fakeCorrectionStore) GetByID(id uint64) (*models.CorrectionRequest, error) {
+	if s.item != nil {
+		return s.item, s.err
+	}
+	for index := range s.items {
+		if s.items[index].ID == id {
+			return &s.items[index], s.err
+		}
+	}
+	return nil, s.err
+}
+
+func (s *fakeCorrectionStore) UpdateStatus(id uint64, status string) (*models.CorrectionRequest, error) {
+	s.status = status
+	item, err := s.GetByID(id)
+	if item == nil || err != nil {
+		return item, err
+	}
+	item.Status = status
+	return item, nil
 }
 
 func TestCorrectionServiceListCorrectionsNormalizesPaginationAndMapsResponse(t *testing.T) {
@@ -73,5 +103,37 @@ func TestCorrectionServiceListCorrectionsNormalizesPaginationAndMapsResponse(t *
 	}
 	if got.OriginalText != "床前明月光" || got.SuggestedText != "窗前明月光" {
 		t.Fatalf("unexpected text fields: %+v", got)
+	}
+}
+
+func TestCorrectionServiceCreateCorrectionCreatesPendingRequest(t *testing.T) {
+	store := &fakeCorrectionStore{}
+	service := NewCorrectionService(store)
+
+	response, err := service.CreateCorrection(3001, dto.CorrectionCreateRequest{
+		PoemID:        dto.RequestID(2001),
+		Type:          " content ",
+		OriginalText:  " 错误原文 ",
+		SuggestedText: " 正确原文 ",
+		Reason:        " 错别字 ",
+	})
+
+	if err != nil {
+		t.Fatalf("CreateCorrection returned error: %v", err)
+	}
+	if store.created == nil {
+		t.Fatal("created correction = nil, want correction request")
+	}
+	if store.created.PoemID != 2001 || store.created.UserID != 3001 {
+		t.Fatalf("created ids = poem %d user %d, want 2001/3001", store.created.PoemID, store.created.UserID)
+	}
+	if store.created.Type != "content" || store.created.OriginalText != "错误原文" || store.created.SuggestedText != "正确原文" {
+		t.Fatalf("created correction text fields = %+v", store.created)
+	}
+	if store.created.Reason != "错别字" || store.created.Status != "pending" {
+		t.Fatalf("created reason/status = %q/%q, want 错别字/pending", store.created.Reason, store.created.Status)
+	}
+	if response == nil || response.Status != "pending" || response.UserID != 3001 {
+		t.Fatalf("response = %+v, want pending response for user 3001", response)
 	}
 }

@@ -284,6 +284,10 @@ export interface CorrectionListResponse {
   pageSize: number;
 }
 
+export interface CorrectionStatusUpdateRequest {
+  status: CorrectionRequest['status'];
+}
+
 // ─── Forum Admin ────────────────────────────────────────────────────────────
 
 export interface AdminForumPostListParams {
@@ -442,6 +446,14 @@ export const adminService = {
   // Admin corrections
   getCorrections(params?: CorrectionListParams): Promise<CorrectionListResponse> {
     return api.get<CorrectionListResponse>('/admin/corrections', params as Record<string, unknown>);
+  },
+
+  getCorrection(id: AdminID): Promise<CorrectionRequest> {
+    return api.get<CorrectionRequest>(`/admin/corrections/${id}`);
+  },
+
+  updateCorrectionStatus(id: AdminID, data: CorrectionStatusUpdateRequest): Promise<CorrectionRequest> {
+    return api.put<CorrectionRequest>(`/admin/corrections/${id}/status`, data);
   },
 
   // Admin forum

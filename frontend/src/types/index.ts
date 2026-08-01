@@ -347,7 +347,7 @@ export interface CorrectionRequest {
   /** 提交用户摘要。 */
   user?: CorrectionUserSummary;
   /** 纠错类型。 */
-  type: 'content' | 'translation' | 'appreciation' | 'annotation';
+  type: 'title' | 'author' | 'dynasty' | 'content' | 'translation' | 'appreciation' | 'annotation' | 'other';
   /** 被纠错的原文内容。 */
   originalText: string;
   /** 用户建议修改后的内容。 */

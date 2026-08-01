@@ -9,6 +9,20 @@ type CorrectionListRequest struct {
 	Keyword  string `form:"keyword"`             // Keyword 搜索关键词，匹配诗词标题、提交用户、原文或建议内容。
 }
 
+// CorrectionCreateRequest 提交诗词纠错申请。
+type CorrectionCreateRequest struct {
+	PoemID        RequestID `json:"poemId" binding:"required"`        // PoemID 被纠错诗词的 Snowflake ID。
+	Type          string    `json:"type" binding:"required,max=20"`   // Type 纠错位置或类型，例如 title、author、dynasty、content、translation、appreciation、annotation 或 other。
+	OriginalText  string    `json:"originalText" binding:"required"`  // OriginalText 当前错误或待确认的原文。
+	SuggestedText string    `json:"suggestedText" binding:"required"` // SuggestedText 用户建议修改后的内容。
+	Reason        string    `json:"reason" binding:"required"`        // Reason 纠错原因、依据和补充说明。
+}
+
+// CorrectionStatusUpdateRequest 更新纠错申请状态。
+type CorrectionStatusUpdateRequest struct {
+	Status string `json:"status" binding:"required,oneof=pending voting approved rejected completed"` // Status 目标状态。
+}
+
 // CorrectionPoemSummary 纠错列表中的诗词摘要。
 type CorrectionPoemSummary struct {
 	ID    uint64 `json:"id,string"` // ID 诗词 Snowflake ID，对外序列化为字符串。
@@ -30,9 +44,9 @@ type CorrectionResponse struct {
 	Poem          *CorrectionPoemSummary `json:"poem,omitempty"` // Poem 被纠错诗词摘要。
 	UserID        uint64                 `json:"userId,string"`  // UserID 提交用户的 Snowflake ID。
 	User          *CorrectionUserSummary `json:"user,omitempty"` // User 提交用户摘要。
-	Type          string                 `json:"type"`           // Type 纠错类型：content、translation、appreciation 或 annotation。
+	Type          string                 `json:"type"`           // Type 纠错类型。
 	OriginalText  string                 `json:"originalText"`   // OriginalText 被纠错的原文内容。
-	SuggestedText string                 `json:"suggestedText"`  // SuggestedText 建议修改后的内容。
+	SuggestedText string                 `json:"suggestedText"`  // SuggestedText 用户建议修改后的内容。
 	Reason        string                 `json:"reason"`         // Reason 用户提交的纠错理由。
 	Status        string                 `json:"status"`         // Status 当前状态：pending、voting、approved、rejected 或 completed。
 	VoteCount     int                    `json:"voteCount"`      // VoteCount 投票总数。

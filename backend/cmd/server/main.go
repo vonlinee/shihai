@@ -294,6 +294,9 @@ func setupRoutes(r *gin.Engine, app *App) {
 			authorized.POST("/comments", app.commentHandler.CreateComment)
 			authorized.DELETE("/comments/:id", app.commentHandler.DeleteComment)
 
+			// Corrections - Protected
+			authorized.POST("/corrections", app.rbacMiddleware.RequirePermission(models.PermCorrectionCreate), app.correctionHandler.CreateCorrection)
+
 			// Forum - Protected write
 			authorized.POST("/forum/posts", app.rbacMiddleware.RequirePermission(models.PermForumCreate), app.forumHandler.CreatePost)
 			authorized.PUT("/forum/posts/:id", app.forumHandler.UpdatePost)

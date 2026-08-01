@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { poemService, type PoemID, type PoetListParams } from '@/services/poemService';
+import { poemService, type CorrectionCreateRequest, type PoemID, type PoetListParams } from '@/services/poemService';
 import type { PoemSearchParams } from '@/types';
 import { toast } from 'sonner';
 
@@ -38,6 +38,18 @@ export function useLikePoem() {
     },
     onError: (error: Error) => {
       toast.error(error.message || '操作失败');
+    },
+  });
+}
+
+export function useCreateCorrection() {
+  return useMutation({
+    mutationFn: (data: CorrectionCreateRequest) => poemService.createCorrection(data),
+    onSuccess: () => {
+      toast.success('已提交纠错申请');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '提交纠错失败');
     },
   });
 }

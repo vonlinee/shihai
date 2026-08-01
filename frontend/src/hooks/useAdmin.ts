@@ -22,6 +22,7 @@ import {
   type PoetUpdateRequest,
   type AdminCreateUserRequest,
   type CorrectionListParams,
+  type CorrectionStatusUpdateRequest,
   type AdminForumPostListParams,
 } from '@/services/adminService';
 import { toast } from 'sonner';
@@ -170,6 +171,31 @@ export function useAdminCorrections(params?: CorrectionListParams) {
   return useQuery({
     queryKey: ['admin', 'corrections', params],
     queryFn: () => adminService.getCorrections(params),
+  });
+}
+
+export function useAdminCorrection(id: AdminID | null) {
+  return useQuery({
+    queryKey: ['admin', 'correction', id],
+    queryFn: () => adminService.getCorrection(id!),
+    enabled: !!id,
+  });
+}
+
+export function useAdminUpdateCorrectionStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: AdminID; data: CorrectionStatusUpdateRequest }) =>
+      adminService.updateCorrectionStatus(id, data),
+    onSuccess: (_, variables) => {
+      toast.success(variables.data.status === 'approved' ? '纠错已通过' : '纠错已驳回');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'corrections'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'correction', variables.id] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '更新纠错状态失败');
+    },
   });
 }
 

@@ -24,6 +24,16 @@ export interface PoetListResponse {
   pageSize: number;
 }
 
+export type CorrectionType = 'title' | 'author' | 'dynasty' | 'content' | 'translation' | 'appreciation' | 'annotation' | 'other';
+
+export interface CorrectionCreateRequest {
+  poemId: PoemID;
+  type: CorrectionType;
+  originalText: string;
+  suggestedText: string;
+  reason: string;
+}
+
 export const poemService = {
   getPoems(params?: PoemSearchParams): Promise<PoemListResponse> {
     return api.get<PoemListResponse>('/poems', params as Record<string, unknown>);
@@ -39,6 +49,10 @@ export const poemService = {
 
   likePoem(id: PoemID): Promise<void> {
     return api.post<void>(`/poems/${id}/like`);
+  },
+
+  createCorrection(data: CorrectionCreateRequest): Promise<void> {
+    return api.post<void>('/corrections', data);
   },
 
   getDynasties(): Promise<Dynasty[]> {

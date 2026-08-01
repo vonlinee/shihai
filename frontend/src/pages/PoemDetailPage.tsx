@@ -17,12 +17,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { usePoem, useLikePoem } from '@/hooks/usePoems'
+import { usePoem, useLikePoem, useCreateCorrection } from '@/hooks/usePoems'
 import { useComments, useCreateComment, useVoteComment } from '@/hooks/useComments'
 import { useAuthStore } from '@/stores/authStore'
 import { ReplyChainDialog } from '@/components/comment/ReplyChainDialog'
 import { PoemAnnotationSection } from '@/components/poetry/annotation/PoemAnnotationSection'
-import type { Comment } from '@/types'
+import type { CorrectionType } from '@/services/poemService'
+import type { Comment, Poem } from '@/types'
 
 function commentAuthorName(comment: Comment) {
   return comment.user?.name ?? comment.visitorName ?? '匿名用户'
@@ -35,6 +36,67 @@ type FlatReply = {
 }
 
 const longCommentThreshold = 160
+
+type CorrectionFormData = {
+  type: CorrectionType
+  originalText: string
+  suggestedText: string
+  reason: string
+  source: string
+  note: string
+}
+
+const correctionTypeOptions: { value: CorrectionType; label: string }[] = [
+  { value: 'content', label: '正文' },
+  { value: 'title', label: '题目' },
+  { value: 'author', label: '作者' },
+  { value: 'dynasty', label: '朝代' },
+  { value: 'translation', label: '译文' },
+  { value: 'appreciation', label: '赏析' },
+  { value: 'annotation', label: '注释' },
+  { value: 'other', label: '其他' },
+]
+
+function originalTextForCorrectionType(poem: Poem, type: CorrectionType): string {
+  switch (type) {
+    case 'title':
+      return poem.title
+    case 'author':
+      return poem.author?.name ?? ''
+    case 'dynasty':
+      return poem.dynasty?.name ?? ''
+    case 'translation':
+      return poem.translation ?? ''
+    case 'appreciation':
+      return poem.appreciation ?? ''
+    case 'annotation':
+      return poem.annotation ?? ''
+    case 'content':
+      return poem.content.join('\n')
+    case 'other':
+    default:
+      return ''
+  }
+}
+
+function createCorrectionFormData(poem: Poem, selectedText = ''): CorrectionFormData {
+  return {
+    type: 'content',
+    originalText: selectedText || originalTextForCorrectionType(poem, 'content'),
+    suggestedText: '',
+    reason: '',
+    source: '',
+    note: '',
+  }
+}
+
+function buildCorrectionReason(formData: CorrectionFormData): string {
+  return [
+    formData.reason.trim(),
+    formData.source.trim() ? `参考来源：${formData.source.trim()}` : '',
+    formData.note.trim() ? `补充说明：${formData.note.trim()}` : '',
+  ].filter(Boolean).join('\n')
+}
 
 function flattenReplies(root: Comment): FlatReply[] {
   const flatReplies: FlatReply[] = []
@@ -94,11 +156,14 @@ export function PoemDetailPage() {
   const [replyTarget, setReplyTarget] = useState<Comment | null>(null)
   const [replyText, setReplyText] = useState('')
   const [replyChain, setReplyChain] = useState<Comment[] | null>(null)
+  const [showCorrectionDialog, setShowCorrectionDialog] = useState(false)
+  const [correctionFormData, setCorrectionFormData] = useState<CorrectionFormData | null>(null)
   const [commentPage] = useState(1)
 
   const { data: poem, isLoading: poemLoading } = usePoem(poemId)
   const { data: commentsData, isLoading: commentsLoading } = useComments(poemId, commentPage)
   const likeMutation = useLikePoem()
+  const createCorrectionMutation = useCreateCorrection()
   const createCommentMutation = useCreateComment()
   const voteCommentMutation = useVoteComment()
 
@@ -145,6 +210,65 @@ export function PoemDetailPage() {
           setReplyText('')
           setReplyTarget(null)
         },
+      },
+    )
+  }
+
+  const openCorrectionDialog = () => {
+    if (!isAuthenticated) {
+      toast.error('请先登录后再提交纠错')
+      return
+    }
+    if (!poem) return
+
+    const selectedText = window.getSelection()?.toString().trim() ?? ''
+    setCorrectionFormData(createCorrectionFormData(poem, selectedText))
+    setShowCorrectionDialog(true)
+  }
+
+  const closeCorrectionDialog = () => {
+    setShowCorrectionDialog(false)
+    setCorrectionFormData(null)
+  }
+
+  const handleCorrectionTypeChange = (type: CorrectionType) => {
+    if (!poem || !correctionFormData) return
+
+    setCorrectionFormData({
+      ...correctionFormData,
+      type,
+      originalText: originalTextForCorrectionType(poem, type),
+    })
+  }
+
+  const handleSubmitCorrection = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!poemId || !correctionFormData) return
+
+    const reason = buildCorrectionReason(correctionFormData)
+    if (!correctionFormData.originalText.trim()) {
+      toast.error('请填写原文内容')
+      return
+    }
+    if (!correctionFormData.suggestedText.trim()) {
+      toast.error('请填写建议修改内容')
+      return
+    }
+    if (!reason) {
+      toast.error('请填写纠错原因')
+      return
+    }
+
+    createCorrectionMutation.mutate(
+      {
+        poemId,
+        type: correctionFormData.type,
+        originalText: correctionFormData.originalText.trim(),
+        suggestedText: correctionFormData.suggestedText.trim(),
+        reason,
+      },
+      {
+        onSuccess: closeCorrectionDialog,
       },
     )
   }
@@ -200,7 +324,7 @@ export function PoemDetailPage() {
                 <Share2 className="h-4 w-4 mr-2" />
                 分享
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast.success('已提交纠错申请')}>
+              <Button variant="outline" size="sm" onClick={openCorrectionDialog}>
                 <Flag className="h-4 w-4 mr-2" />
                 纠错
               </Button>
@@ -308,6 +432,143 @@ export function PoemDetailPage() {
       {replyChain && (
         <ReplyChainDialog chain={replyChain} onClose={() => setReplyChain(null)} />
       )}
+      {showCorrectionDialog && correctionFormData && poem && (
+        <CorrectionDialog
+          poem={poem}
+          formData={correctionFormData}
+          isSubmitting={createCorrectionMutation.isPending}
+          onChange={setCorrectionFormData}
+          onClose={closeCorrectionDialog}
+          onSubmit={handleSubmitCorrection}
+          onTypeChange={handleCorrectionTypeChange}
+        />
+      )}
+    </div>
+  )
+}
+
+function CorrectionDialog({
+  poem,
+  formData,
+  isSubmitting,
+  onChange,
+  onClose,
+  onSubmit,
+  onTypeChange,
+}: {
+  poem: Poem
+  formData: CorrectionFormData
+  isSubmitting: boolean
+  onChange: (formData: CorrectionFormData) => void
+  onClose: () => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onTypeChange: (type: CorrectionType) => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-background shadow-lg">
+        <div className="flex items-start justify-between gap-4 border-b p-6 pb-4">
+          <div>
+            <h2 className="font-serif text-xl font-bold">提交纠错</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              《{poem.title}》 [{poem.dynasty?.name}] {poem.author?.name}
+            </p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <form className="space-y-4 overflow-y-auto p-6 pt-4" onSubmit={onSubmit}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="correction-type" className="text-sm font-medium">纠错位置 *</label>
+              <select
+                id="correction-type"
+                value={formData.type}
+                onChange={(event) => onTypeChange(event.target.value as CorrectionType)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {correctionTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="correction-reason" className="text-sm font-medium">纠错原因 *</label>
+              <select
+                id="correction-reason"
+                value={formData.reason}
+                onChange={(event) => onChange({ ...formData, reason: event.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">请选择原因</option>
+                <option value="错别字">错别字</option>
+                <option value="缺字或多字">缺字或多字</option>
+                <option value="断句错误">断句错误</option>
+                <option value="作者或朝代错误">作者或朝代错误</option>
+                <option value="内容缺失">内容缺失</option>
+                <option value="版本差异">版本差异</option>
+                <option value="其他">其他</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="correction-original" className="text-sm font-medium">原文内容 *</label>
+            <textarea
+              id="correction-original"
+              value={formData.originalText}
+              onChange={(event) => onChange({ ...formData, originalText: event.target.value })}
+              rows={4}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="correction-suggested" className="text-sm font-medium">建议修改为 *</label>
+            <textarea
+              id="correction-suggested"
+              value={formData.suggestedText}
+              onChange={(event) => onChange({ ...formData, suggestedText: event.target.value })}
+              placeholder="填写你认为正确的内容"
+              rows={4}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="correction-source" className="text-sm font-medium">参考来源</label>
+            <Input
+              id="correction-source"
+              value={formData.source}
+              onChange={(event) => onChange({ ...formData, source: event.target.value })}
+              placeholder="书名、网页链接或版本说明"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="correction-note" className="text-sm font-medium">补充说明</label>
+            <textarea
+              id="correction-note"
+              value={formData.note}
+              onChange={(event) => onChange({ ...formData, note: event.target.value })}
+              placeholder="说明判断依据或需要管理员注意的情况"
+              rows={3}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? '提交中...' : '提交纠错'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
