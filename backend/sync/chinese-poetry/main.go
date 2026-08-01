@@ -28,6 +28,8 @@ const (
 	importBatchSize = 500
 	tangDynastyName = "唐"
 	songDynastyName = "宋"
+	poemCategory    = "诗"
+	ciCategory      = "词"
 )
 
 var root = "D:\\Develop\\Code\\Github\\chinese-poetry"
@@ -47,9 +49,10 @@ type poem struct {
 }
 
 type poemSyncSource struct {
-	filePrefix  string
-	fileDynasty string
-	dynastyName string
+	filePrefix    string
+	fileDynasty   string
+	dynastyName   string
+	genreCategory string
 }
 
 func main() {
@@ -82,20 +85,22 @@ func main() {
 		return
 	}
 	syncAllPoem(*db, root+"/全唐诗", poemSyncSource{
-		filePrefix:  "poet",
-		fileDynasty: "tang",
-		dynastyName: tangDynastyName,
+		filePrefix:    "poet",
+		fileDynasty:   "tang",
+		dynastyName:   tangDynastyName,
+		genreCategory: poemCategory,
 	})
 
 	songCiSource := poemSyncSource{
-		filePrefix:  "ci",
-		fileDynasty: "song",
-		dynastyName: songDynastyName,
+		filePrefix:    "ci",
+		fileDynasty:   "song",
+		dynastyName:   songDynastyName,
+		genreCategory: ciCategory,
 	}
 	// 宋词
 	syncAllPoem(*db, root+"/宋词", songCiSource)
 	// 宋词三百首.json
-	syncPoem(*db, root+"/宋词/宋词三百首.json", importBatchSize, songCiSource.dynastyName)
+	syncPoem(*db, root+"/宋词/宋词三百首.json", importBatchSize, songCiSource)
 
 	if err := config.MigrateMissingPoetsFromPoems(db); err != nil {
 		log.Fatalf("补齐诗人数据失败: %s", err)
@@ -108,7 +113,7 @@ func syncAllPoem(db gorm.DB, path string, source poemSyncSource) {
 			return nil
 		}
 		log.Printf("read poem from %s", path)
-		syncPoem(db, path, importBatchSize, source.dynastyName)
+		syncPoem(db, path, importBatchSize, source)
 		return nil
 	})
 	if err != nil {
@@ -119,13 +124,13 @@ func syncAllPoem(db gorm.DB, path string, source poemSyncSource) {
 func isPoemDataFile(name string, source poemSyncSource) bool {
 	parts := strings.Split(name, ".")
 	return len(parts) >= 4 &&
-			parts[0] == source.filePrefix &&
-			parts[1] == source.fileDynasty &&
-			parts[len(parts)-1] == "json"
+		parts[0] == source.filePrefix &&
+		parts[1] == source.fileDynasty &&
+		parts[len(parts)-1] == "json"
 }
 
 // 同步诗歌信息
-func syncPoem(db gorm.DB, path string, batchSize int, dynastyName string) {
+func syncPoem(db gorm.DB, path string, batchSize int, source poemSyncSource) {
 	text, err := readFileToString(path)
 	if err != nil {
 		log.Fatalf("读取诗词文件失败: %s", err)
@@ -140,7 +145,7 @@ func syncPoem(db gorm.DB, path string, batchSize int, dynastyName string) {
 		log.Fatalf("同步作者失败: %s", err)
 		return
 	}
-	dynastyID, err := findDynastyIDByName(db, dynastyName)
+	dynastyID, err := findDynastyIDByName(db, source.dynastyName)
 	if err != nil {
 		log.Fatalf("查询朝代失败: %s", err)
 		return
@@ -151,7 +156,7 @@ func syncPoem(db gorm.DB, path string, batchSize int, dynastyName string) {
 		log.Fatalf("同步词牌失败: %s", err)
 	}
 
-	poemModels, skippedPoems := buildPoemModels(poems, authorIDs, dynastyID, ciTuneIDs)
+	poemModels, skippedPoems := buildPoemModels(poems, authorIDs, dynastyID, source.genreCategory, ciTuneIDs)
 
 	logSkippedPoems(path, skippedPoems)
 	log.Printf("prepared poems from %s: total=%d insert=%d skipped=%d authorMappings=%d dynastyID=%d", path, len(poems), len(poemModels), len(skippedPoems), len(authorIDs), dynastyID)
@@ -336,10 +341,10 @@ func syncAuthors(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 			},
 			func(batch []models.Author) error {
 				return tx.Omit(clause.Associations).
-						Clauses(clause.OnConflict{
-							Columns:   []clause.Column{{Name: "name"}},
-							DoNothing: true,
-						}).
+					Clauses(clause.OnConflict{
+						Columns:   []clause.Column{{Name: "name"}},
+						DoNothing: true,
+					}).
 					CreateInBatches(&batch, len(batch)).Error
 			},
 		)
@@ -352,10 +357,10 @@ func syncAuthors(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 }
 
 func resolveAuthorIDs(
-		names []string,
-		batchSize int,
-		list func(names []string) ([]models.Author, error),
-		insertBatch func(batch []models.Author) error,
+	names []string,
+	batchSize int,
+	list func(names []string) ([]models.Author, error),
+	insertBatch func(batch []models.Author) error,
 ) (map[string]uint64, error) {
 	existingAuthors, err := list(names)
 	if err != nil {
@@ -445,10 +450,10 @@ func syncCiTunes(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 			},
 			func(batch []models.CiTune) error {
 				return tx.Omit(clause.Associations).
-						Clauses(clause.OnConflict{
-							Columns:   []clause.Column{{Name: "name"}},
-							DoNothing: true,
-						}).
+					Clauses(clause.OnConflict{
+						Columns:   []clause.Column{{Name: "name"}},
+						DoNothing: true,
+					}).
 					CreateInBatches(&batch, len(batch)).Error
 			},
 		)
@@ -461,10 +466,10 @@ func syncCiTunes(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 }
 
 func resolveCiTuneIDs(
-		names []string,
-		batchSize int,
-		list func(names []string) ([]models.CiTune, error),
-		insertBatch func(batch []models.CiTune) error,
+	names []string,
+	batchSize int,
+	list func(names []string) ([]models.CiTune, error),
+	insertBatch func(batch []models.CiTune) error,
 ) (map[string]uint64, error) {
 	existingCiTunes, err := list(names)
 	if err != nil {
@@ -545,7 +550,7 @@ func normalizeCiTuneName(name string) string {
 // dynastyID 诗歌所属朝代 ID。
 // ciTuneMappings 可选的词牌名称到词牌 ID 映射；非词数据无需传入。
 // 返回可入库诗歌模型，以及因作者缺失而跳过的原始诗歌。
-func buildPoemModels(poems []poem, authorIDs map[string]uint64, dynastyID uint64, ciTuneMappings ...map[string]uint64) ([]models.Poem, []poem) {
+func buildPoemModels(poems []poem, authorIDs map[string]uint64, dynastyID uint64, genreCategory string, ciTuneMappings ...map[string]uint64) ([]models.Poem, []poem) {
 	poemModels := make([]models.Poem, 0, len(poems))
 	skippedPoems := make([]poem, 0)
 	var ciTuneIDs map[string]uint64
@@ -563,11 +568,12 @@ func buildPoemModels(poems []poem, authorIDs map[string]uint64, dynastyID uint64
 
 		content := buildPoemContent(p.Paragraphs)
 		poemModel := models.Poem{
-			Title:     poemTitle(p),
-			Content:   content,
-			Pingze:    poetry.RecognizePingzeLines(content),
-			AuthorID:  authorID,
-			DynastyID: dynastyID,
+			Title:         poemTitle(p),
+			Content:       content,
+			Pingze:        poetry.RecognizePingzeLines(content),
+			GenreCategory: genreCategory,
+			AuthorID:      authorID,
+			DynastyID:     dynastyID,
 		}
 		if ciTuneID := ciTuneIDs[normalizeCiTuneName(p.Rhythmic)]; ciTuneID != 0 {
 			poemModel.CiTuneID = uint64Pointer(ciTuneID)

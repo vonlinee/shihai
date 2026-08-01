@@ -96,6 +96,9 @@ func AutoMigrateDatabaseModel(db *gorm.DB, err error) error {
 	if err := backfillPoemPingze(db); err != nil {
 		return err
 	}
+	if err := backfillPoemGenreCategories(db); err != nil {
+		return err
+	}
 	if err := MigrateMissingPoetsFromPoems(db); err != nil {
 		return err
 	}
@@ -166,6 +169,36 @@ func marshalPoemPingzeJSON(pingze []string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+func backfillPoemGenreCategories(db *gorm.DB) error {
+	for _, sql := range buildPoemGenreCategoryBackfillSQL("poem") {
+		if err := db.Exec(sql).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func buildPoemGenreCategoryBackfillSQL(tableName string) []string {
+	return []string{
+		fmt.Sprintf(`
+UPDATE "%s" AS p
+SET "genre_category" = pt."category"
+FROM "poem_type" AS pt
+WHERE (p."genre_category" IS NULL OR p."genre_category" = '')
+  AND p."genre" = pt."name"
+  AND pt."deleted_at" IS NULL;`, tableName),
+		fmt.Sprintf(`
+UPDATE "%s" AS p
+SET "genre_category" = pt."category"
+FROM "ci_tune" AS ct
+JOIN "poem_type" AS pt ON pt."id" = ct."poem_type_id"
+WHERE (p."genre_category" IS NULL OR p."genre_category" = '')
+  AND p."ci_tune_id" = ct."id"
+  AND ct."deleted_at" IS NULL
+  AND pt."deleted_at" IS NULL;`, tableName),
+	}
 }
 
 // migratePoemContentToJSONB 在 GORM 自动迁移前修复旧库中的诗词正文列类型。

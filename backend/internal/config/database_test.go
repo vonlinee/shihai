@@ -80,6 +80,25 @@ func TestBuildPoemPingzeBackfillSQLFillsMissingJSONArray(t *testing.T) {
 	}
 }
 
+func TestBuildPoemGenreCategoryBackfillSQLUsesPoemTypes(t *testing.T) {
+	sqlStatements := buildPoemGenreCategoryBackfillSQL("poem")
+	sql := strings.Join(sqlStatements, "\n")
+
+	for _, want := range []string{
+		`UPDATE "poem" AS p`,
+		`SET "genre_category" = pt."category"`,
+		`FROM "poem_type" AS pt`,
+		`AND p."genre" = pt."name"`,
+		`FROM "ci_tune" AS ct`,
+		`JOIN "poem_type" AS pt ON pt."id" = ct."poem_type_id"`,
+		`AND p."ci_tune_id" = ct."id"`,
+	} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("genre category backfill sql %q does not contain %q", sql, want)
+		}
+	}
+}
+
 func TestMarshalPoemPingzeJSONReturnsJSONArray(t *testing.T) {
 	got, err := marshalPoemPingzeJSON([]string{"平仄?", "仄平"})
 

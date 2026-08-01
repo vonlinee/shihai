@@ -687,6 +687,12 @@ export function PoemsTab() {
         meta: { filterPlaceholder: '筛选朝代', width: 140 },
       },
       {
+        accessorKey: 'genreCategory',
+        header: '分类',
+        cell: ({ row }) => row.original.genreCategory || '-',
+        meta: { filterPlaceholder: '筛选分类', width: 120 },
+      },
+      {
         accessorKey: 'genre',
         header: '体裁',
         meta: { filterPlaceholder: '筛选体裁', width: 140 },

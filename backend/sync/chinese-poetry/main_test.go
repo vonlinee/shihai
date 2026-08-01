@@ -159,7 +159,7 @@ func TestBuildPoemModelsResolvesAuthorAndDynastyIDs(t *testing.T) {
 	}
 	authorIDs := map[string]uint64{"李白": 101}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, nil)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, poemCategory, nil)
 
 	if len(skippedPoems) != 0 {
 		t.Fatalf("skipped poem count = %d, want 0", len(skippedPoems))
@@ -172,6 +172,9 @@ func TestBuildPoemModelsResolvesAuthorAndDynastyIDs(t *testing.T) {
 	}
 	if poemModels[0].DynastyID != 202 {
 		t.Fatalf("dynasty ID = %d, want 202", poemModels[0].DynastyID)
+	}
+	if poemModels[0].GenreCategory != poemCategory {
+		t.Fatalf("genre category = %q, want %q", poemModels[0].GenreCategory, poemCategory)
 	}
 	if poemModels[0].Title != "静夜思" {
 		t.Fatalf("title = %q, want 静夜思", poemModels[0].Title)
@@ -186,7 +189,7 @@ func TestBuildPoemModelsStoresJoinedParagraphsAsSingleContentItem(t *testing.T) 
 	}
 	authorIDs := map[string]uint64{"李白": 101}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, nil)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, poemCategory, nil)
 
 	if len(skippedPoems) != 0 {
 		t.Fatalf("skipped poem count = %d, want 0", len(skippedPoems))
@@ -206,7 +209,7 @@ func TestBuildPoemModelsSkipsPoemsWithoutKnownAuthor(t *testing.T) {
 	}
 	authorIDs := map[string]uint64{"李白": 101}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, nil)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 202, poemCategory, nil)
 
 	if len(poemModels) != 1 {
 		t.Fatalf("poem model count = %d, want 1", len(poemModels))
@@ -439,7 +442,7 @@ func TestBuildPoemModelsAssociatesCiTuneFromRhythmic(t *testing.T) {
 	authorIDs := map[string]uint64{"苏轼": 11, "李白": 12}
 	ciTuneIDs := map[string]uint64{"念奴娇": 21}
 
-	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 31, ciTuneIDs)
+	poemModels, skippedPoems := buildPoemModels(rawPoems, authorIDs, 31, ciCategory, ciTuneIDs)
 
 	if len(skippedPoems) != 0 || len(poemModels) != 2 {
 		t.Fatalf("models = %d, skipped = %d, want 2 and 0", len(poemModels), len(skippedPoems))
@@ -449,6 +452,9 @@ func TestBuildPoemModelsAssociatesCiTuneFromRhythmic(t *testing.T) {
 	}
 	if poemModels[0].CiTuneID == nil || *poemModels[0].CiTuneID != 21 {
 		t.Errorf("ci tune ID = %v, want 21", poemModels[0].CiTuneID)
+	}
+	if poemModels[0].GenreCategory != ciCategory {
+		t.Errorf("ci genre category = %q, want %q", poemModels[0].GenreCategory, ciCategory)
 	}
 	if poemModels[1].CiTuneID != nil {
 		t.Errorf("poem ci tune ID = %v, want nil", poemModels[1].CiTuneID)
