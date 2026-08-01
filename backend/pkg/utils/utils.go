@@ -239,3 +239,162 @@ func valueAsFloat64(value interface{}) float64 {
 		return 0
 	}
 }
+
+// SliceToMapByKey 通用转换：整个结构体作为 Value
+// 用法：SliceToMapByKey(users, func(u User) int { return u.ID })
+func SliceToMapByKey[T any, K comparable](items []T, keyFn func(T) K) map[K]*T {
+	m := make(map[K]*T, len(items))
+	for _, item := range items {
+		m[keyFn(item)] = &item
+	}
+	return m
+}
+
+// SliceToMapByKeyValue 通用转换：自定义 Value
+// 用法：SliceToMapByKeyValue(users, func(u User) int { return u.ID }, func(u User) string { return u.Name })
+func SliceToMapByKeyValue[T any, K comparable, V any](items []T, keyFn func(T) K, valFn func(T) V) map[K]V {
+	m := make(map[K]V, len(items))
+	for _, item := range items {
+		m[keyFn(item)] = valFn(item)
+	}
+	return m
+}
+
+// IsEmpty 判断切片是否为空（nil 或长度为 0）
+func IsEmpty[T any](items []T) bool {
+	return items == nil || len(items) == 0
+}
+
+// IsNotEmpty 判断切片是否非空
+func IsNotEmpty[T any](items []T) bool {
+	return items != nil && len(items) > 0
+}
+
+// Count 统计切片中符合条件的元素数量
+func Count[T any](items []T, predicate func(T) bool) int {
+	count := 0
+	for _, item := range items {
+		if predicate(item) {
+			count++
+		}
+	}
+	return count
+}
+
+// Exists 判断切片中符合条件的元素
+func Exists[T any](items []T, predicate func(T) bool) bool {
+	for _, item := range items {
+		if predicate(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// Keys 获取 map 的所有 key
+func Keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// ExtractToSlice 提取字段
+func ExtractToSlice[T any, R any](items []T, fieldFn func(T) R) []R {
+	result := make([]R, 0, len(items))
+	for _, item := range items {
+		result = append(result, fieldFn(item))
+	}
+	return result
+}
+
+// ExtractToSliceUnique 提取并去重
+func ExtractToSliceUnique[T any, R comparable](items []T, fieldFn func(T) R) []R {
+	seen := make(map[R]struct{})
+	result := make([]R, 0, len(items))
+	for _, item := range items {
+		val := fieldFn(item)
+		if _, exists := seen[val]; !exists {
+			seen[val] = struct{}{}
+			result = append(result, val)
+		}
+	}
+	return result
+}
+
+// FlatToSlice 将结构体数组中指定字段（数组类型）的所有元素展平到一个切片
+func FlatToSlice[T any, R any](items []T, fieldFn func(T) []R) []R {
+	// 先计算总长度
+	totalLen := 0
+	for _, item := range items {
+		totalLen += len(fieldFn(item))
+	}
+
+	result := make([]R, 0, totalLen)
+	for _, item := range items {
+		result = append(result, fieldFn(item)...)
+	}
+	return result
+}
+
+// FlatToSliceUnique 展平并去重
+func FlatToSliceUnique[T any, R comparable](items []T, fieldFn func(T) []R) []R {
+	seen := make(map[R]struct{})
+	result := make([]R, 0)
+
+	for _, item := range items {
+		for _, val := range fieldFn(item) {
+			if _, exists := seen[val]; !exists {
+				seen[val] = struct{}{}
+				result = append(result, val)
+			}
+		}
+	}
+	return result
+}
+
+// FlatToSliceIf 展平并过滤（根据元素值过滤）
+func FlatToSliceIf[T any, R any](items []T, fieldFn func(T) []R, predicate func(R) bool) []R {
+	result := make([]R, 0)
+	for _, item := range items {
+		for _, val := range fieldFn(item) {
+			if predicate(val) {
+				result = append(result, val)
+			}
+		}
+	}
+	return result
+}
+
+// FlatToSliceWhere 展平并过滤（根据结构体条件过滤）
+func FlatToSliceWhere[T any, R any](items []T, fieldFn func(T) []R, condition func(T) bool) []R {
+	result := make([]R, 0)
+	for _, item := range items {
+		if condition(item) {
+			result = append(result, fieldFn(item)...)
+		}
+	}
+	return result
+}
+
+// FlatToSliceWithCount 展平并返回每个元素出现的次数
+func FlatToSliceWithCount[T any, R comparable](items []T, fieldFn func(T) []R) map[R]int {
+	countMap := make(map[R]int)
+	for _, item := range items {
+		for _, val := range fieldFn(item) {
+			countMap[val]++
+		}
+	}
+	return countMap
+}
+
+// FlatToMapByKey 展平并分组（按指定的 key）
+func FlatToMapByKey[T any, R any, K comparable](items []T, keyFn func(T) K, fieldFn func(T) []R) map[K][]R {
+	result := make(map[K][]R)
+	for _, item := range items {
+		key := keyFn(item)
+		result[key] = append(result[key], fieldFn(item)...)
+	}
+	return result
+}
