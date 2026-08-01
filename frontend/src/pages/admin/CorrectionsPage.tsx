@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle, Eye, Search, XCircle } from 'lucide-react'
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
+import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/Pagination'
 import {
   useAdminCorrection,
@@ -25,19 +25,23 @@ const typeLabels: Record<CorrectionRequest['type'], string> = {
 }
 
 const statusLabels: Record<CorrectionRequest['status'], string> = {
-  pending: '待审核',
-  voting: '投票中',
-  approved: '已通过',
+  pending: '待处理',
+  voting: '处理中',
+  processing: '处理中',
+  approved: '处理中',
   rejected: '已驳回',
-  completed: '已完成',
+  resolved: '已解决',
+  completed: '已解决',
 }
 
 const statusClassNames: Record<CorrectionRequest['status'], string> = {
   pending: 'bg-yellow-500/10 text-yellow-600',
   voting: 'bg-blue-500/10 text-blue-600',
-  approved: 'bg-green-500/10 text-green-600',
+  processing: 'bg-blue-500/10 text-blue-600',
+  approved: 'bg-blue-500/10 text-blue-600',
   rejected: 'bg-red-500/10 text-red-600',
-  completed: 'bg-muted text-muted-foreground',
+  resolved: 'bg-green-500/10 text-green-600',
+  completed: 'bg-green-500/10 text-green-600',
 }
 
 function formatDateTime(value: string) {
@@ -75,7 +79,7 @@ export function AdminCorrectionsPage() {
 
   const handleUpdateStatus = (
     correction: CorrectionRequest,
-    status: Extract<CorrectionRequest['status'], 'approved' | 'rejected'>,
+    status: Extract<CorrectionRequest['status'], 'processing' | 'rejected' | 'resolved'>,
   ) => {
     updateStatusMutation.mutate({ id: correction.id, data: { status } })
   }
@@ -140,40 +144,42 @@ export function AdminCorrectionsPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const correction = row.original
-          const canReview = correction.status === 'pending' || correction.status === 'voting'
+          const canStartProcessing = correction.status === 'pending' || correction.status === 'voting'
+          const canResolve = correction.status === 'processing' || correction.status === 'approved'
+          const canReject = canStartProcessing || canResolve
 
           return (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              title="查看详情"
-              onClick={() => handleViewCorrection(correction)}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={!canReview || isUpdatingStatus}
-              title={canReview ? '通过纠错' : '当前状态不可审核'}
-              onClick={() => handleUpdateStatus(correction, 'approved')}
-            >
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={!canReview || isUpdatingStatus}
-              title={canReview ? '驳回纠错' : '当前状态不可审核'}
-              onClick={() => handleUpdateStatus(correction, 'rejected')}
-            >
-              <XCircle className="h-4 w-4 text-cinnabar" />
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                title="查看详情"
+                onClick={() => handleViewCorrection(correction)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={(!canStartProcessing && !canResolve) || isUpdatingStatus}
+                title={canResolve ? '标记已解决' : canStartProcessing ? '标记处理中' : '当前状态不可更新'}
+                onClick={() => handleUpdateStatus(correction, canResolve ? 'resolved' : 'processing')}
+              >
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={!canReject || isUpdatingStatus}
+                title={canReject ? '驳回纠错' : '当前状态不可驳回'}
+                onClick={() => handleUpdateStatus(correction, 'rejected')}
+              >
+                <XCircle className="h-4 w-4 text-cinnabar" />
+              </Button>
+            </div>
           )
         },
       },

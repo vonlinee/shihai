@@ -355,7 +355,7 @@ export interface CorrectionRequest {
   /** 用户提交的纠错理由。 */
   reason: string;
   /** 纠错流程状态。 */
-  status: 'pending' | 'voting' | 'approved' | 'rejected' | 'completed';
+  status: 'pending' | 'voting' | 'processing' | 'approved' | 'rejected' | 'resolved' | 'completed';
   /** 投票总数。 */
   voteCount: number;
   /** 支持票数。 */

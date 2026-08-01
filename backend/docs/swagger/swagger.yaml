@@ -232,7 +232,8 @@ definitions:
         description: RejectCount 反对票数。
         type: integer
       status:
-        description: Status 当前状态：pending、voting、approved、rejected 或 completed。
+        description: Status 当前状态：pending、voting、processing、approved、rejected、resolved
+          或 completed。
         type: string
       suggestedText:
         description: SuggestedText 用户建议修改后的内容。
@@ -254,6 +255,22 @@ definitions:
       voteCount:
         description: VoteCount 投票总数。
         type: integer
+    type: object
+  dto.CorrectionStatusUpdateRequest:
+    properties:
+      status:
+        description: Status 目标状态。
+        enum:
+        - pending
+        - voting
+        - processing
+        - approved
+        - rejected
+        - resolved
+        - completed
+        type: string
+    required:
+    - status
     type: object
   dto.CorrectionUserSummary:
     properties:
@@ -1202,6 +1219,94 @@ paths:
       security:
       - BearerAuth: []
       summary: 查询纠错列表
+      tags:
+      - 后台纠错
+  /api/admin/corrections/{id}:
+    get:
+      parameters:
+      - description: 纠错申请 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CorrectionResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询纠错详情
+      tags:
+      - 后台纠错
+  /api/admin/corrections/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 纠错申请 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 纠错状态
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CorrectionStatusUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CorrectionResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新纠错状态
       tags:
       - 后台纠错
   /api/admin/dashboard:
@@ -2762,6 +2867,37 @@ paths:
       security:
       - BearerAuth: []
       summary: 提交诗词纠错申请
+      tags:
+      - 纠错
+  /api/corrections/my:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询我的纠错申请
       tags:
       - 纠错
   /api/dynasties:

@@ -13,6 +13,7 @@ type correctionService interface {
 	CreateCorrection(userID uint64, req dto.CorrectionCreateRequest) (*dto.CorrectionResponse, error)
 	GetCorrection(id uint64) (*dto.CorrectionResponse, error)
 	ListCorrections(req dto.CorrectionListRequest) ([]dto.CorrectionResponse, int64, error)
+	ListUserCorrections(userID uint64, req dto.CorrectionListRequest) ([]dto.CorrectionResponse, int64, error)
 	UpdateCorrectionStatus(id uint64, req dto.CorrectionStatusUpdateRequest) (*dto.CorrectionResponse, error)
 }
 
@@ -86,6 +87,54 @@ func (h *CorrectionHandler) ListCorrections(c *gin.Context) {
 	corrections, total, err := h.correctionService.ListCorrections(req)
 	if err != nil {
 		utils.InternalServerError(c, err.Error())
+		return
+	}
+
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := req.PageSize
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	utils.PageSuccess(c, corrections, total, page, pageSize)
+}
+
+// ListMyCorrections handles GET /api/corrections/my.
+// @Summary 查询我的纠错申请
+// @Tags 纠错
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Success 200 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/corrections/my [get]
+func (h *CorrectionHandler) ListMyCorrections(c *gin.Context) {
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		utils.Unauthorized(c, "请先登录")
+		return
+	}
+	userID, ok := userIDValue.(uint64)
+	if !ok || userID == 0 {
+		utils.Unauthorized(c, "登录状态无效")
+		return
+	}
+
+	var req dto.CorrectionListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	corrections, total, err := h.correctionService.ListUserCorrections(userID, req)
+	if err != nil {
+		utils.InternalServerError(c, "查询我的纠错申请失败")
 		return
 	}
 

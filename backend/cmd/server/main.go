@@ -296,6 +296,7 @@ func setupRoutes(r *gin.Engine, app *App) {
 
 			// Corrections - Protected
 			authorized.POST("/corrections", app.rbacMiddleware.RequirePermission(models.PermCorrectionCreate), app.correctionHandler.CreateCorrection)
+			authorized.GET("/corrections/my", app.correctionHandler.ListMyCorrections)
 
 			// Forum - Protected write
 			authorized.POST("/forum/posts", app.rbacMiddleware.RequirePermission(models.PermForumCreate), app.forumHandler.CreatePost)

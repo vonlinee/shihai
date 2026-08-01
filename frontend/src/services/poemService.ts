@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Poem, Dynasty, Poet, PoemSearchParams, GenreCategory } from '@/types';
+import type { Poem, Dynasty, Poet, PoemSearchParams, GenreCategory, CorrectionRequest } from '@/types';
 
 export type PoemID = string | number;
 
@@ -34,6 +34,18 @@ export interface CorrectionCreateRequest {
   reason: string;
 }
 
+export interface CorrectionListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CorrectionListResponse {
+  list: CorrectionRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export const poemService = {
   getPoems(params?: PoemSearchParams): Promise<PoemListResponse> {
     return api.get<PoemListResponse>('/poems', params as Record<string, unknown>);
@@ -53,6 +65,10 @@ export const poemService = {
 
   createCorrection(data: CorrectionCreateRequest): Promise<void> {
     return api.post<void>('/corrections', data);
+  },
+
+  getMyCorrections(params?: CorrectionListParams): Promise<CorrectionListResponse> {
+    return api.get<CorrectionListResponse>('/corrections/my', params as Record<string, unknown>);
   },
 
   getDynasties(): Promise<Dynasty[]> {

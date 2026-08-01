@@ -20,7 +20,7 @@ type CorrectionCreateRequest struct {
 
 // CorrectionStatusUpdateRequest 更新纠错申请状态。
 type CorrectionStatusUpdateRequest struct {
-	Status string `json:"status" binding:"required,oneof=pending voting approved rejected completed"` // Status 目标状态。
+	Status string `json:"status" binding:"required,oneof=pending voting processing approved rejected resolved completed"` // Status 目标状态。
 }
 
 // CorrectionPoemSummary 纠错列表中的诗词摘要。
@@ -48,7 +48,7 @@ type CorrectionResponse struct {
 	OriginalText  string                 `json:"originalText"`   // OriginalText 被纠错的原文内容。
 	SuggestedText string                 `json:"suggestedText"`  // SuggestedText 用户建议修改后的内容。
 	Reason        string                 `json:"reason"`         // Reason 用户提交的纠错理由。
-	Status        string                 `json:"status"`         // Status 当前状态：pending、voting、approved、rejected 或 completed。
+	Status        string                 `json:"status"`         // Status 当前状态：pending、voting、processing、approved、rejected、resolved 或 completed。
 	VoteCount     int                    `json:"voteCount"`      // VoteCount 投票总数。
 	ApproveCount  int                    `json:"approveCount"`   // ApproveCount 支持票数。
 	RejectCount   int                    `json:"rejectCount"`    // RejectCount 反对票数。

@@ -54,6 +54,13 @@ export function useCreateCorrection() {
   });
 }
 
+export function useMyCorrections() {
+  return useQuery({
+    queryKey: ['corrections', 'my'],
+    queryFn: () => poemService.getMyCorrections({ page: 1, pageSize: 5 }),
+  });
+}
+
 export function useDynasties() {
   return useQuery({
     queryKey: ['dynasties'],

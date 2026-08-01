@@ -10,6 +10,7 @@ import (
 type fakeCorrectionStore struct {
 	page     int
 	pageSize int
+	userID   uint64
 	keyword  string
 	items    []models.CorrectionRequest
 	created  *models.CorrectionRequest
@@ -28,6 +29,13 @@ func (s *fakeCorrectionStore) List(page, pageSize int, keyword string) ([]models
 	s.page = page
 	s.pageSize = pageSize
 	s.keyword = keyword
+	return s.items, s.total, s.err
+}
+
+func (s *fakeCorrectionStore) ListByUser(userID uint64, page, pageSize int) ([]models.CorrectionRequest, int64, error) {
+	s.userID = userID
+	s.page = page
+	s.pageSize = pageSize
 	return s.items, s.total, s.err
 }
 
@@ -103,6 +111,43 @@ func TestCorrectionServiceListCorrectionsNormalizesPaginationAndMapsResponse(t *
 	}
 	if got.OriginalText != "床前明月光" || got.SuggestedText != "窗前明月光" {
 		t.Fatalf("unexpected text fields: %+v", got)
+	}
+}
+
+func TestCorrectionServiceListUserCorrectionsFiltersByUserAndMapsResponse(t *testing.T) {
+	store := &fakeCorrectionStore{
+		items: []models.CorrectionRequest{
+			{
+				BaseModel:     models.BaseModel{ID: 1002},
+				PoemID:        2002,
+				Poem:          models.Poem{BaseModel: models.BaseModel{ID: 2002}, Title: "test poem"},
+				UserID:        3002,
+				Type:          "title",
+				OriginalText:  "old title",
+				SuggestedText: "new title",
+				Reason:        "typo",
+				Status:        "processing",
+			},
+		},
+		total: 1,
+	}
+	service := NewCorrectionService(store)
+
+	responses, total, err := service.ListUserCorrections(3002, dto.CorrectionListRequest{
+		Page:     0,
+		PageSize: 200,
+	})
+	if err != nil {
+		t.Fatalf("ListUserCorrections returned error: %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if store.userID != 3002 || store.page != 1 || store.pageSize != 100 {
+		t.Fatalf("repository args = (%d, %d, %d), want (3002, 1, 100)", store.userID, store.page, store.pageSize)
+	}
+	if len(responses) != 1 || responses[0].UserID != 3002 || responses[0].Status != "processing" {
+		t.Fatalf("responses = %+v, want one processing correction for user 3002", responses)
 	}
 }
 

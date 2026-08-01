@@ -11,6 +11,7 @@ type correctionStore interface {
 	Create(correction *models.CorrectionRequest) error
 	GetByID(id uint64) (*models.CorrectionRequest, error)
 	List(page, pageSize int, keyword string) ([]models.CorrectionRequest, int64, error)
+	ListByUser(userID uint64, page, pageSize int) ([]models.CorrectionRequest, int64, error)
 	UpdateStatus(id uint64, status string) (*models.CorrectionRequest, error)
 }
 
@@ -39,6 +40,32 @@ func (s *CorrectionService) ListCorrections(req dto.CorrectionListRequest) ([]dt
 	}
 
 	corrections, total, err := s.correctionRepo.List(page, pageSize, req.Keyword)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	responses := make([]dto.CorrectionResponse, 0, len(corrections))
+	for _, correction := range corrections {
+		responses = append(responses, toCorrectionResponse(correction))
+	}
+	return responses, total, nil
+}
+
+// ListUserCorrections returns correction requests submitted by a user.
+func (s *CorrectionService) ListUserCorrections(userID uint64, req dto.CorrectionListRequest) ([]dto.CorrectionResponse, int64, error) {
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := req.PageSize
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	corrections, total, err := s.correctionRepo.ListByUser(userID, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}

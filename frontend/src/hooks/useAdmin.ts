@@ -189,9 +189,19 @@ export function useAdminUpdateCorrectionStatus() {
     mutationFn: ({ id, data }: { id: AdminID; data: CorrectionStatusUpdateRequest }) =>
       adminService.updateCorrectionStatus(id, data),
     onSuccess: (_, variables) => {
-      toast.success(variables.data.status === 'approved' ? '纠错已通过' : '纠错已驳回');
+      const statusMessages: Record<CorrectionStatusUpdateRequest['status'], string> = {
+        pending: '纠错已设为待处理',
+        voting: '纠错已设为投票中',
+        processing: '纠错已设为处理中',
+        approved: '纠错已通过',
+        rejected: '纠错已驳回',
+        resolved: '纠错已解决',
+        completed: '纠错已完成',
+      };
+      toast.success(statusMessages[variables.data.status]);
       queryClient.invalidateQueries({ queryKey: ['admin', 'corrections'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'correction', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['corrections', 'my'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || '更新纠错状态失败');

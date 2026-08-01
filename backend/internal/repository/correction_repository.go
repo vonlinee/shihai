@@ -45,6 +45,31 @@ func (r *CorrectionRepository) UpdateStatus(id uint64, status string) (*models.C
 	return r.GetByID(id)
 }
 
+// ListByUser returns paginated correction requests submitted by a user.
+func (r *CorrectionRepository) ListByUser(userID uint64, page, pageSize int) ([]models.CorrectionRequest, int64, error) {
+	var corrections []models.CorrectionRequest
+	var total int64
+
+	query := r.db.Model(&models.CorrectionRequest{}).
+		Preload("Poem").
+		Preload("User").
+		Where("user_id = ?", userID)
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := query.
+		Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&corrections).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return corrections, total, nil
+}
+
 // List returns paginated correction requests with poem and user summaries preloaded.
 func (r *CorrectionRepository) List(page, pageSize int, keyword string) ([]models.CorrectionRequest, int64, error) {
 	var corrections []models.CorrectionRequest
