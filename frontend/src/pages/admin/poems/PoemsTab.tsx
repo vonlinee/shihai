@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Search, Plus, Edit2, Trash2, Eye, X, Wand2 } from 'lucide-react'
 
@@ -234,7 +233,6 @@ function PoemAnnotationDraftList({
 }
 
 export function PoemsTab() {
-  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -327,6 +325,10 @@ export function PoemsTab() {
   const allVisiblePoemsSelected = visiblePoemIds.length > 0 && visiblePoemIds.every((id) => selectedPoemIds.includes(id))
   const poemContentLineCount = Math.max(3, splitPoemContentInput(formData.content).length)
   const invalidPingzeLine = getInvalidPoemPingzeLine(formData.pingze)
+
+  const openPoemInNewTab = useCallback((poemId: string | number) => {
+    window.open(`/poems/${poemId}`, '_blank', 'noopener,noreferrer')
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -726,7 +728,7 @@ export function PoemsTab() {
         header: '操作',
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => navigate(`/poems/${row.original.id}`)}><Eye className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => openPoemInNewTab(row.original.id)}><Eye className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => openEditPoemDialog(row.original)}><Edit2 className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={() => handleDelete(toEntityId(row.original.id))}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
           </div>
@@ -736,7 +738,7 @@ export function PoemsTab() {
         meta: { align: 'right', draggable: false, fixed: 'right', headerAlign: 'center', width: 132 },
       },
     ],
-    [allVisiblePoemsSelected, handleDelete, navigate, openEditPoemDialog, selectedPoemIds, visiblePoemIds],
+    [allVisiblePoemsSelected, handleDelete, openEditPoemDialog, openPoemInNewTab, selectedPoemIds, visiblePoemIds],
   )
 
   return (
