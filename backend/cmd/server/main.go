@@ -31,6 +31,7 @@ type App struct {
 	correctionHandler     *handlers.CorrectionHandler
 	announcementHandler   *handlers.AnnouncementHandler
 	workCollectionHandler *handlers.WorkCollectionHandler
+	dashboardHandler      *handlers.DashboardHandler
 	textConversionHandler *handlers.TextConversionHandler
 	pingzeHandler         *handlers.PingzeHandler
 	rbacHandler           *handlers.RBACHandler
@@ -136,6 +137,7 @@ func initApp(db *gorm.DB) *App {
 	correctionRepo := repository.NewCorrectionRepository(db)
 	announcementRepo := repository.NewAnnouncementRepository(db)
 	workCollectionRepo := repository.NewWorkCollectionRepository(db)
+	dashboardRepo := repository.NewDashboardRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	rolePermissionRepo := repository.NewRolePermissionRepository(db)
 	userRoleRepo := repository.NewUserRoleRepository(db)
@@ -151,6 +153,7 @@ func initApp(db *gorm.DB) *App {
 	correctionService := services.NewCorrectionService(correctionRepo)
 	announcementService := services.NewAnnouncementService(announcementRepo)
 	workCollectionService := services.NewWorkCollectionService(workCollectionRepo, poemRepo)
+	dashboardService := services.NewDashboardService(dashboardRepo)
 	textConversionService := services.NewTextConversionService()
 	pingzeRecognitionService := services.NewPingzeRecognitionService()
 	rbacService := services.NewRBACService(roleRepo, rolePermissionRepo, userRoleRepo, permRepo)
@@ -163,6 +166,7 @@ func initApp(db *gorm.DB) *App {
 	correctionHandler := handlers.NewCorrectionHandler(correctionService)
 	announcementHandler := handlers.NewAnnouncementHandler(announcementService)
 	workCollectionHandler := handlers.NewWorkCollectionHandler(workCollectionService)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 	textConversionHandler := handlers.NewTextConversionHandler(textConversionService)
 	pingzeHandler := handlers.NewPingzeHandler(pingzeRecognitionService)
 	rbacHandler := handlers.NewRBACHandler(rbacService)
@@ -179,6 +183,7 @@ func initApp(db *gorm.DB) *App {
 		correctionHandler:     correctionHandler,
 		announcementHandler:   announcementHandler,
 		workCollectionHandler: workCollectionHandler,
+		dashboardHandler:      dashboardHandler,
 		textConversionHandler: textConversionHandler,
 		pingzeHandler:         pingzeHandler,
 		rbacHandler:           rbacHandler,
@@ -328,6 +333,8 @@ func setupRoutes(r *gin.Engine, app *App) {
 		admin := api.Group("/admin")
 		admin.Use(middleware.Auth(), app.rbacMiddleware.RequireAnyRole(models.RoleAdmin, models.RoleEditor))
 		{
+			admin.GET("/dashboard", app.rbacMiddleware.RequirePermission(models.PermPoemList), app.dashboardHandler.GetDashboard)
+
 			// Users
 			admin.GET("/users", app.rbacMiddleware.RequirePermission(models.PermUserList), app.userHandler.GetUserList)
 			admin.GET("/users/:id", app.rbacMiddleware.RequirePermission(models.PermUserRead), app.userHandler.GetUserByID)

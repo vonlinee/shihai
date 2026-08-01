@@ -3,6 +3,35 @@ import type { User, Poem, Announcement, Dynasty, Poet, WorkCollection, WorkColle
 
 type AdminID = string | number;
 
+export interface DashboardStat {
+  /** 统计项稳定标识。 */
+  key: 'users' | 'poems' | 'comments' | 'pendingCorrections';
+  /** 统计项展示标题。 */
+  title: string;
+  /** 当前总数。 */
+  value: number;
+  /** 最近 7 天相对前 7 天的变化百分比。 */
+  trendPercent: number;
+}
+
+export interface DashboardActivity {
+  /** 活动稳定标识。 */
+  id: string;
+  /** 活动类型标题。 */
+  action: string;
+  /** 活动详情文案。 */
+  detail: string;
+  /** 活动发生时间。 */
+  createdAt: string;
+}
+
+export interface DashboardResponse {
+  /** 仪表盘统计卡片。 */
+  stats: DashboardStat[];
+  /** 最近活动列表。 */
+  recentActivities: DashboardActivity[];
+}
+
 // ─── User Admin ──────────────────────────────────────────────────────────────
 
 export interface UserListResponse {
@@ -292,6 +321,10 @@ export interface PoetUpdateRequest {
 }
 
 export const adminService = {
+  getDashboard(): Promise<DashboardResponse> {
+    return api.get<DashboardResponse>('/admin/dashboard');
+  },
+
   // Users
   getUsers(params?: UserListParams): Promise<UserListResponse> {
     return api.get<UserListResponse>('/admin/users', params as Record<string, unknown>);

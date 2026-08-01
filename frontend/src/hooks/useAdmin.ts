@@ -28,6 +28,13 @@ import { toast } from 'sonner';
 
 type AdminID = string | number;
 
+export function useAdminDashboard() {
+  return useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: () => adminService.getDashboard(),
+  });
+}
+
 function syncSavedPoemQueryCache(
   queryClient: QueryClient,
   poem: { id?: AdminID } | null | undefined,

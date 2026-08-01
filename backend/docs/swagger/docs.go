@@ -566,6 +566,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/admin/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取后台仪表盘统计卡片和最近活动",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "获取后台仪表盘数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DashboardResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/admin/dynasties": {
             "post": {
                 "security": [
@@ -4835,6 +4890,67 @@ const docTemplate = `{
                         "like",
                         "dislike"
                     ]
+                }
+            }
+        },
+        "dto.DashboardActivityResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "Action display label.",
+                    "type": "string"
+                },
+                "createdAt": {
+                    "description": "CreatedAt activity creation timestamp.",
+                    "type": "string"
+                },
+                "detail": {
+                    "description": "Detail human-readable activity summary.",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID stable identifier built from activity type and entity ID.",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.DashboardResponse": {
+            "type": "object",
+            "properties": {
+                "recentActivities": {
+                    "description": "RecentActivities latest cross-module activity stream.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.DashboardActivityResponse"
+                    }
+                },
+                "stats": {
+                    "description": "Stats dashboard summary cards.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.DashboardStatResponse"
+                    }
+                }
+            }
+        },
+        "dto.DashboardStatResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "Key stable frontend identifier for the statistic.",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "Title display label for the statistic.",
+                    "type": "string"
+                },
+                "trendPercent": {
+                    "description": "TrendPercent percentage change for the latest 7 days versus the previous 7 days.",
+                    "type": "integer"
+                },
+                "value": {
+                    "description": "Value current total count.",
+                    "type": "integer"
                 }
             }
         },

@@ -166,6 +166,50 @@ definitions:
     - commentId
     - type
     type: object
+  dto.DashboardActivityResponse:
+    properties:
+      action:
+        description: Action display label.
+        type: string
+      createdAt:
+        description: CreatedAt activity creation timestamp.
+        type: string
+      detail:
+        description: Detail human-readable activity summary.
+        type: string
+      id:
+        description: ID stable identifier built from activity type and entity ID.
+        type: string
+    type: object
+  dto.DashboardResponse:
+    properties:
+      recentActivities:
+        description: RecentActivities latest cross-module activity stream.
+        items:
+          $ref: '#/definitions/dto.DashboardActivityResponse'
+        type: array
+      stats:
+        description: Stats dashboard summary cards.
+        items:
+          $ref: '#/definitions/dto.DashboardStatResponse'
+        type: array
+    type: object
+  dto.DashboardStatResponse:
+    properties:
+      key:
+        description: Key stable frontend identifier for the statistic.
+        type: string
+      title:
+        description: Title display label for the statistic.
+        type: string
+      trendPercent:
+        description: TrendPercent percentage change for the latest 7 days versus the
+          previous 7 days.
+        type: integer
+      value:
+        description: Value current total count.
+        type: integer
+    type: object
   dto.DynastyCreateRequest:
     properties:
       description:
@@ -1055,6 +1099,38 @@ paths:
       summary: 查询纠错列表
       tags:
       - 后台纠错
+  /api/admin/dashboard:
+    get:
+      description: 获取后台仪表盘统计卡片和最近活动
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取后台仪表盘数据
+      tags:
+      - 管理后台
   /api/admin/dynasties:
     delete:
       parameters:
