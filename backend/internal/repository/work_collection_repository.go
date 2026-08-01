@@ -60,6 +60,35 @@ func (r *WorkCollectionRepository) Update(collection *models.WorkCollection) err
 	return r.db.Save(collection).Error
 }
 
+// ListByName 根据名称查询作品集
+func (r *WorkCollectionRepository) ListByName(collectionName string) []models.WorkCollection {
+	var workCollections []models.WorkCollection
+	r.db.Raw("SELECT * FROM work_collection WHERE Title = ?", collectionName).Scan(&workCollections)
+	return workCollections
+}
+
+// ListItemsByWorkCollectionId 根据工作集ID查询作品列表
+func (r *WorkCollectionRepository) ListItemsByWorkCollectionId(collectionId uint64) []models.WorkCollectionItem {
+	var items []models.WorkCollectionItem
+	if err := r.db.Where("collection_id = ?", collectionId).
+		Order("sort_order ASC, created_at ASC").
+		Find(&items).Error; err != nil {
+		return nil
+	}
+	return items
+}
+
+// IsWorkCollectionHasItems 根据工作集ID检查是否包含作品
+func (r *WorkCollectionRepository) IsWorkCollectionHasItems(collectionId uint64) bool {
+	var count int64
+	if err := r.db.Model(&models.WorkCollectionItem{}).
+		Where("collection_id = ?", collectionId).
+		Count(&count).Error; err != nil {
+		return false
+	}
+	return count > 0
+}
+
 func (r *WorkCollectionRepository) Delete(id uint64) error {
 	return r.db.Delete(&models.WorkCollection{}, id).Error
 }

@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm/logger"
 	"log"
 	"os"
+	"shihai/internal/repository"
 	"sort"
 	"strings"
 	"sync"
@@ -42,6 +43,7 @@ type poem struct {
 	Title      string   `json:"title"`
 	ID         string   `json:"id"`
 	Rhythmic   string   `json:"rhythmic"`
+	Tags       []string `json:"tags"`
 }
 
 type poemSyncSource struct {
@@ -84,12 +86,16 @@ func main() {
 		fileDynasty: "tang",
 		dynastyName: tangDynastyName,
 	})
-	syncAllPoem(*db, root+"/宋词", poemSyncSource{
+
+	songCiSource := poemSyncSource{
 		filePrefix:  "ci",
 		fileDynasty: "song",
 		dynastyName: songDynastyName,
-	})
-	// TODO 宋词三百首.json
+	}
+	// 宋词
+	syncAllPoem(*db, root+"/宋词", songCiSource)
+	// 宋词三百首.json
+	syncPoem(*db, root+"/宋词/宋词三百首.json", importBatchSize, songCiSource.dynastyName)
 
 	if err := config.MigrateMissingPoetsFromPoems(db); err != nil {
 		log.Fatalf("补齐诗人数据失败: %s", err)
@@ -113,9 +119,9 @@ func syncAllPoem(db gorm.DB, path string, source poemSyncSource) {
 func isPoemDataFile(name string, source poemSyncSource) bool {
 	parts := strings.Split(name, ".")
 	return len(parts) >= 4 &&
-		parts[0] == source.filePrefix &&
-		parts[1] == source.fileDynasty &&
-		parts[len(parts)-1] == "json"
+			parts[0] == source.filePrefix &&
+			parts[1] == source.fileDynasty &&
+			parts[len(parts)-1] == "json"
 }
 
 // 同步诗歌信息
@@ -155,8 +161,127 @@ func syncPoem(db gorm.DB, path string, batchSize int, dynastyName string) {
 		return
 	}
 	if err := batchInsert(db, poemModels, batchSize); err != nil {
-		printPgError("批量插入诗歌失败:", err)
+		printPgError("批量插入诗词失败:", err)
+	} else {
+		syncPoemCollection(db, poems, poemModels)
 	}
+}
+
+// syncPoemCollection 同步诗集信息
+func syncPoemCollection(db gorm.DB, poems []poem, poemModels []models.Poem) {
+	if utils.NotExists(poems, func(p poem) bool {
+		return utils.IsNotEmpty(p.Tags)
+	}) {
+		return
+	}
+	mapByTitle := utils.SliceToMapByKey(poemModels, func(p models.Poem) string { return p.Title })
+
+	titleTagsMap := utils.SliceToMapByKeyValue(poems, func(p poem) string {
+		if utils.IsNotBlank(&p.Title) {
+			return p.Title
+		} else {
+			return p.Rhythmic
+		}
+	}, func(t poem) []string {
+		return t.Tags
+	})
+
+	tagIdMap := utils.NewMultiValueMap[string, uint64]()
+	for title, tags := range titleTagsMap {
+		p := mapByTitle[title]
+		if p != nil {
+			// 标签
+			for _, tag := range tags {
+				tagIdMap.Add(tag, p.ID)
+			}
+		}
+	}
+
+	workCollectionRepository := repository.NewWorkCollectionRepository(&db)
+	tagIdMap.ForEach(func(tag string, ids []uint64) {
+		uniqueIDs := uniqueUint64(ids)
+		if len(uniqueIDs) == 0 {
+			return
+		}
+
+		wcList := workCollectionRepository.ListByName(tag)
+		if utils.IsEmpty(wcList) {
+			collection := &models.WorkCollection{
+				Title:       tag,
+				IsPublished: false,
+				ItemCount:   len(uniqueIDs),
+			}
+			if err := workCollectionRepository.Create(collection); err != nil {
+				log.Printf("create work collection %q failed: %v", tag, err)
+				return
+			}
+			for i, id := range uniqueIDs {
+				item := &models.WorkCollectionItem{
+					CollectionID: collection.ID,
+					WorkType:     models.WorkTypePoem,
+					WorkID:       id,
+					SortOrder:    i,
+				}
+				if err := workCollectionRepository.CreateItem(item); err != nil {
+					log.Printf("create work collection item %q/%d failed: %v", tag, id, err)
+					return
+				}
+			}
+			if _, err := workCollectionRepository.RecalculateItemCount(collection.ID); err != nil {
+				log.Printf("recalculate work collection item count %q failed: %v", tag, err)
+			}
+		} else if len(wcList) == 1 {
+			collection := wcList[0]
+			existingItems := workCollectionRepository.ListItemsByWorkCollectionId(collection.ID)
+			existingIDs := make(map[uint64]struct{}, len(existingItems))
+			maxSortOrder := -1
+			for _, item := range existingItems {
+				existingIDs[item.WorkID] = struct{}{}
+				if item.SortOrder > maxSortOrder {
+					maxSortOrder = item.SortOrder
+				}
+			}
+
+			added := false
+			for _, id := range uniqueIDs {
+				if _, ok := existingIDs[id]; ok {
+					continue
+				}
+				maxSortOrder++
+				item := &models.WorkCollectionItem{
+					CollectionID: collection.ID,
+					WorkType:     models.WorkTypePoem,
+					WorkID:       id,
+					SortOrder:    maxSortOrder,
+				}
+				if err := workCollectionRepository.CreateItem(item); err != nil {
+					log.Printf("create work collection item %q/%d failed: %v", tag, id, err)
+					return
+				}
+				added = true
+			}
+			if added {
+				if _, err := workCollectionRepository.RecalculateItemCount(collection.ID); err != nil {
+					log.Printf("recalculate work collection item count %q failed: %v", tag, err)
+				}
+			}
+		} else {
+			log.Printf("duplicate work collection name %q", tag)
+		}
+	})
+}
+
+func uniqueUint64(values []uint64) []uint64 {
+	seen := make(map[uint64]struct{}, len(values))
+	result := make([]uint64, 0, len(values))
+	for _, value := range values {
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 // printPgError 打印 PostgreSQL 错误的关键诊断字段。
@@ -211,10 +336,10 @@ func syncAuthors(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 			},
 			func(batch []models.Author) error {
 				return tx.Omit(clause.Associations).
-					Clauses(clause.OnConflict{
-						Columns:   []clause.Column{{Name: "name"}},
-						DoNothing: true,
-					}).
+						Clauses(clause.OnConflict{
+							Columns:   []clause.Column{{Name: "name"}},
+							DoNothing: true,
+						}).
 					CreateInBatches(&batch, len(batch)).Error
 			},
 		)
@@ -227,10 +352,10 @@ func syncAuthors(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 }
 
 func resolveAuthorIDs(
-	names []string,
-	batchSize int,
-	list func(names []string) ([]models.Author, error),
-	insertBatch func(batch []models.Author) error,
+		names []string,
+		batchSize int,
+		list func(names []string) ([]models.Author, error),
+		insertBatch func(batch []models.Author) error,
 ) (map[string]uint64, error) {
 	existingAuthors, err := list(names)
 	if err != nil {
@@ -320,10 +445,10 @@ func syncCiTunes(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 			},
 			func(batch []models.CiTune) error {
 				return tx.Omit(clause.Associations).
-					Clauses(clause.OnConflict{
-						Columns:   []clause.Column{{Name: "name"}},
-						DoNothing: true,
-					}).
+						Clauses(clause.OnConflict{
+							Columns:   []clause.Column{{Name: "name"}},
+							DoNothing: true,
+						}).
 					CreateInBatches(&batch, len(batch)).Error
 			},
 		)
@@ -336,10 +461,10 @@ func syncCiTunes(db gorm.DB, poems []poem, batchSize int) (map[string]uint64, er
 }
 
 func resolveCiTuneIDs(
-	names []string,
-	batchSize int,
-	list func(names []string) ([]models.CiTune, error),
-	insertBatch func(batch []models.CiTune) error,
+		names []string,
+		batchSize int,
+		list func(names []string) ([]models.CiTune, error),
+		insertBatch func(batch []models.CiTune) error,
 ) (map[string]uint64, error) {
 	existingCiTunes, err := list(names)
 	if err != nil {

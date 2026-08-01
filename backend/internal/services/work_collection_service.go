@@ -170,7 +170,7 @@ func (s *WorkCollectionService) DeleteItem(collectionID uint64, itemID uint64) e
 }
 
 func (s *WorkCollectionService) validateWorkReference(workType string, workID uint64) error {
-	if workType != "poem" {
+	if workType != models.WorkTypePoem {
 		return errors.New("unsupported work type")
 	}
 	if workID == 0 {

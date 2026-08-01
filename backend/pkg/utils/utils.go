@@ -281,6 +281,16 @@ func Count[T any](items []T, predicate func(T) bool) int {
 	return count
 }
 
+// NotExists 判断切片中符合条件的元素
+func NotExists[T any](items []T, predicate func(T) bool) bool {
+	for _, item := range items {
+		if predicate(item) {
+			return false
+		}
+	}
+	return true
+}
+
 // Exists 判断切片中符合条件的元素
 func Exists[T any](items []T, predicate func(T) bool) bool {
 	for _, item := range items {

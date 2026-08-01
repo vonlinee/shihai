@@ -41,8 +41,13 @@ func TruncateText(text string, maxLength int) string {
 }
 
 // IsBlank 判断文本是否为空或只包含 Unicode 空白字符。
-func IsBlank(text string) bool {
-	return strings.TrimSpace(text) == ""
+func IsBlank(text *string) bool {
+	return text == nil || strings.TrimSpace(*text) == ""
+}
+
+// IsNotBlank 判断文本是否为空或只包含 Unicode 空白字符。
+func IsNotBlank(text *string) bool {
+	return text != nil && strings.TrimSpace(*text) != ""
 }
 
 // TextSimilarity 基于归一化 Levenshtein 距离计算两个文本的相似度。
