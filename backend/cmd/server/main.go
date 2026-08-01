@@ -397,6 +397,8 @@ func setupRoutes(r *gin.Engine, app *App) {
 
 			// Corrections Admin
 			admin.GET("/corrections", app.rbacMiddleware.RequirePermission(models.PermCorrectionList), app.correctionHandler.ListCorrections)
+			admin.GET("/corrections/:id", app.rbacMiddleware.RequirePermission(models.PermCorrectionRead), app.correctionHandler.GetCorrection)
+			admin.PUT("/corrections/:id/status", app.rbacMiddleware.RequirePermission(models.PermCorrectionReview), app.correctionHandler.UpdateCorrectionStatus)
 		}
 
 		// Forum Admin（forum:moderate 权限可独立授予 reviewer，不套用 admin/editor 角色门槛）
