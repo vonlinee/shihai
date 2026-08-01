@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -66,6 +67,53 @@ export function AdminWorkCollectionsPage() {
     }
     return result
   }, [poemData])
+
+  const collectionColumns = useMemo<DataTableColumn<WorkCollection>[]>(
+    () => [
+      {
+        accessorKey: 'title',
+        header: '标题',
+        cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
+      },
+      {
+        accessorKey: 'isPublished',
+        header: '状态',
+        cell: ({ row }) => (row.original.isPublished ? '已发布' : '草稿'),
+      },
+      {
+        accessorKey: 'itemCount',
+        header: '作品数',
+        enableColumnFilter: false,
+      },
+      {
+        accessorKey: 'createdAt',
+        header: '创建时间',
+        enableColumnFilter: false,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '操作',
+        enableColumnFilter: false,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(row.original.id)}>
+              <Trash2 className="h-4 w-4 text-cinnabar" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
 
   useEffect(() => {
     if (!detail || !editingId) return
@@ -157,41 +205,15 @@ export function AdminWorkCollectionsPage() {
 
       <Card className="ink-border">
         <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
-          ) : collections.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">暂无作品集数据</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>标题</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>作品数</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {collections.map((collection) => (
-                    <TableRow key={collection.id}>
-                      <TableCell>{collection.id}</TableCell>
-                      <TableCell className="font-medium">{collection.title}</TableCell>
-                      <TableCell>{collection.isPublished ? '已发布' : '草稿'}</TableCell>
-                      <TableCell>{collection.itemCount}</TableCell>
-                      <TableCell className="text-muted-foreground">{new Date(collection.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(collection)}><Edit2 className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(collection.id)}><Trash2 className="h-4 w-4 text-cinnabar" /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable
+            columns={collectionColumns}
+            data={collections}
+            emptyText="暂无作品集数据"
+            enableColumnDragging
+            enableColumnFilters
+            getRowId={(collection) => String(collection.id)}
+            loading={isLoading}
+          />
           <Pagination
             className="mt-4"
             page={page}
