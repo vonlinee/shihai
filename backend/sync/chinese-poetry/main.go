@@ -610,7 +610,7 @@ func buildPoemContent(paragraphs []string) []string {
 	if len(items) == 0 {
 		return []string{}
 	}
-	return []string{strings.Join(items, "")}
+	return items
 }
 
 // validatePoemAuthorReferences 校验待插入诗歌的作者外键是否存在。
