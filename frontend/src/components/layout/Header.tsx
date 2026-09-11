@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { BookOpen, MessageSquare, HelpCircle } from 'lucide-react'
+import { Logo } from '@/components/brand/Logo'
 import { UserMenu } from './UserMenu'
 
 export function Header() {
@@ -12,9 +13,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-6">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 font-serif text-2xl font-bold text-ink">
-          <span className="text-cinnabar">识</span>海
+        <Link
+          to="/"
+          aria-label="识海首页"
+          className="flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Logo />
         </Link>
 
         {/* Navigation */}

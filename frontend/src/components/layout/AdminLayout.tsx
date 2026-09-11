@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { UserMenu } from './UserMenu'
+import { Logo } from '@/components/brand/Logo'
 import { useAuthStore } from '@/stores/authStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/utils/cn'
@@ -97,14 +98,14 @@ export function AdminLayout() {
         >
           <Link
             to="/"
-            title="诗海管理"
+            title="识海管理"
+            aria-label="识海管理首页"
             className={cn(
-              'flex min-w-0 items-center gap-2 font-serif font-bold text-foreground',
-              isSidebarCollapsed ? 'h-10 w-10 justify-center text-xl' : 'text-xl',
+              'flex min-w-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isSidebarCollapsed ? 'h-10 w-10 justify-center' : '',
             )}
           >
-            <span className="text-primary">诗</span>
-            {!isSidebarCollapsed && <span className="truncate">海管理</span>}
+            <Logo showWordmark={!isSidebarCollapsed} compact={isSidebarCollapsed} />
           </Link>
           <button
             type="button"
