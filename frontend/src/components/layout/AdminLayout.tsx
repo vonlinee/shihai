@@ -96,27 +96,48 @@ export function AdminLayout() {
             isSidebarCollapsed ? 'flex-col p-4' : 'justify-between p-6',
           )}
         >
-          <Link
-            to="/"
-            title="识海管理"
-            aria-label="识海管理首页"
-            className={cn(
-              'flex min-w-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              isSidebarCollapsed ? 'h-10 w-10 justify-center' : '',
-            )}
-          >
-            <Logo showWordmark={!isSidebarCollapsed} compact={isSidebarCollapsed} />
-          </Link>
-          <button
-            type="button"
-            aria-label={isSidebarCollapsed ? '展开导航栏' : '折叠导航栏'}
-            aria-pressed={isSidebarCollapsed}
-            title={isSidebarCollapsed ? '展开导航栏' : '折叠导航栏'}
-            onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </button>
+          {isSidebarCollapsed ? (
+            <div className="group relative h-10 w-10 shrink-0">
+              <Link
+                to="/"
+                title="识海管理"
+                aria-label="识海管理首页"
+                className="flex h-10 w-10 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Logo showWordmark={false} compact />
+              </Link>
+              <button
+                type="button"
+                aria-label="展开导航栏"
+                title="展开导航栏"
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/95 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-muted hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                to="/"
+                title="识海管理"
+                aria-label="识海管理首页"
+                className="flex min-w-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Logo />
+              </Link>
+              <button
+                type="button"
+                aria-label="折叠导航栏"
+                aria-pressed={false}
+                title="折叠导航栏"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
 
         <TooltipProvider delayDuration={200}>
