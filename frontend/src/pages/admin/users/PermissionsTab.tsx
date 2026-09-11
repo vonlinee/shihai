@@ -5,7 +5,13 @@ import { Input } from '@/components/ui/input'
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, FolderTree } from 'lucide-react'
-import { usePermissions, useCreatePermission, useUpdatePermission, useDeletePermission } from '@/hooks/useRbac'
+import {
+  usePermissions,
+  useCreatePermission,
+  useUpdatePermission,
+  useUpdatePermissionModule,
+  useDeletePermission,
+} from '@/hooks/useRbac'
 import { getModuleDisplayName } from './utils'
 
 // 单条权限数据结构（与后端 dto.PermissionResponse 保持一致）
@@ -35,6 +41,7 @@ export function PermissionsTab() {
   const [selectedModule, setSelectedModule] = useState('')
   const [showDialog, setShowDialog] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingModule, setEditingModule] = useState<string | null>(null)
   const [formData, setFormData] = useState({ code: '', name: '', description: '', module: '', isActive: true })
   // 折叠状态：记录被折叠的模块名称，未在集合中的模块默认展开
   const [collapsedModules, setCollapsedModules] = useState<Set<string>>(new Set())
@@ -42,6 +49,7 @@ export function PermissionsTab() {
   const { data: permissionsData, isLoading } = usePermissions(1, 100, selectedModule || undefined)
   const createMutation = useCreatePermission()
   const updateMutation = useUpdatePermission()
+  const updateModuleMutation = useUpdatePermissionModule()
   const deleteMutation = useDeletePermission()
   const { confirm, ConfirmDialog } = useConfirmDialog()
 
@@ -90,8 +98,28 @@ export function PermissionsTab() {
 
   const resetForm = () => setFormData({ code: '', name: '', description: '', module: '', isActive: true })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const nextModule = formData.module.trim()
+
+    if (editingModule) {
+      if (!nextModule || nextModule === editingModule) {
+        setShowDialog(false)
+        setEditingModule(null)
+        resetForm()
+        return
+      }
+
+      await updateModuleMutation.mutateAsync({
+        ids: permissions.filter((permission) => permission.module === editingModule).map((permission) => permission.id),
+        module: nextModule,
+      })
+      setShowDialog(false)
+      setEditingModule(null)
+      resetForm()
+      return
+    }
+
     if (editingId) {
       updateMutation.mutate(
         { id: editingId, data: { name: formData.name, description: formData.description, module: formData.module, isActive: formData.isActive } },
@@ -107,7 +135,15 @@ export function PermissionsTab() {
 
   const startEdit = (perm: PermissionRow) => {
     setEditingId(perm.id)
+    setEditingModule(null)
     setFormData({ code: perm.code, name: perm.name, description: perm.description, module: perm.module, isActive: perm.isActive })
+    setShowDialog(true)
+  }
+
+  const startEditModule = (module: string) => {
+    setEditingId(null)
+    setEditingModule(module)
+    setFormData({ code: '', name: '', description: '', module, isActive: true })
     setShowDialog(true)
   }
 
@@ -155,7 +191,7 @@ export function PermissionsTab() {
             {allCollapsed ? '全部展开' : '全部收起'}
           </Button>
         </div>
-        <Button onClick={() => { setEditingId(null); resetForm(); setShowDialog(true) }}>
+        <Button onClick={() => { setEditingId(null); setEditingModule(null); resetForm(); setShowDialog(true) }}>
           <Plus className="h-4 w-4 mr-2" />添加权限
         </Button>
       </div>
@@ -203,7 +239,21 @@ export function PermissionsTab() {
                           <TableCell className="text-sm text-muted-foreground" colSpan={3}>
                             共 {perms.length} 个权限点
                           </TableCell>
-                          <TableCell />
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`编辑${getModuleDisplayName(module)}模块`}
+                              title={`编辑${getModuleDisplayName(module)}模块`}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                startEditModule(module)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
 
                         {/* 子行：模块下的权限点 */}
@@ -251,50 +301,61 @@ export function PermissionsTab() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg w-full max-w-md max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
-              <h2 className="text-xl font-bold font-serif">{editingId ? '编辑权限' : '添加权限'}</h2>
+              <h2 className="text-xl font-bold font-serif">
+                {editingModule ? '编辑权限模块' : editingId ? '编辑权限' : '添加权限'}
+              </h2>
               <button onClick={() => setShowDialog(false)} className="p-1 hover:bg-muted rounded">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4 p-6 pt-4 overflow-y-auto">
+              {!editingModule && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">权限编码</label>
+                    <Input
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      placeholder="如：user:create"
+                      required
+                      disabled={!!editingId}
+                    />
+                    <p className="text-xs text-muted-foreground">格式：模块:操作，如 user:create</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">权限名称</label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="如：创建用户"
+                      required
+                    />
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
-                <label className="text-sm font-medium">权限编码</label>
-                <Input
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="如：user:create"
-                  required
-                  disabled={!!editingId}
-                />
-                <p className="text-xs text-muted-foreground">格式：模块:操作，如 user:create</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">权限名称</label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="如：创建用户"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">所属模块</label>
+                <label className="text-sm font-medium">{editingModule ? '新模块编码' : '所属模块'}</label>
                 <Input
                   value={formData.module}
                   onChange={(e) => setFormData({ ...formData, module: e.target.value })}
                   placeholder="如：user, poem, role"
                   required
                 />
+                {editingModule && (
+                  <p className="text-xs text-muted-foreground">
+                    修改后会同步更新该模块下所有权限点的所属模块。
+                  </p>
+                )}
               </div>
-              <div className="space-y-2">
+              {!editingModule && <div className="space-y-2">
                 <label className="text-sm font-medium">描述</label>
                 <Input
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="权限描述..."
                 />
-              </div>
-              <div className="flex items-center space-x-2">
+              </div>}
+              {!editingModule && <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   checked={formData.isActive}
@@ -302,7 +363,7 @@ export function PermissionsTab() {
                   className="rounded border-gray-300"
                 />
                 <label className="text-sm font-medium">启用权限</label>
-              </div>
+              </div>}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
@@ -311,8 +372,17 @@ export function PermissionsTab() {
                 >
                   取消
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending ? '保存中...' : editingId ? '更新' : '创建'}
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending || updateModuleMutation.isPending}
+                >
+                  {createMutation.isPending || updateMutation.isPending || updateModuleMutation.isPending
+                    ? '保存中...'
+                    : editingModule
+                      ? '更新模块'
+                      : editingId
+                        ? '更新'
+                        : '创建'}
                 </Button>
               </div>
             </form>

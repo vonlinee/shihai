@@ -134,6 +134,22 @@ export function useUpdatePermission() {
   });
 }
 
+export function useUpdatePermissionModule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ids, module }: { ids: number[]; module: string }) =>
+      Promise.all(ids.map((id) => rbacService.updatePermission(id, { module }))),
+    onSuccess: () => {
+      toast.success('权限模块更新成功');
+      queryClient.invalidateQueries({ queryKey: ['rbac', 'permissions'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '更新权限模块失败');
+    },
+  });
+}
+
 export function useDeletePermission() {
   const queryClient = useQueryClient();
 
