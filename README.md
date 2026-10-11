@@ -129,6 +129,55 @@ go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g internal/apidocs/doc.go -
 
 The generated files are written to `backend/docs/swagger/` and should not be edited manually.
 
+## Cross-platform Scripts:
+
+The repository provides a platform-independent launcher that can be run from
+Windows Command Prompt, PowerShell, Linux, or macOS terminals. It uses only
+the selected runtime's standard library and invokes the project tools directly.
+
+Node.js version:
+
+```text
+node scripts/shihai.mjs start
+node scripts/shihai.mjs start --mode development
+node scripts/shihai.mjs start --frontend-mode standalone --frontend-port 4173
+```
+
+Python version:
+
+```text
+python scripts/shihai.py start
+python scripts/shihai.py start --mode development
+python scripts/shihai.py start --frontend-mode standalone --frontend-port 4173
+```
+
+Common operations are available in both versions:
+
+```text
+# Preview the startup plan and access URLs
+node scripts/shihai.mjs start --mode development --backend-port 9090 --dry-run
+
+# Build and deploy without starting services
+node scripts/shihai.mjs deploy --frontend-mode embedded
+
+# Run in the background, inspect status, and stop
+node scripts/shihai.mjs start --detach
+node scripts/shihai.mjs start --status
+node scripts/shihai.mjs start --stop
+
+# Run project checks
+node scripts/shihai.mjs test
+python scripts/shihai.py test
+```
+
+The launcher prints `Frontend URL` and `Backend URL` for every startup plan.
+The Python commands are direct replacements for the Node.js commands, for
+example `python scripts/shihai.py start --status` and
+`python scripts/shihai.py deploy --frontend-mode embedded`.
+
+See [cross-platform scripts documentation](scripts/README.md) for all options,
+deployment modes, standalone service commands, and runtime requirements.
+
 ## Quick Deploy Scripts:
 
 ### Windows:
