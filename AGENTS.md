@@ -15,6 +15,7 @@
 
 - 后端位于 `backend/`，主要使用 Go、Gin、GORM 和 PostgreSQL。
 - 前端位于 `frontend/`，主要使用 React、TypeScript 和 Vite。
+- 微信小程序客户端位于 `client-wechat/`，主要使用 TypeScript，包含小程序页面和相关类型定义。
 - 数据库脚本位于 `database/`。
 - 长期开发指南位于 `docs/guidelines/`。
 
